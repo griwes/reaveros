@@ -13,3 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+namespace std
+{
+using size_t = decltype(sizeof(0));
+using ptrdiff_t = decltype(static_cast<char *>(nullptr) - static_cast<char *>(nullptr));
+using nullptr_t = decltype(nullptr);
+}
+
+// vim: ft=cpp

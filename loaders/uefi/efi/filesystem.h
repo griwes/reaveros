@@ -13,3 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include <memory>
+
+#include "../cpu/cpuid.h"
+#include "../efi/types.h"
+#include "path.h"
+
+namespace efi_loader
+{
+using file_buffer = std::unique_ptr<char[]>;
+
+path locate_source_directory(EFI_HANDLE);
+file_buffer load_file(const path &);
+file_buffer load_kernel(const path &, const cpu_capabilities &);
+file_buffer load_initrd(const path &, const cpu_capabilities &);
+} // namespace efi_loader

@@ -13,3 +13,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include <string_view>
+
+namespace efi_loader
+{
+struct EFI_DEVICE_PATH_PROTOCOL;
+
+class path
+{
+public:
+    path(EFI_DEVICE_PATH_PROTOCOL *);
+    path(std::string_view);
+    ~path();
+
+    path(const path &) = delete;
+    path(path &&) = default;
+    path & operator=(const path &) = delete;
+    path & operator=(path &&) = default;
+
+    void print() const;
+
+    const char16_t * string() const
+    {
+        return _buffer;
+    }
+
+    path operator/(const char16_t *) const;
+
+private:
+    char16_t * _buffer;
+};
+} // namespace efi_loader

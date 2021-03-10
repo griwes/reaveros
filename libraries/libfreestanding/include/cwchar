@@ -13,3 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include "cstddef"
+
+namespace std
+{
+using wint_t = size_t;
+}
+
+// vim: ft=cpp

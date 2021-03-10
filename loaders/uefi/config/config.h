@@ -13,3 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include <string_view>
+
+#include "../efi/filesystem.h"
+
+namespace efi_loader
+{
+struct config
+{
+public:
+    config(file_buffer config_file) : _config_file{ std::move(config_file) }
+    {
+    }
+
+    std::string_view operator[](std::string_view key) const;
+
+private:
+    file_buffer _config_file;
+};
+} // namespace efi_loader

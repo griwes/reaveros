@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.12)
+project(reaveros-meta C CXX)
+
+set(REAVEROS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(REAVEROS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+set(REAVEROS_C_STANDARD "11")
+set(REAVEROS_CXX_STANDARD "20")
+
+option(REAVEROS_USE_CACHE "Enable the use of a cache program in builds." ON)
+set(REAVEROS_CACHE_PROGRAM "ccache" CACHE STRING "Name of the cache program to use (defaults to ccache).")
+
+set(REAVEROS_CMAKE ${REAVEROS_BINARY_DIR}/install/toolchains/cmake/bin/cmake)
+
+if (REAVEROS_USE_CACHE)
+    find_program(_cache_program ${REAVEROS_CACHE_PROGRAM})
+    if (_cache_program)
+        set(CMAKE_C_COMPILER_LAUNCHER ${_cache_program})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${_cache_program})
+    endif()
+endif()
+
+include(ExternalProject)
+
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.20)
+    set(_REAVEROS_CONFIGURE_HANDLED_BY_BUILD "CONFIGURE_HANDLED_BY_BUILD TRUE")
+else()
+    set(_REAVEROS_CONFIGURE_HANDLED_BY_BUILD "")
+endif()
+
+set(REAVEROS_TOOLCHAINS "llvm" CACHE STRING "List of toolchains to build with. Possible values: llvm, gcc.")
+set(REAVEROS_ARCHITECTURES "amd64" CACHE STRING "List of architectures to build for. Possible values: amd64.")
+set(REAVEROS_LOADERS "uefi" CACHE STRING "List of loaders to build images with. Possible values: uefi (amd64 only).")
+
+include(cmake/target_functions.cmake)
+
+reaveros_add_aggregate_targets("")
+add_custom_target(all-toolchains)
+
+add_subdirectory(toolchains EXCLUDE_FROM_ALL)
+add_subdirectory(libraries EXCLUDE_FROM_ALL)
+add_subdirectory(loaders EXCLUDE_FROM_ALL)
+add_subdirectory(kernel EXCLUDE_FROM_ALL)
+add_subdirectory(userspace EXCLUDE_FROM_ALL)
+add_subdirectory(images EXCLUDE_FROM_ALL)

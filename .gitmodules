@@ -1,3 +1,0 @@
-[submodule "deps/gnu-efi"]
-	path = deps/gnu-efi
-	url = git://git.code.sf.net/p/gnu-efi/code

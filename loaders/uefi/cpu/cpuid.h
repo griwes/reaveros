@@ -13,3 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+namespace efi_loader
+{
+enum class cpu_manufacturer
+{
+    intel,
+    amd,
+    unknown
+};
+
+struct cpu_capabilities
+{
+    cpu_manufacturer manufacturer = cpu_manufacturer::unknown;
+    char brand_string[48] = "Unknown CPU brand";
+};
+
+cpu_capabilities detect_cpu();
+} // namespace efi_loader

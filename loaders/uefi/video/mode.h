@@ -13,3 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+namespace efi_loader
+{
+struct config;
+
+struct video_mode
+{
+};
+
+video_mode choose_mode(const config & cfg);
+} // namespace efi_loader

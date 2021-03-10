@@ -5,3 +5,5 @@
 tools
 *.EFI
 *.ELF
+build
+compile_flags.txt

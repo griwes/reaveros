@@ -13,3 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#define CHAR_BIT __CHAR_BIT__
+
+// vim: ft=cpp
