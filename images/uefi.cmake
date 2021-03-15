@@ -25,10 +25,15 @@ function(_reaveros_add_uefi_image_target toolchain architecture)
             ${REAVEROS_SOURCE_DIR}/loaders/uefi/config/reaveros.conf
             ${_targetfs_contents}/EFI/BOOT/reaveros.conf
 
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${_targetfs_contents}/reaver
+        COMMAND ${CMAKE_COMMAND} -E
+            touch ${_targetfs_contents}/reaver/kernel.img
+            touch ${_targetfs_contents}/reaver/initrd.img
+
         COMMAND ${CMAKE_COMMAND} -E rm -f ${_targetfs_path}
         COMMAND dd if=/dev/zero of=${_targetfs_path} bs=1474560 count=1
         COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/dosfstools/sbin/mkfs.fat ${_targetfs_path}
-        COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/mtools/bin/mcopy -os -i ${_targetfs_path} ${_targetfs_contents}/EFI ::/
+        COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/mtools/bin/mcopy -os -i ${_targetfs_path} ${_targetfs_contents}/* ::/
     )
 
     add_custom_target(image-uefi-efipart-${architecture}-${toolchain}

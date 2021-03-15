@@ -41,6 +41,14 @@ struct EFI_TABLE_HEADER
     std::uint32_t reserved;
 };
 
+enum class EFI_ALLOCATE_TYPE
+{
+    allocate_any_pages,
+    allocate_max_address,
+    allocate_address,
+    max_allocate_type
+};
+
 enum class EFI_MEMORY_TYPE
 {
     efi_reserved_memory_type,
@@ -75,4 +83,4 @@ struct EFI_TIME
     std::uint8_t daylight;
     std::uint8_t pad2;
 };
-} // namespace efi_loader
+}

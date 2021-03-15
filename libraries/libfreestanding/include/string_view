@@ -33,7 +33,7 @@ public:
     using const_pointer = const value_type *;
     using reference = value_type &;
     using const_reference = const value_type &;
-    using const_iterator = void; // see [string.view.iterators]
+    using const_iterator = const _CharT *;
     using iterator = const_iterator;
     // using const_reverse_iterator = reverse_iterator<const_iterator>;
     // using reverse_iterator = const_reverse_iterator;
@@ -56,10 +56,26 @@ public:
     // template<class It, class End>
     // constexpr basic_string_view(It begin, End end);
 
-    constexpr const_iterator begin() const noexcept;
-    constexpr const_iterator end() const noexcept;
-    constexpr const_iterator cbegin() const noexcept;
-    constexpr const_iterator cend() const noexcept;
+    constexpr const_iterator begin() const noexcept
+    {
+        return __data;
+    }
+
+    constexpr const_iterator end() const noexcept
+    {
+        return __data + __size;
+    }
+
+    constexpr const_iterator cbegin() const noexcept
+    {
+        return __data;
+    }
+
+    constexpr const_iterator cend() const noexcept
+    {
+        return __data + __size;
+    }
+
     // constexpr const_reverse_iterator rbegin() const noexcept;
     // constexpr const_reverse_iterator rend() const noexcept;
     // constexpr const_reverse_iterator crbegin() const noexcept;
@@ -86,7 +102,11 @@ public:
     constexpr const_reference at(size_type __pos) const;
     constexpr const_reference front() const;
     constexpr const_reference back() const;
-    constexpr const_pointer data() const noexcept;
+
+    constexpr const_pointer data() const noexcept
+    {
+        return __data;
+    }
 
     constexpr void remove_prefix(size_type __n)
     {
@@ -103,7 +123,12 @@ public:
 
     constexpr size_type copy(_CharT * __s, size_type __n, size_type __pos = 0) const;
 
-    constexpr basic_string_view substr(size_type __pos = 0, size_type __n = npos) const;
+    constexpr basic_string_view substr(size_type __pos = 0, size_type __n = npos) const
+    {
+        auto __rem = __size - __pos;
+        __n = __n < __rem ? __n : __rem;
+        return { __data + __pos, __n };
+    }
 
     constexpr int compare(basic_string_view __s) const noexcept
     {

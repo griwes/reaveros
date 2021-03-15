@@ -32,4 +32,4 @@ struct cpu_capabilities
 };
 
 cpu_capabilities detect_cpu();
-} // namespace efi_loader
+}

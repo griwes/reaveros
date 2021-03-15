@@ -86,4 +86,4 @@ cpu_capabilities detect_cpu()
 
     return caps;
 }
-} // namespace efi_loader
+}

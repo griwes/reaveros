@@ -17,6 +17,7 @@
 #include "efi.h"
 #include "console.h"
 #include "system_table.h"
+#include "types.h"
 
 namespace efi_loader
 {
@@ -25,12 +26,14 @@ constexpr auto EFI_BOOT_SERVICES_REVISION = EFI_SPECIFICATION_VERSION;
 
 using EFI_RAISE_TPL = void (*)();
 using EFI_RESTORE_TPL = void (*)();
-using EFI_ALLOCATE_PAGES = void (*)();
+
+using EFI_ALLOCATE_PAGES = EFIAPI EFI_STATUS (*)(EFI_ALLOCATE_TYPE, EFI_MEMORY_TYPE, std::size_t, void **);
+
 using EFI_FREE_PAGES = void (*)();
+
 using EFI_GET_MEMORY_MAP = void (*)();
 
-using EFI_ALLOCATE_POOL =
-    EFIAPI EFI_STATUS (*)(EFI_MEMORY_TYPE memory_pool, std::size_t size, void ** buffer);
+using EFI_ALLOCATE_POOL = EFIAPI EFI_STATUS (*)(EFI_MEMORY_TYPE, std::size_t, void **);
 
 using EFI_FREE_POOL = EFIAPI EFI_STATUS (*)(void *);
 
@@ -151,21 +154,21 @@ struct EFI_BOOT_SERVICES
 EFI_SYSTEM_TABLE * system_table = nullptr;
 EFI_HANDLE image_handle = {};
 
-void * open_protocol_by_guid(const EFI_GUID & guid)
+void * open_protocol_by_guid(const EFI_GUID & guid, const char * name)
 {
     void * ret;
     auto status = system_table->boot_services->locate_protocol(const_cast<EFI_GUID *>(&guid), nullptr, &ret);
 
     if (status != EFI_SUCCESS)
     {
-        console::print(u"[ERR] Failed to open protocol. [TODO: print the guid here]\n\r");
+        console::print(u" > Failed to open protocol: ", name, u".\n\r");
         return nullptr;
     }
 
     return ret;
 }
 
-void * open_protocol_by_guid(EFI_HANDLE handle, const EFI_GUID & guid)
+void * open_protocol_by_guid(EFI_HANDLE handle, const EFI_GUID & guid, const char * name)
 {
     void * ret;
     auto status = system_table->boot_services->open_protocol(
@@ -178,16 +181,36 @@ void * open_protocol_by_guid(EFI_HANDLE handle, const EFI_GUID & guid)
 
     if (status != EFI_SUCCESS)
     {
-        console::print(u"[ERR] Failed to open protocol. [TODO: print the guid here]\n\r");
+        console::print(u" > Failed to open protocol: ", name, u".\n\r");
         return nullptr;
     }
 
     return ret;
 }
-} // namespace efi_loader
+
+void * allocate_pages(std::size_t size, std::uint32_t type)
+{
+    auto num_pages = size ? (size + 4095) / 4096 : 1;
+
+    void * ret = nullptr;
+    switch (auto status = system_table->boot_services->allocate_pages(
+                EFI_ALLOCATE_TYPE::allocate_any_pages, static_cast<EFI_MEMORY_TYPE>(type), num_pages, &ret))
+    {
+        case EFI_SUCCESS:
+            return ret;
+
+        default:
+            console::print(u"[ERR] Error allocating pages: ", status & ~high_bit, u".\n\r");
+            asm volatile("cli; hlt;");
+            __builtin_unreachable();
+    }
+}
+}
 
 void * operator new(std::size_t size)
 {
+    size = size ? size : 1;
+
     void * ret = nullptr;
     switch (auto status = efi_loader::system_table->boot_services->allocate_pool(
                 efi_loader::EFI_MEMORY_TYPE::efi_loader_data, size, &ret))
@@ -208,7 +231,7 @@ void * operator new[](std::size_t size)
     return operator new(size);
 }
 
-void operator delete(void * ptr)
+void operator delete(void * ptr) noexcept
 {
     switch (auto status = efi_loader::system_table->boot_services->free_pool(ptr))
     {
@@ -223,7 +246,7 @@ void operator delete(void * ptr)
     }
 }
 
-void operator delete[](void * ptr)
+void operator delete[](void * ptr) noexcept
 {
     operator delete(ptr);
 }

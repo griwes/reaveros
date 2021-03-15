@@ -16,13 +16,18 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace efi_loader
 {
 struct config;
 
 struct video_mode
 {
+    bool valid = false;
+    std::uint32_t mode_number;
 };
 
 video_mode choose_mode(const config & cfg);
-} // namespace efi_loader
+}

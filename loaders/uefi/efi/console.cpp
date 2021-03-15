@@ -20,8 +20,10 @@
 
 namespace efi_loader
 {
-using EFI_TEXT_RESET = EFIAPI EFI_STATUS (*)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL * self, bool extended_verification);
-using EFI_TEXT_STRING = EFIAPI EFI_STATUS (*)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL * self, const char16_t * string);
+using EFI_TEXT_RESET =
+    EFIAPI EFI_STATUS (*)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL * self, bool extended_verification);
+using EFI_TEXT_STRING =
+    EFIAPI EFI_STATUS (*)(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL * self, const char16_t * string);
 
 using EFI_TEXT_TEST_STRING = void (*)();
 using EFI_TEXT_QUERY_MODE = void (*)();
@@ -72,7 +74,7 @@ void console::print(const char16_t * str)
 
 void console::print(std::string_view str)
 {
-    char16_t buffer[8192] = { '\0' }; // this is very dumb, but it has to stay for now
+    char16_t buffer[8192] = {}; // this is very dumb, but it has to stay for now
 
     if (str.size() > 8191)
     {
@@ -85,6 +87,25 @@ void console::print(std::string_view str)
         buffer[i] = str[i];
     }
 
+    buffer[str.size()] = u'\0';
+
     print(buffer);
 }
-} // namespace efi_loader
+
+void console::print(void * ptr)
+{
+    std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(ptr);
+
+    char16_t buffer[20];
+    buffer[0] = u'0';
+    buffer[1] = u'x';
+
+    for (auto idx = 0; idx < 16; ++idx)
+    {
+        buffer[idx + 2] = u"0123456789ABCDEF"[(iptr >> ((15 - idx) * 4)) & 0xF];
+    }
+    buffer[18] = u'\0';
+
+    print(buffer);
+}
+}

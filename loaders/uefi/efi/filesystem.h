@@ -24,10 +24,12 @@
 
 namespace efi_loader
 {
-using file_buffer = std::unique_ptr<char[]>;
+struct file_buffer
+{
+    std::size_t size;
+    std::unique_ptr<char[]> buffer;
+};
 
 path locate_source_directory(EFI_HANDLE);
 file_buffer load_file(const path &);
-file_buffer load_kernel(const path &, const cpu_capabilities &);
-file_buffer load_initrd(const path &, const cpu_capabilities &);
-} // namespace efi_loader
+}

@@ -93,13 +93,16 @@ inline void initialize(EFI_SYSTEM_TABLE * table, EFI_HANDLE handle)
     image_handle = handle;
 }
 
-void * open_protocol_by_guid(EFI_HANDLE, const EFI_GUID &);
-void * open_protocol_by_guid(const EFI_GUID &);
-} // namespace efi_loader
+void * open_protocol_by_guid(EFI_HANDLE, const EFI_GUID &, const char *);
+void * open_protocol_by_guid(const EFI_GUID &, const char *);
+
+void * allocate_pages(std::size_t, std::uint32_t type);
+}
 
 #define PROTO_GUID(PROTO) EFI_##PROTO##_PROTOCOL_GUID
 #define PROTOCOL(PROTO) EFI_##PROTO##_PROTOCOL
-#define FIND_PROTOCOL_FROM_HANDLE(HANDLE, PROTO)                                                                       \
-    (reinterpret_cast<PROTOCOL(PROTO) *>(::efi_loader::open_protocol_by_guid(HANDLE, PROTO_GUID(PROTO))))
-#define FIND_PROTOCOL(PROTO)                                                                                           \
-    (reinterpret_cast<PROTOCOL(PROTO) *>(::efi_loader::open_protocol_by_guid(PROTO_GUID(PROTO))))
+#define FIND_PROTOCOL_FROM_HANDLE(HANDLE, PROTO)                                                             \
+    (reinterpret_cast<PROTOCOL(PROTO) *>(                                                                    \
+        ::efi_loader::open_protocol_by_guid(HANDLE, PROTO_GUID(PROTO), #PROTO)))
+#define FIND_PROTOCOL(PROTO)                                                                                 \
+    (reinterpret_cast<PROTOCOL(PROTO) *>(::efi_loader::open_protocol_by_guid(PROTO_GUID(PROTO), #PROTO)))

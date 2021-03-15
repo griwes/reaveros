@@ -13,3 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+namespace efi_loader
+{
+struct memory_map
+{
+};
+
+memory_map get_memory_map();
+}

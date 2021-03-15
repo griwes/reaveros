@@ -166,11 +166,11 @@ path locate_source_directory(EFI_HANDLE image_handle)
     switch (simple_fs_proto->open_volume(simple_fs_proto, &boot_fs_root))
     {
         case EFI_SUCCESS:
-            console::print(" > Boot filesystem root opened.\n\r");
+            console::print(u" > Boot filesystem root opened.\n\r");
             break;
 
         default:
-            console::print("[ERR] Unknown error happened while opening boot filesystem root.\n\r");
+            console::print(u"[ERR] Unknown error happened while opening boot filesystem root.\n\r");
             asm volatile("cli; hlt");
             __builtin_unreachable();
     }
@@ -190,7 +190,7 @@ file_buffer load_file(const path & p)
             break;
 
         default:
-            console::print("[ERR] Failed to open `", p, "`..\n\r");
+            console::print(u"[ERR] Failed to open `", p, "`.\n\r");
             asm volatile("cli; hlt");
             __builtin_unreachable();
     }
@@ -200,7 +200,8 @@ file_buffer load_file(const path & p)
     switch (auto status = file->get_info(file, &EFI_FILE_INFO_ID, &size, &info))
     {
         case EFI_SUCCESS:
-            console::print(u" > File size of `", p, u"`: ", info.size, u".\n\r");
+            console::print(u" > File size of `", p, u"`: ", info.file_size, u".\n\r");
+            size = info.file_size;
             break;
 
         default:
@@ -225,6 +226,6 @@ file_buffer load_file(const path & p)
 
     file->close(file);
 
-    return buffer;
+    return { size, std::move(buffer) };
 }
 }

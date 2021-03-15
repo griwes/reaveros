@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(reaveros-loader-uefi ASM CXX)
 
 file(GLOB_RECURSE sources
+    CONFIGURE_DEPENDS
     *.cpp
 )
 

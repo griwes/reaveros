@@ -14,36 +14,13 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <string_view>
+#include "map.h"
 
 namespace efi_loader
 {
-struct EFI_DEVICE_PATH_PROTOCOL;
-
-class path
+memory_map get_memory_map()
 {
-public:
-    path(EFI_DEVICE_PATH_PROTOCOL *);
-    path(std::string_view);
-    ~path();
-
-    path(const path &) = delete;
-    path(path &&) = default;
-    path & operator=(const path &) = delete;
-    path & operator=(path &&) = default;
-
-    void print() const;
-
-    const char16_t * string() const
-    {
-        return _buffer;
-    }
-
-    path operator/(const char16_t *) const;
-
-private:
-    char16_t * _buffer;
-};
+    for (;;)
+        ;
+}
 }

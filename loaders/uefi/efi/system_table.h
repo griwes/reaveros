@@ -46,4 +46,4 @@ struct EFI_SYSTEM_TABLE
     std::size_t number_of_table_entries;
     EFI_CONFIGURATION_TABLE * configuration_table;
 };
-} // namespace efi_loader
+}

@@ -23,50 +23,60 @@
 #include "memory/map.h"
 #include "video/mode.h"
 
+#include <cstring>
+
 extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::EFI_HANDLE image_handle,
     efi_loader::EFI_SYSTEM_TABLE * system_table)
 {
-    if (system_table->header.signature != efi_loader::EFI_SYSTEM_TABLE_SIGNATURE)
     {
-        // need a better way to handle this
-        // probably also need a crc32 check, but fuck that right now
-        *(volatile std::uint64_t *)nullptr = 0xdeadbeef;
-        asm volatile("cli; hlt");
+        if (system_table->header.signature != efi_loader::EFI_SYSTEM_TABLE_SIGNATURE)
+        {
+            // need a better way to handle this
+            // probably also need a crc32 check, but fuck that right now
+            *(volatile std::uint64_t *)nullptr = 0xdeadbeef;
+            asm volatile("cli; hlt");
+        }
+
+        efi_loader::initialize(system_table, image_handle);
+        efi_loader::console::initialize();
+
+        efi_loader::console::print(u"ReaverOS UEFI bootloader\n\r");
+        efi_loader::console::print(u"Version 0.0.0 alpha, codename \"Cotyledon\"\n\r");
+        efi_loader::console::print(u"Copyright (C) 2021 Reaver Project Team\n\n\r");
+
+        efi_loader::console::print(u"[CPU] Checking CPU capabilities...\n\r");
+        auto cpu_caps = efi_loader::detect_cpu();
+
+        efi_loader::console::print(u"[EFI] Looking for own location...\n\r");
+        auto source_directory = efi_loader::locate_source_directory(image_handle);
+
+        efi_loader::console::print(u"[DSK] Loading configuration...\n\r");
+        auto config = efi_loader::config{ efi_loader::load_file(source_directory / u"reaveros.conf") };
+
+        efi_loader::console::print(u"[GFX] Choosing video mode...\n\r");
+        auto video_mode = efi_loader::choose_mode(config);
+
+        efi_loader::console::print(u"[DSK] Loading kernel and initrd...\n\r");
+        auto kernel = efi_loader::load_file(config["kernel"]);
+        auto initrd = efi_loader::load_file(config["initrd"]);
+
+        efi_loader::console::print(u"[MEM] Allocating memory regions...\n\r");
+        auto kernel_region = efi_loader::allocate_pages(kernel.size, 0x80000000);
+        auto initrd_region = efi_loader::allocate_pages(initrd.size, 0x80000001);
+
+        std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
+        std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
+
+        /*efi_loader::console::print(u"[CPU] Preparing GDT and IDT...\n\r");
+        efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
+        if (video_mode.valid) {
+        efi_loader::console::print(u"[GFX] Will set video mode.\n\r");
+        efi_loader::allocate_pages(video buffer size, 0x80001000);
+        }*/
     }
-
-    efi_loader::initialize(system_table, image_handle);
-    efi_loader::console::initialize();
-
-    efi_loader::console::print(u"ReaverOS UEFI bootloader\n\r");
-    efi_loader::console::print(u"Version 0.0.0 alpha, codename \"Cotyledon\"\n\r");
-    efi_loader::console::print(u"Copyright (C) 2021 Reaver Project Team\n\n\r");
-
-    efi_loader::console::print(u"[CPU] Checking CPU capabilities...\n\r");
-    auto cpu_caps = efi_loader::detect_cpu();
-
-    efi_loader::console::print(u"[EFI] Looking for own location...\n\r");
-    auto source_directory = efi_loader::locate_source_directory(image_handle);
-
-    efi_loader::console::print(u"[DSK] Loading configuration...\n\r");
-    auto config = efi_loader::config{ efi_loader::load_file(source_directory / u"reaveros.conf") };
-
-    efi_loader::console::print(u"[GFX] Choosing video mode...\n\r");
-    auto video_mode = efi_loader::choose_mode(config);
-
-    /*efi_loader::console::print(u"[DSK] Loading kernel and initrd...\n\r");
-    auto kernel = efi_loader::load_kernel(source_directory, config);
-    auto initrd = efi_loader::load_initrd(source_directory, config);
-
-    efi_loader::console::print(u"[MEM] Getting memory map...\n\r");
-    auto memory_map = efi_loader::get_memory_map();*/
-
-    /*efi_loader::console::print(u"[MEM] Allocating memory regions...\n\r");
-    efi_loader::console::print(u"[CPU] Preparing GDT and IDT...\n\r");
-    efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
-    efi_loader::console::print(u"[GFX] Setting video mode...\n\r");
-    efi_loader::console::print(u"[EFI] Bootloader done. Giving up EFI boot services and invoking the
-    kernel.\n\r");*/
+    /*efi_loader::console::print(
+        u"[EFI] Bootloader done. Giving up EFI boot services and invoking the kernel.\n\r");*/
 
     *(volatile std::uint64_t *)nullptr = 0xdeadc0de;
     for (;;)

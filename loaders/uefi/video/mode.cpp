@@ -93,60 +93,114 @@ namespace
         if (!proto)
         {
             proto = FIND_PROTOCOL(GRAPHICS_OUTPUT);
-            console::print(u" > Found GRAPHICS_OUTPUT protocol.\n\r");
         }
 
         return proto;
     }
-} // namespace
+}
 
 video_mode choose_mode(const config & cfg)
 {
     init_proto();
+
+    if (!proto)
+    {
+        console::print(u" > No graphics protocol found, assuming headless boot.\n\r");
+        return {};
+    }
+
     console::print(u" > ", proto->mode->max_mode, u" video modes available.\n\r");
 
-    auto preference = cfg["resolutions"];
-    console::print(u" > Resolution preference: ", preference, u".\n\r");
+    auto preference = cfg["max-resolution"];
+    console::print(u" > Max resolution allowed by config: ", preference, u".\n\r");
 
-    std::uint32_t max_horizontal = 0;
-    std::uint32_t max_vertical = 0;
-    std::uint32_t max_index = 0;
+    auto x_pos = preference.find('x');
+    if (x_pos == std::string_view::npos)
+    {
+        console::print(u"[ERR] Malformed config file detected, max-resolution does not contain an 'x'!\n\r");
+        asm volatile("cli; hlt;");
+    }
+
+    auto horizontal_config = preference.substr(0, x_pos);
+    auto vertical_config = preference.substr(x_pos + 1);
+
+    auto parse_int = [](std::string_view input, auto && description) {
+        bool failed = false;
+
+        std::uint32_t ret = 0;
+
+        for (auto && c : input)
+        {
+            if (c < '0' || c > '9')
+            {
+                failed = true;
+                break;
+            }
+
+            auto new_ret = ret * 10 + (c - '0');
+            if (new_ret < ret)
+            {
+                failed = true;
+                break;
+            }
+
+            ret = new_ret;
+        }
+
+        if (failed)
+        {
+            console::print(
+                u"[ERR] Malformed config file detected, the ",
+                description,
+                " max-resolution is not a valid unsigned decimal integer that fits in 32 bits!\n\r");
+            asm volatile("cli; hlt;");
+        }
+
+        return ret;
+    };
+
+    std::uint32_t max_horizontal = parse_int(horizontal_config, u"horizontal");
+    std::uint32_t max_vertical = parse_int(vertical_config, u"vertical");
 
     std::uint32_t preferred_horizontal = 0;
     std::uint32_t preferred_vertical = 0;
-    std::uint32_t preferred_priority = -(std::uint32_t)1;
-    std::uint64_t preferred_index = -(std::uint64_t)1;
+    std::uint32_t preferred_index = -1;
+    bool found_exact_match = false;
 
     EFI_GRAPHICS_OUTPUT_MODE_INFORMATION * info = nullptr;
     std::size_t info_size = 0;
 
-    for (auto i = 0u; i < proto->mode->max_mode; ++i)
+    for (auto i = 0u; i < proto->mode->max_mode && !found_exact_match; ++i)
     {
         switch (auto status = proto->query_mode(proto, i, &info_size, &info))
         {
             case EFI_SUCCESS:
-                console::print(
-                    u" > Video mode ",
-                    i,
-                    u": ",
-                    info->horizontal_resolution,
-                    u"x",
-                    info->vertical_resolution,
-                    u" (pixel format: ",
-                    static_cast<int>(info->pixel_format),
-                    info->pixel_format != EFI_GRAPHICS_PIXEL_FORMAT::pixel_blt_only ? u", ok" : u", not ok",
-                    u").\n\r");
-
                 if (info->pixel_format == EFI_GRAPHICS_PIXEL_FORMAT::pixel_blt_only)
                 {
                     // don't want a blt-only format!
                     break;
                 }
 
-                if (max_horizontal <= info->horizontal_resolution
-                    && max_vertical <= info->vertical_resolution)
+                if (max_horizontal == info->horizontal_resolution
+                    && max_vertical == info->vertical_resolution)
                 {
-                    max_index = i;
+                    preferred_index = i;
+                    found_exact_match = true;
+                    break;
+                }
+
+                if (max_horizontal < info->horizontal_resolution || max_vertical < info->vertical_resolution)
+                {
+                    continue;
+                }
+
+                if (preferred_horizontal < info->horizontal_resolution
+                    || (preferred_horizontal == info->horizontal_resolution
+                        && preferred_vertical < info->vertical_resolution))
+                {
+                    preferred_horizontal = info->horizontal_resolution;
+                    preferred_vertical = info->vertical_resolution;
+                    preferred_index = i;
                 }
 
                 break;
@@ -158,15 +212,27 @@ video_mode choose_mode(const config & cfg)
         delete info;
     }
 
-    if (preferred_index == -(std::uint64_t)1)
+    if (preferred_index == -1)
     {
-        preferred_index = max_index;
+        console::print(u" > No suitable video mode found, proceeding without graphic output.\n\r");
+        return {};
     }
 
     proto->query_mode(proto, preferred_index, &info_size, &info);
 
+    console::print(
+        u" > Selected video mode, index ",
+        preferred_index,
+        u": ",
+        info->horizontal_resolution,
+        u"x",
+        info->vertical_resolution,
+        u" (pixel format: ",
+        static_cast<int>(info->pixel_format),
+        u").\n\r");
+
     delete info;
 
-    return {};
+    return { true, preferred_index };
 }
 }

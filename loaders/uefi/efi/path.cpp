@@ -20,13 +20,11 @@
 
 namespace efi_loader
 {
-using EFI_DEVICE_PATH_TO_TEXT_NODE = EFIAPI char16_t * (*)(const EFI_DEVICE_PATH_PROTOCOL * device_node,
-    bool display_only,
-    bool allow_shortcuts);
+using EFI_DEVICE_PATH_TO_TEXT_NODE =
+    EFIAPI char16_t * (*)(const EFI_DEVICE_PATH_PROTOCOL * device_node, bool display_only, bool allow_shortcuts);
 
-using EFI_DEVICE_PATH_TO_TEXT_PATH = EFIAPI char16_t * (*)(const EFI_DEVICE_PATH_PROTOCOL * device_node,
-    bool display_only,
-    bool allow_shortcuts);
+using EFI_DEVICE_PATH_TO_TEXT_PATH =
+    EFIAPI char16_t * (*)(const EFI_DEVICE_PATH_PROTOCOL * device_node, bool display_only, bool allow_shortcuts);
 
 constexpr auto EFI_DEVICE_PATH_TO_TEXT_PROTOCOL_GUID =
     EFI_GUID{ 0x8b843e20, 0x8132, 0x4852, { 0x90, 0xcc, 0x55, 0x1a, 0x4e, 0x4a, 0x7f, 0x1c } };
@@ -37,9 +35,11 @@ struct EFI_DEVICE_PATH_TO_TEXT_PROTOCOL
     EFI_DEVICE_PATH_TO_TEXT_PATH convert_device_path_to_text;
 };
 
-using EFI_DEVICE_PATH_FROM_TEXT_NODE = EFIAPI EFI_DEVICE_PATH_PROTOCOL * (*)(const char16_t * text_device_node);
+using EFI_DEVICE_PATH_FROM_TEXT_NODE =
+    EFIAPI EFI_DEVICE_PATH_PROTOCOL * (*)(const char16_t * text_device_node);
 
-using EFI_DEVICE_PATH_FROM_TEXT_PATH = EFIAPI EFI_DEVICE_PATH_PROTOCOL * (*)(const char16_t * text_device_path);
+using EFI_DEVICE_PATH_FROM_TEXT_PATH =
+    EFIAPI EFI_DEVICE_PATH_PROTOCOL * (*)(const char16_t * text_device_path);
 
 constexpr auto EFI_DEVICE_PATH_FROM_TEXT_PROTOCOL_GUID =
     EFI_GUID{ 0x5c99a21, 0xc70f, 0x4ad2, { 0x8a, 0x5f, 0x35, 0xdf, 0x33, 0x43, 0xf5, 0x1e } };
@@ -81,19 +81,20 @@ namespace
 
         return from_text_protocol;
     }
-} // namespace
+}
 
 path::path(EFI_DEVICE_PATH_PROTOCOL * device_path)
     : _buffer{ to_text_init()->convert_device_path_to_text(device_path, false, false) }
 {
 }
 
-path::path(std::string_view str) : _buffer{ new char16_t[str.size() + 1]{ '\0' } }
+path::path(std::string_view str) : _buffer{ new char16_t[str.size() + 1]{} }
 {
     for (std::size_t i = 0; i < str.size(); ++i)
     {
         _buffer[i] = str[i];
     }
+    _buffer[str.size()] = u'\0';
 }
 
 path::~path()
@@ -126,4 +127,4 @@ path path::operator/(const char16_t * append) const
     operator delete(proto);
     return ret;
 }
-} // namespace efi_loader
+}

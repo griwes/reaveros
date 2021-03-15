@@ -34,4 +34,4 @@ public:
 private:
     file_buffer _config_file;
 };
-} // namespace efi_loader
+}

@@ -34,7 +34,7 @@ auto substr(std::string_view str, std::size_t pos, std::size_t num = std::string
 
 std::string_view config::operator[](std::string_view key) const
 {
-    std::string_view config = _config_file.get();
+    std::string_view config = _config_file.buffer.get();
 
     for (auto pos = config.find('\n'); pos != std::string_view::npos; pos = config.find('\n'))
     {
@@ -48,7 +48,7 @@ std::string_view config::operator[](std::string_view key) const
             asm volatile("cli; hlt");
         }
 
-        // ...maybe, just maybe, I'll write a proper parser for this
+        // ...maybe, just maybe, I'll write a proper parser for this one day
         // but that day isn't today
         if (substr(line, 0, colon) == key)
         {
@@ -60,4 +60,4 @@ std::string_view config::operator[](std::string_view key) const
     asm volatile("cli; hlt");
     __builtin_unreachable();
 }
-} // namespace efi_loader
+}
