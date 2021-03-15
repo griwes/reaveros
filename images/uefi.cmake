@@ -4,7 +4,7 @@ function(_reaveros_add_uefi_image_target toolchain architecture)
 
     file(MAKE_DIRECTORY ${REAVEROS_BINARY_DIR}/install/images)
 
-    add_custom_command(OUTPUT ${_targetfs_path}
+    add_custom_command(OUTPUT ${_targetfs_path} "always rebuilt"
         DEPENDS
             toolchain-dosfstools-install
             toolchain-mtools-install
