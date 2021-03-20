@@ -16,12 +16,12 @@
 
 #include <cstdint>
 
-#include "../efi/console.h"
+#include "../../efi/console.h"
 #include "cpuid.h"
 
 #define cpuid(id, a, b, c, d) asm volatile("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(id))
 
-namespace efi_loader
+namespace efi_loader::inline amd64
 {
 cpu_capabilities detect_intel()
 {

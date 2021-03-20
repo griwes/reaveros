@@ -14,21 +14,11 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "environment.h"
 
-#include <memory>
-
-#include "../efi/types.h"
-#include "path.h"
-
-namespace efi_loader
+namespace efi_loader::inline amd64
 {
-struct file_buffer
+void prepare_environment()
 {
-    std::size_t size;
-    std::unique_ptr<char[]> buffer;
-};
-
-path locate_source_directory(EFI_HANDLE);
-file_buffer load_file(const path &);
+}
 }

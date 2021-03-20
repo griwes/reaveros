@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "mode.h"
+#include "video_mode.h"
 #include "../config/config.h"
-#include "../efi/console.h"
-#include "../efi/efi.h"
+#include "console.h"
+#include "efi.h"
 
 #include <cstring>
 

@@ -13,22 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#pragma once
-
-#include <memory>
-
-#include "../efi/types.h"
-#include "path.h"
-
-namespace efi_loader
-{
-struct file_buffer
-{
-    std::size_t size;
-    std::unique_ptr<char[]> buffer;
-};
-
-path locate_source_directory(EFI_HANDLE);
-file_buffer load_file(const path &);
-}

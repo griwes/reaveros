@@ -15,13 +15,14 @@
  */
 
 #include "config/config.h"
-#include "cpu/cpuid.h"
+#include "cpu/detection.h"
+#include "cpu/environment.h"
 #include "efi/console.h"
 #include "efi/efi.h"
 #include "efi/filesystem.h"
+#include "efi/memory_map.h"
 #include "efi/system_table.h"
-#include "memory/map.h"
-#include "video/mode.h"
+#include "efi/video_mode.h"
 
 #include <cstring>
 
@@ -68,8 +69,10 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
         std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
 
-        /*efi_loader::console::print(u"[CPU] Preparing GDT and IDT...\n\r");
-        efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
+        efi_loader::console::print(u"[CPU] Preparing controlled execution environment structures...\n\r");
+        efi_loader::prepare_environment();
+
+        /*efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
         if (video_mode.valid) {
         efi_loader::console::print(u"[GFX] Will set video mode.\n\r");
         efi_loader::allocate_pages(video buffer size, 0x80001000);

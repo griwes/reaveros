@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "memory_map.h"
 
 namespace efi_loader
 {
-enum class cpu_manufacturer
+memory_map get_memory_map()
 {
-    intel,
-    amd,
-    unknown
-};
-
-struct cpu_capabilities
-{
-    cpu_manufacturer manufacturer = cpu_manufacturer::unknown;
-    char brand_string[48] = "Unknown CPU brand";
-};
-
-cpu_capabilities detect_cpu();
+    for (;;)
+        ;
+}
 }

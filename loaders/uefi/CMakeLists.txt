@@ -6,22 +6,24 @@ file(GLOB_RECURSE sources
     *.cpp
 )
 
+file(GLOB asm_sources
+    CONFIGURE_DEPENDS
+    *.asm
+    cpu/${REAVEROS_ARCH}/*.asm
+)
+
 set_source_files_properties(
-    crt0.asm
+    ${asm_sources}
     PROPERTIES
         LANGUAGE ASM
 )
 
-add_library(crt0 STATIC
-    crt0.asm
-)
-
 add_executable(loader-uefi-elf
+    ${asm_sources}
     ${sources}
 )
 
 target_link_libraries(loader-uefi-elf
-    crt0
     freestanding
 )
 
