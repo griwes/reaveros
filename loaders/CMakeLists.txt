@@ -25,6 +25,7 @@ if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
                 -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                 -DCMAKE_TOOLCHAIN_FILE=${REAVEROS_BINARY_DIR}/install/toolchains/${toolchain}-amd64-kernel.cmake
                 -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                -DREAVEROS_ARCH=amd64
         )
 
         reaveros_register_target(loader-uefi-amd64-${toolchain} ${toolchain} amd64 loaders uefi)

@@ -61,3 +61,27 @@ endfunction()
 function(reaveros_register_target _target)
     _reaveros_register_target_impl(${_target} "" "${ARGN}")
 endfunction()
+
+function(reaveros_add_ep_prune_target external_project)
+    ExternalProject_Add_Step(${external_project}
+        prune
+        COMMAND ${CMAKE_COMMAND} -E rm -rf <SOURCE_DIR> <BINARY_DIR>
+        EXCLUDE_FROM_MAIN TRUE
+    )
+    ExternalProject_Add_StepTargets(${external_project} prune)
+
+    add_dependencies(all-toolchains-prune
+        ${external_project}-prune
+    )
+endfunction()
+
+function(reaveros_add_ep_fetch_tag_target external_project tag)
+    ExternalProject_Add_Step(${external_project}
+        fetch-tag
+        COMMAND ${GIT_EXECUTABLE} fetch origin ${tag} --depth=1
+        WORKING_DIRECTORY <SOURCE_DIR>
+        DEPENDEES download
+        DEPENDERS update configure build
+        EXCLUDE_FROM_MAIN TRUE
+    )
+endfunction()

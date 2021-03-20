@@ -14,6 +14,8 @@ foreach (toolchain_file_in IN LISTS toolchain_files)
     )
 endforeach()
 
+add_custom_target(all-toolchains-prune)
+
 include(cmake.cmake)
 
 if ("uefi" IN_LIST REAVEROS_LOADERS)

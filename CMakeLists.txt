@@ -20,6 +20,13 @@ if (REAVEROS_USE_CACHE)
     endif()
 endif()
 
+if (NOT GIT_EXECUTABLE OR NOT GIT_VERSION_STRING)
+    find_package(Git QUIET)
+    if (NOT GIT_EXECUTABLE)
+        message(FATAL_ERROR "error: could not find git")
+    endif()
+endif()
+
 include(ExternalProject)
 
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.20)

@@ -70,6 +70,17 @@ There are also targets for the specific components of the build, for instance:
 * `library-libfreestanding-kernel-amd64-llvm`;
 * `image-uefi-efipart-amd64-llvm`.
 
+There's one more group of targets that are of note - the prune targets. All toolchain targets have an associated prune target,
+and there also exists an aggregate `all-toolchains-prune` target. Their role is to remove the source and build directories of
+a given (or all) toolchain subprojects, to reduce the build directory size; since all the toolchains install into subdirectories
+of `install/toolchains`, the source and build directories aren't needed to build all of ReaverOS targets.
+
+Do keep in mind that this means that if a version of a pruned toolchain changes, you will need to re-download the sources,
+re-configure the project, and rebuild it fully; since the compilers used by ReaverOS can (and will) take a long time to compile,
+you should be very careful of pruning a toolchain if you disabled build caching (see `REAVEROS_USE_CACHE` above), built enough
+files to have your cache evict the previous stored build results, and do not wish to possibly wait for full GCC or LLVM builds
+to finish whenever you pull the main branch.
+
 ### Running the OS (or, for now, its UEFI bootloader)
 
 This last mentioned target - `image-uefi-efipart-amd64-llvm` - will create a file containing a FAT filesystem image that includes
