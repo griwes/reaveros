@@ -60,4 +60,4 @@ reaveros_add_ep_fetch_tag_target(toolchain-llvm-binutils-extra ${REAVEROS_LLVM_B
 
 add_dependencies(toolchain-llvm-install toolchain-llvm-binutils-extra-install)
 
-reaveros_register_target(toolchain-llvm toolchains)
+reaveros_register_target(toolchain-llvm-install toolchains)
