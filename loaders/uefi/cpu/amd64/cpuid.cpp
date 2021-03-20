@@ -23,20 +23,16 @@
 
 namespace efi_loader::inline amd64
 {
-cpu_capabilities detect_intel()
+void detect_intel(cpu_capabilities & caps)
 {
-    cpu_capabilities caps;
-    console::print(u" > Intel CPU detected.\n\r");
+    console::print(u" > CPU vendor: Intel\n\r");
     caps.manufacturer = cpu_manufacturer::intel;
-    return caps;
 }
 
-cpu_capabilities detect_amd()
+void detect_amd(cpu_capabilities & caps)
 {
-    cpu_capabilities caps;
-    console::print(u" > AMD CPU detected.\n\r");
+    console::print(u" > CPU vendor: AMD\n\r");
     caps.manufacturer = cpu_manufacturer::amd;
-    return caps;
 }
 
 void detect_brand(cpu_capabilities & caps)
@@ -57,24 +53,24 @@ void detect_brand(cpu_capabilities & caps)
 
 cpu_capabilities detect_cpu()
 {
-    std::uint64_t rbx, _;
-    cpuid(0, _, rbx, _, _);
+    cpu_capabilities caps;
+    std::uint32_t ebdcx[3], _;
+    cpuid(0, _, ebdcx[0], ebdcx[2], ebdcx[1]);
 
-    auto caps = [&]() -> cpu_capabilities
+    std::string_view vendor{ reinterpret_cast<char *>(ebdcx), sizeof(ebdcx) };
+
+    if (vendor == std::string_view{ "GenuineIntel" })
     {
-        switch (rbx)
-        {
-            case 0x756e6547:
-                return detect_intel();
-
-            case 0x68747541:
-                return detect_amd();
-
-            default:
-                console::print(u" > Unknown CPU manufacturer detected.\n\r");
-                return {};
-        }
-    }();
+        detect_intel(caps);
+    }
+    else if (vendor == std::string_view{ "AuthenticAMD" })
+    {
+        detect_amd(caps);
+    }
+    else
+    {
+        console::print(u"> CPU vendor: unknown (", vendor, u")\r\n");
+    }
 
     std::uint64_t rax;
     cpuid(0x80000000, rax, _, _, _);
