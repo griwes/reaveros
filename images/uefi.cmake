@@ -31,7 +31,7 @@ function(_reaveros_add_uefi_image_target toolchain architecture)
             ${_targetfs_contents}/reaver/initrd.img
 
         COMMAND rm -f ${_targetfs_path}
-        COMMAND dd if=/dev/zero of=${_targetfs_path} bs=1474560 count=1
+        COMMAND fallocate -l 1474560 ${_targetfs_path}
         COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/dosfstools/sbin/mkfs.fat ${_targetfs_path}
         COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/mtools/bin/mcopy -os -i ${_targetfs_path} ${_targetfs_contents}/* ::/
     )
