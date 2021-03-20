@@ -65,7 +65,7 @@ endfunction()
 function(reaveros_add_ep_prune_target external_project)
     ExternalProject_Add_Step(${external_project}
         prune
-        COMMAND ${CMAKE_COMMAND} -E rm -rf <SOURCE_DIR> <BINARY_DIR>
+        COMMAND ${REAVEROS_CMAKE} -E rm -rf <SOURCE_DIR> <BINARY_DIR>
         EXCLUDE_FROM_MAIN TRUE
     )
     ExternalProject_Add_StepTargets(${external_project} prune)
