@@ -16,6 +16,7 @@
 
 #include "video_mode.h"
 #include "../config/config.h"
+#include "../cpu/halt.h"
 #include "console.h"
 #include "efi.h"
 
@@ -118,7 +119,7 @@ video_mode choose_mode(const config & cfg)
     if (x_pos == std::string_view::npos)
     {
         console::print(u"[ERR] Malformed config file detected, max-resolution does not contain an 'x'!\n\r");
-        asm volatile("cli; hlt;");
+        halt();
     }
 
     auto horizontal_config = preference.substr(0, x_pos);
@@ -154,7 +155,7 @@ video_mode choose_mode(const config & cfg)
                 u"[ERR] Malformed config file detected, the ",
                 description,
                 " max-resolution is not a valid unsigned decimal integer that fits in 32 bits!\n\r");
-            asm volatile("cli; hlt;");
+            halt();
         }
 
         return ret;
@@ -268,7 +269,7 @@ void set_mode(video_mode & mode)
 
                 default:
                     console::print(u"[ERR] Video mode with invalid pixel format chosen!\n\r");
-                    asm volatile("cli; hlt;");
+                    halt();
             }
 
             mode.info.ppl = info->pixels_per_scan_line;

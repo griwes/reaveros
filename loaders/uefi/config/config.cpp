@@ -15,6 +15,7 @@
  */
 
 #include "config.h"
+#include "../cpu/halt.h"
 #include "../efi/console.h"
 
 namespace efi_loader
@@ -45,7 +46,7 @@ std::string_view config::operator[](std::string_view key) const
         if (colon == std::string_view::npos)
         {
             console::print(u"[ERR] Malformed config file detected!\n\r");
-            asm volatile("cli; hlt");
+            halt();
         }
 
         // ...maybe, just maybe, I'll write a proper parser for this one day
@@ -57,7 +58,6 @@ std::string_view config::operator[](std::string_view key) const
     }
 
     console::print(u"[ERR] Failed to find a value for the key `", key, u"` in the config file.\n\r");
-    asm volatile("cli; hlt");
-    __builtin_unreachable();
+    halt();
 }
 }

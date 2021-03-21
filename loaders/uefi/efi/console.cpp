@@ -15,6 +15,7 @@
  */
 
 #include "console.h"
+#include "../cpu/halt.h"
 #include "efi.h"
 #include "system_table.h"
 
@@ -79,7 +80,7 @@ void console::print(std::string_view str)
     if (str.size() > 8191)
     {
         print(u"[ERR] console::print: tried to print a too long string view.\n\r");
-        asm volatile("cli; hlt");
+        halt();
     }
 
     for (auto i = 0u; i < str.size(); ++i)
