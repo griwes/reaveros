@@ -15,9 +15,9 @@
  */
 
 #include "config/config.h"
-#include "cpu/halt.h"
 #include "cpu/detection.h"
 #include "cpu/environment.h"
+#include "cpu/halt.h"
 #include "efi/console.h"
 #include "efi/efi.h"
 #include "efi/filesystem.h"
@@ -67,7 +67,8 @@ extern "C" efi_loader::EFI_STATUS efi_main(
 
         if (video_mode.valid)
         {
-            efi_loader::allocate_pages(video_mode.info.framebuffer_size, 0x80001000);
+            efi_loader::allocate_pages(
+                video_mode.info.framebuffer_size, efi_loader::EFI_MEMORY_TYPE::reaveros_backbuffer);
         }
 
         efi_loader::console::print(u"[DSK] Loading kernel and initrd...\n\r");
@@ -75,8 +76,10 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         auto initrd = efi_loader::load_file(config["initrd"]);
 
         efi_loader::console::print(u"[MEM] Allocating memory regions...\n\r");
-        auto kernel_region = efi_loader::allocate_pages(kernel.size, 0x80000000);
-        auto initrd_region = efi_loader::allocate_pages(initrd.size, 0x80000001);
+        auto kernel_region =
+            efi_loader::allocate_pages(kernel.size, efi_loader::EFI_MEMORY_TYPE::reaveros_kernel);
+        auto initrd_region =
+            efi_loader::allocate_pages(initrd.size, efi_loader::EFI_MEMORY_TYPE::reaveros_initrd);
 
         std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
         std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
