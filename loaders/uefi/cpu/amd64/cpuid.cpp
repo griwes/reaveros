@@ -15,6 +15,7 @@
  */
 
 #include <cstdint>
+#include <cstring>
 
 #include "../../efi/console.h"
 #include "cpuid.h"
@@ -37,17 +38,15 @@ void detect_amd(cpu_capabilities & caps)
 
 void detect_brand(cpu_capabilities & caps)
 {
-    auto buf = reinterpret_cast<std::uint32_t *>(caps.brand_string);
+    auto buf = caps.brand_string;
 
     for (auto i = 0x80000002; i <= 0x80000004; ++i)
     {
-        std::uint64_t registers[4];
+        std::uint32_t registers[4];
         cpuid(i, registers[0], registers[1], registers[2], registers[3]);
 
-        for (int j = 0; j < 4; ++j)
-        {
-            *buf++ = registers[j] & 0xffffffff;
-        }
+        std::memcpy(buf, registers, sizeof(registers));
+        buf += sizeof(registers);
     }
 }
 
@@ -72,9 +71,9 @@ cpu_capabilities detect_cpu()
         console::print(u"> CPU vendor: unknown (", vendor, u")\r\n");
     }
 
-    std::uint64_t rax;
-    cpuid(0x80000000, rax, _, _, _);
-    if (rax >= 0x80000004)
+    std::uint32_t eax;
+    cpuid(0x80000000, eax, _, _, _);
+    if (eax >= 0x80000004)
     {
         detect_brand(caps);
     }
