@@ -15,6 +15,7 @@
  */
 
 #include "efi.h"
+#include "../cpu/halt.h"
 #include "console.h"
 #include "system_table.h"
 #include "types.h"
@@ -201,8 +202,7 @@ void * allocate_pages(std::size_t size, std::uint32_t type)
 
         default:
             console::print(u"[ERR] Error allocating pages: ", status & ~high_bit, u".\n\r");
-            asm volatile("cli; hlt;");
-            __builtin_unreachable();
+            halt();
     }
 }
 }
@@ -221,8 +221,7 @@ void * operator new(std::size_t size)
         default:
             efi_loader::console::print(
                 u"[ERR] Error allocating memory: ", status & ~efi_loader::high_bit, u".\n\r");
-            asm volatile("cli; hlt");
-            __builtin_unreachable();
+            efi_loader::halt();
     }
 }
 
@@ -241,8 +240,7 @@ void operator delete(void * ptr) noexcept
         default:
             efi_loader::console::print(
                 u"[ERR] Error freeing memory: ", status & ~efi_loader::high_bit, u".\n\r");
-            asm volatile("cli; hlt");
-            __builtin_unreachable();
+            efi_loader::halt();
     }
 }
 

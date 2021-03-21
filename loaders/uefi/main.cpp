@@ -15,6 +15,7 @@
  */
 
 #include "config/config.h"
+#include "cpu/halt.h"
 #include "cpu/detection.h"
 #include "cpu/environment.h"
 #include "efi/console.h"
@@ -36,7 +37,7 @@ extern "C" efi_loader::EFI_STATUS efi_main(
             // need a better way to handle this
             // probably also need a crc32 check, but fuck that right now
             *(volatile std::uint64_t *)nullptr = 0xdeadbeef;
-            asm volatile("cli; hlt");
+            efi_loader::halt();
         }
 
         efi_loader::initialize(system_table, image_handle);

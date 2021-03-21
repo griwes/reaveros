@@ -17,6 +17,7 @@
 #include <cstring>
 #include <memory>
 
+#include "../cpu/halt.h"
 #include "console.h"
 #include "efi.h"
 #include "filesystem.h"
@@ -171,8 +172,7 @@ path locate_source_directory(EFI_HANDLE image_handle)
 
         default:
             console::print(u"[ERR] Unknown error happened while opening boot filesystem root.\n\r");
-            asm volatile("cli; hlt");
-            __builtin_unreachable();
+            halt();
     }
 
     return image_path / u"..";
@@ -191,8 +191,7 @@ file_buffer load_file(const path & p)
 
         default:
             console::print(u"[ERR] Failed to open `", p, "`.\n\r");
-            asm volatile("cli; hlt");
-            __builtin_unreachable();
+            halt();
     }
 
     EFI_FILE_INFO info;
@@ -206,7 +205,7 @@ file_buffer load_file(const path & p)
 
         default:
             console::print(u"[ERR] Getting file info for `", p, u"` failed: ", status & ~high_bit, u".\n\r");
-            asm volatile("cli; hlt");
+            halt();
     }
 
     std::unique_ptr<char[]> buffer = std::make_unique<char[]>(size);
@@ -221,7 +220,7 @@ file_buffer load_file(const path & p)
 
         default:
             console::print(u"[ERR] Loading file `", p, u"` failed: ", status & ~high_bit, u".\n\r");
-            asm volatile("cli; hlt");
+            halt();
     }
 
     file->close(file);
