@@ -189,13 +189,13 @@ void * open_protocol_by_guid(EFI_HANDLE handle, const EFI_GUID & guid, const cha
     return ret;
 }
 
-void * allocate_pages(std::size_t size, std::uint32_t type)
+void * allocate_pages(std::size_t size, EFI_MEMORY_TYPE type)
 {
     auto num_pages = size ? (size + 4095) / 4096 : 1;
 
     void * ret = nullptr;
     switch (auto status = system_table->boot_services->allocate_pages(
-                EFI_ALLOCATE_TYPE::allocate_any_pages, static_cast<EFI_MEMORY_TYPE>(type), num_pages, &ret))
+                EFI_ALLOCATE_TYPE::allocate_any_pages, type, num_pages, &ret))
     {
         case EFI_SUCCESS:
             return ret;

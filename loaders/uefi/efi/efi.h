@@ -96,7 +96,7 @@ inline void initialize(EFI_SYSTEM_TABLE * table, EFI_HANDLE handle)
 void * open_protocol_by_guid(EFI_HANDLE, const EFI_GUID &, const char *);
 void * open_protocol_by_guid(const EFI_GUID &, const char *);
 
-void * allocate_pages(std::size_t, std::uint32_t type);
+void * allocate_pages(std::size_t, EFI_MEMORY_TYPE type);
 }
 
 #define PROTO_GUID(PROTO) EFI_##PROTO##_PROTOCOL_GUID

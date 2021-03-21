@@ -49,7 +49,7 @@ enum class EFI_ALLOCATE_TYPE
     max_allocate_type
 };
 
-enum class EFI_MEMORY_TYPE
+enum class EFI_MEMORY_TYPE : std::uint32_t
 {
     efi_reserved_memory_type,
     efi_loader_code,
@@ -66,7 +66,11 @@ enum class EFI_MEMORY_TYPE
     efi_memory_mapped_io_port_space,
     efi_pal_code,
     efi_persistent_memory,
-    efi_max_memory_type
+    efi_max_memory_type,
+
+    reaveros_kernel = 0x80000000,
+    reaveros_initrd = 0x80000001,
+    reaveros_backbuffer = 0x80001000
 };
 
 struct EFI_TIME
