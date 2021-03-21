@@ -186,11 +186,11 @@ file_buffer load_file(const path & p)
     switch (boot_fs_root->open(boot_fs_root, &file, p.string(), EFI_FILE_MODE_READ, 0))
     {
         case EFI_SUCCESS:
-            console::print(" > Succeeded opening `", p, u"`.\n\r");
+            console::print(u" > Succeeded opening `", p, u"`.\n\r");
             break;
 
         default:
-            console::print(u"[ERR] Failed to open `", p, "`.\n\r");
+            console::print(u"[ERR] Failed to open `", p, u"`.\n\r");
             halt();
     }
 
@@ -214,7 +214,6 @@ file_buffer load_file(const path & p)
     switch (auto status = file->read(file, &size, buffer.get()))
     {
         case EFI_SUCCESS:
-            buffer[size] = '\0';
             console::print(u" > File `", p, u"` loaded.\n\r");
             break;
 

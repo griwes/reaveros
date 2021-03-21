@@ -209,7 +209,10 @@ void * allocate_pages(std::size_t size, std::uint32_t type)
 
 void * operator new(std::size_t size)
 {
-    size = size ? size : 1;
+    if (size == 0)
+    {
+        return reinterpret_cast<void *>(~0ull);
+    }
 
     void * ret = nullptr;
     switch (auto status = efi_loader::system_table->boot_services->allocate_pool(
@@ -232,6 +235,11 @@ void * operator new[](std::size_t size)
 
 void operator delete(void * ptr) noexcept
 {
+    if (ptr == reinterpret_cast<void *>(~0ull))
+    {
+        return;
+    }
+
     switch (auto status = efi_loader::system_table->boot_services->free_pool(ptr))
     {
         case efi_loader::EFI_SUCCESS:
