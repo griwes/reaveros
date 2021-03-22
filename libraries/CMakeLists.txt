@@ -26,7 +26,7 @@ function(_reaveros_libraries_add_library directory mode architecture toolchain)
             -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     )
 
-    reaveros_register_target(${library_name} ${toolchain} ${architecture} ${mode} libraries)
+    reaveros_register_target(${library_name}-install ${toolchain} ${architecture} ${mode} libraries)
 endfunction()
 
 file(GLOB directories RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)

@@ -23,7 +23,7 @@ dependencies are:
 On a recent apt-based systems, the following command should fulfill the dependencies:
 
 ```
-apt install build-essential cmake git python3 bison flex libssl-dev
+apt install build-essential automake cmake git python3 bison flex libssl-dev
 ```
 
 ### Build considerations

@@ -16,21 +16,21 @@ function(_reaveros_add_uefi_image_target toolchain architecture)
             # there isn't anything useful for this to do quite yet
             ${REAVEROS_SOURCE_DIR}/loaders/uefi/config/reaveros.conf
 
-        COMMAND ${REAVEROS_CMAKE} -E rm -rf ${_targetfs_contents}
-        COMMAND ${REAVEROS_CMAKE} -E make_directory ${_targetfs_contents}
-        COMMAND ${REAVEROS_CMAKE} -E copy
+        COMMAND rm -rf ${_targetfs_contents}
+        COMMAND mkdir -p ${_targetfs_contents}
+        COMMAND cp
             ${REAVEROS_BINARY_DIR}/install/loaders/uefi-${architecture}-${toolchain}/loader-uefi
             ${_targetfs_contents}/EFI/BOOT/BOOTX64.EFI
-        COMMAND ${REAVEROS_CMAKE} -E copy
+        COMMAND cp
             ${REAVEROS_SOURCE_DIR}/loaders/uefi/config/reaveros.conf
             ${_targetfs_contents}/EFI/BOOT/reaveros.conf
 
-        COMMAND ${REAVEROS_CMAKE} -E make_directory ${_targetfs_contents}/reaver
-        COMMAND ${REAVEROS_CMAKE} -E
-            touch ${_targetfs_contents}/reaver/kernel.img
-            touch ${_targetfs_contents}/reaver/initrd.img
+        COMMAND mkdir -p ${_targetfs_contents}/reaver
+        COMMAND touch
+            ${_targetfs_contents}/reaver/kernel.img
+            ${_targetfs_contents}/reaver/initrd.img
 
-        COMMAND ${REAVEROS_CMAKE} -E rm -f ${_targetfs_path}
+        COMMAND rm -f ${_targetfs_path}
         COMMAND dd if=/dev/zero of=${_targetfs_path} bs=1474560 count=1
         COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/dosfstools/sbin/mkfs.fat ${_targetfs_path}
         COMMAND ${REAVEROS_BINARY_DIR}/install/toolchains/mtools/bin/mcopy -os -i ${_targetfs_path} ${_targetfs_contents}/* ::/

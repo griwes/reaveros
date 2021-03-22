@@ -28,7 +28,7 @@ if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
                 -DREAVEROS_ARCH=amd64
         )
 
-        reaveros_register_target(loader-uefi-amd64-${toolchain} ${toolchain} amd64 loaders uefi)
+        reaveros_register_target(loader-uefi-amd64-${toolchain}-install ${toolchain} amd64 loaders uefi)
     endforeach()
 endif()
 
