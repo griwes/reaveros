@@ -65,8 +65,10 @@ endfunction()
 function(reaveros_add_ep_prune_target external_project)
     ExternalProject_Add_Step(${external_project}
         prune
-        COMMAND ${REAVEROS_CMAKE} -E rm -rf <SOURCE_DIR> <BINARY_DIR>
+        COMMAND rm -rf <SOURCE_DIR> <BINARY_DIR>
+        DEPENDERS mkdir download
         EXCLUDE_FROM_MAIN TRUE
+        INDEPENDENT TRUE
     )
     ExternalProject_Add_StepTargets(${external_project} prune)
 
@@ -83,5 +85,6 @@ function(reaveros_add_ep_fetch_tag_target external_project tag)
         DEPENDEES download
         DEPENDERS update configure build
         EXCLUDE_FROM_MAIN TRUE
+        INDEPENDENT TRUE
     )
 endfunction()

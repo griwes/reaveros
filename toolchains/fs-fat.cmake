@@ -31,7 +31,7 @@ ExternalProject_Add(toolchain-mtools
 
     INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchains/mtools
 
-    ${_REAVEROS_CONFIGURE_HANDLED_BY_BUIL}
+    ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
 
     CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
         "CC=${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}"

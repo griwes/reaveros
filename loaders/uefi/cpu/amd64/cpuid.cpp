@@ -60,7 +60,8 @@ cpu_capabilities detect_cpu()
     std::uint64_t rbx, _;
     cpuid(0, _, rbx, _, _);
 
-    auto caps = [&]() -> cpu_capabilities {
+    auto caps = [&]() -> cpu_capabilities
+    {
         switch (rbx)
         {
             case 0x756e6547:
