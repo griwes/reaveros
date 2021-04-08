@@ -63,10 +63,29 @@ function(reaveros_register_target _target)
 endfunction()
 
 function(reaveros_add_ep_prune_target external_project)
+    ExternalProject_Get_Property(${external_project} STAMP_DIR)
+
+    get_property(has_git_tag TARGET ${external_project} PROPERTY _EP_GIT_TAG SET)
+    if (has_git_tag)
+        get_property(GIT_TAG TARGET ${external_project} PROPERTY _EP_GIT_TAG)
+        file(GLOB force_download_stamps ${STAMP_DIR}/${external_project}-force-download-*)
+        list(REMOVE_ITEM force_download_stamps ${STAMP_DIR}/${external_project}-force-download-${GIT_TAG})
+    endif()
+
+    set(_commands
+        COMMAND rm -rf <SOURCE_DIR> <BINARY_DIR>
+        COMMAND rm -rf ${force_download_stamps}
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt
+        COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
+        COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-configure
+        COMMAND touch ${STAMP_DIR}/${external_project}-build
+        COMMAND touch ${STAMP_DIR}/${external_project}-install
+    )
+
     ExternalProject_Add_Step(${external_project}
         prune
-        COMMAND rm -rf <SOURCE_DIR> <BINARY_DIR>
-        DEPENDERS mkdir download
+        ${_commands}
         EXCLUDE_FROM_MAIN TRUE
         INDEPENDENT TRUE
     )
@@ -77,14 +96,50 @@ function(reaveros_add_ep_prune_target external_project)
     )
 endfunction()
 
-function(reaveros_add_ep_fetch_tag_target external_project tag)
+function(reaveros_add_ep_fetch_tag_target external_project)
+    ExternalProject_Get_Property(${external_project} STAMP_DIR GIT_TAG)
+
     ExternalProject_Add_Step(${external_project}
-        fetch-tag
-        COMMAND ${GIT_EXECUTABLE} fetch origin ${tag} --depth=1
+        set-to-tag
+        COMMAND ${GIT_EXECUTABLE} fetch origin ${GIT_TAG} --depth=1
+        COMMAND ${GIT_EXECUTABLE} checkout ${GIT_TAG}
         WORKING_DIRECTORY <SOURCE_DIR>
         DEPENDEES download
         DEPENDERS update configure build
         EXCLUDE_FROM_MAIN TRUE
         INDEPENDENT TRUE
     )
+
+    file(GLOB force_download_stamps ${STAMP_DIR}/${external_project}-force-download-*)
+    list(REMOVE_ITEM force_download_stamps ${STAMP_DIR}/${external_project}-force-download-${GIT_TAG})
+
+    ExternalProject_Add_Step(${external_project}
+        force-download-${GIT_TAG}
+        COMMAND rm -rf ${force_download_stamps}
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-mkdir
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-download
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-configure
+        DEPENDERS mkdir download update set-to-tag prune
+        EXCLUDE_FROM_MAIN TRUE
+        INDEPENDENT TRUE
+    )
+
+    add_custom_command(TARGET ${external_project}
+        COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
+        COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-configure
+        COMMAND touch ${STAMP_DIR}/${external_project}-build
+        COMMAND touch ${STAMP_DIR}/${external_project}-install
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-prune
+    )
+    add_custom_command(TARGET ${external_project}-install
+        COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
+        COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-configure
+        COMMAND touch ${STAMP_DIR}/${external_project}-build
+        COMMAND touch ${STAMP_DIR}/${external_project}-install
+        COMMAND rm -rf ${STAMP_DIR}/${external_project}-prune
+    )
 endfunction()
+

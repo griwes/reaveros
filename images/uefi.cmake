@@ -17,7 +17,7 @@ function(_reaveros_add_uefi_image_target toolchain architecture)
             ${REAVEROS_SOURCE_DIR}/loaders/uefi/config/reaveros.conf
 
         COMMAND rm -rf ${_targetfs_contents}
-        COMMAND mkdir -p ${_targetfs_contents}
+        COMMAND mkdir -p ${_targetfs_contents}/EFI/BOOT
         COMMAND cp
             ${REAVEROS_BINARY_DIR}/install/loaders/uefi-${architecture}-${toolchain}/loader-uefi
             ${_targetfs_contents}/EFI/BOOT/BOOTX64.EFI

@@ -1,4 +1,4 @@
-set(REAVEROS_CMAKE_TAG v3.20.0-rc5)
+set(REAVEROS_CMAKE_TAG v3.20.0)
 ExternalProject_Add(toolchain-cmake
     GIT_REPOSITORY https://github.com/Kitware/CMake
     GIT_TAG ${REAVEROS_CMAKE_TAG}
@@ -18,6 +18,6 @@ ExternalProject_Add(toolchain-cmake
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
 )
 reaveros_add_ep_prune_target(toolchain-cmake)
-reaveros_add_ep_fetch_tag_target(toolchain-cmake ${REAVEROS_CMAKE_TAG})
+reaveros_add_ep_fetch_tag_target(toolchain-cmake)
 
 reaveros_register_target(toolchain-cmake-install toolchains)
