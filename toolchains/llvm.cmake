@@ -7,7 +7,7 @@ ExternalProject_Add(toolchain-llvm
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
 
-    STEP_TARGETS install
+    STEP_TARGETS configure install
 
     DEPENDS toolchain-cmake-install
 
@@ -33,7 +33,7 @@ ExternalProject_Add(toolchain-llvm
         -DLLVM_INCLUDE_EXAMPLES=OFF
 )
 reaveros_add_ep_prune_target(toolchain-llvm)
-reaveros_add_ep_fetch_tag_target(toolchain-llvm ${REAVEROS_LLVM_TAG})
+reaveros_add_ep_fetch_tag_target(toolchain-llvm)
 
 set(REAVEROS_LLVM_BINUTILS_EXTRA_TAG binutils-2_36_1)
 ExternalProject_Add(toolchain-llvm-binutils-extra
@@ -56,7 +56,7 @@ ExternalProject_Add(toolchain-llvm-binutils-extra
     INSTALL_COMMAND $(MAKE) MAKEINFO=true install
 )
 reaveros_add_ep_prune_target(toolchain-llvm-binutils-extra)
-reaveros_add_ep_fetch_tag_target(toolchain-llvm-binutils-extra ${REAVEROS_LLVM_BINUTILS_EXTRA_TAG})
+reaveros_add_ep_fetch_tag_target(toolchain-llvm-binutils-extra)
 
 add_dependencies(toolchain-llvm-install toolchain-llvm-binutils-extra-install)
 
