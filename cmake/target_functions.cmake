@@ -72,6 +72,11 @@ function(reaveros_add_ep_prune_target external_project)
         list(REMOVE_ITEM force_download_stamps ${STAMP_DIR}/${external_project}-force-download-${GIT_TAG})
     endif()
 
+    file(TOUCH ${STAMP_DIR}/${external_project}-skip-update)
+    file(TOUCH ${STAMP_DIR}/${external_project}-configure)
+    file(TOUCH ${STAMP_DIR}/${external_project}-build)
+    file(TOUCH ${STAMP_DIR}/${external_project}-install)
+
     set(_commands
         COMMAND rm -rf <SOURCE_DIR> <BINARY_DIR>
         COMMAND rm -rf ${force_download_stamps}
