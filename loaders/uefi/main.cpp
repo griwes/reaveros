@@ -58,6 +58,17 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         efi_loader::console::print(u"[GFX] Choosing video mode...\n\r");
         auto video_mode = efi_loader::choose_mode(config);
 
+        if (video_mode.valid)
+        {
+            efi_loader::console::print(u"[GFX] Setting video mode...\n\r");
+            efi_loader::set_mode(video_mode);
+        }
+
+        if (video_mode.valid)
+        {
+            efi_loader::allocate_pages(video_mode.info.framebuffer_size, 0x80001000);
+        }
+
         efi_loader::console::print(u"[DSK] Loading kernel and initrd...\n\r");
         auto kernel = efi_loader::load_file(config["kernel"]);
         auto initrd = efi_loader::load_file(config["initrd"]);
