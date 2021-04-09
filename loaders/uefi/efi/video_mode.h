@@ -23,11 +23,38 @@ namespace efi_loader
 {
 struct config;
 
+enum class pixel_format
+{
+    rgb,
+    bgr,
+    mask
+};
+
+struct pixel_format_masks
+{
+    std::uint32_t red;
+    std::uint32_t green;
+    std::uint32_t blue;
+};
+
+struct kernel_video_mode
+{
+    std::uintptr_t framebuffer_base;
+    std::size_t framebuffer_size;
+    std::uint32_t x;
+    std::uint32_t y;
+    std::uint32_t ppl;
+    pixel_format format;
+    pixel_format_masks masks;
+};
+
 struct video_mode
 {
     bool valid = false;
     std::uint32_t mode_number;
+    kernel_video_mode info;
 };
 
 video_mode choose_mode(const config & cfg);
+void set_mode(video_mode & mode);
 }

@@ -124,7 +124,8 @@ video_mode choose_mode(const config & cfg)
     auto horizontal_config = preference.substr(0, x_pos);
     auto vertical_config = preference.substr(x_pos + 1);
 
-    auto parse_int = [](std::string_view input, auto && description) {
+    auto parse_int = [](std::string_view input, auto && description)
+    {
         bool failed = false;
 
         std::uint32_t ret = 0;
@@ -234,5 +235,58 @@ video_mode choose_mode(const config & cfg)
     delete info;
 
     return { true, preferred_index };
+}
+
+void set_mode(video_mode & mode)
+{
+    switch (auto status = proto->set_mode(proto, mode.mode_number))
+    {
+        case EFI_SUCCESS:
+        {
+            auto efi_mode = proto->mode;
+            auto info = efi_mode->info;
+
+            mode.info.framebuffer_base = efi_mode->frame_buffer_base;
+            mode.info.framebuffer_size = efi_mode->frame_buffer_size;
+
+            switch (info->pixel_format)
+            {
+                case EFI_GRAPHICS_PIXEL_FORMAT::pixel_red_green_blue_reserved_8bit_per_color:
+                    mode.info.format = pixel_format::rgb;
+                    break;
+
+                case EFI_GRAPHICS_PIXEL_FORMAT::pixel_blue_green_red_reserved_8bit_per_color:
+                    mode.info.format = pixel_format::bgr;
+                    break;
+
+                case EFI_GRAPHICS_PIXEL_FORMAT::pixel_bit_mask:
+                    mode.info.format = pixel_format::mask;
+                    mode.info.masks.red = info->pixel_information.red_mask;
+                    mode.info.masks.green = info->pixel_information.green_mask;
+                    mode.info.masks.blue = info->pixel_information.blue_mask;
+                    break;
+
+                default:
+                    console::print(u"[ERR] Video mode with invalid pixel format chosen!\n\r");
+                    asm volatile("cli; hlt;");
+            }
+
+            mode.info.ppl = info->pixels_per_scan_line;
+            mode.info.x = info->horizontal_resolution;
+            mode.info.y = info->vertical_resolution;
+
+            console::print(
+                u" > Framebuffer base: ", reinterpret_cast<void *>(mode.info.framebuffer_base), u"\n\r");
+            console::print(u" > Framebuffer size: ", mode.info.framebuffer_size, u"\n\r");
+            console::print(u" > Framebuffer pixels per line: ", mode.info.ppl, u"\n\r");
+
+            return;
+        }
+
+        default:
+            console::print(u" > Failed to set video mode: ", status, u".\r\n");
+            mode.valid = false;
+            return;
+    }
 }
 }
