@@ -107,6 +107,11 @@ using pml4_t = pmlt<4>;
 
 pml4_t * pml4;
 
+std::uintptr_t get_cr3_value()
+{
+    return reinterpret_cast<std::uintptr_t>(pml4);
+}
+
 void prepare_paging()
 {
     pml4 = new pml4_t{};

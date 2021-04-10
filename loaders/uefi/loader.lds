@@ -67,4 +67,5 @@ SECTIONS
     *(.note.GNU-stack)
   }
   .comment 0 : { *(.comment) }
+  image_end = .;
 }
