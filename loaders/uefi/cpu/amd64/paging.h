@@ -26,6 +26,8 @@ void vm_map(void * phys, std::size_t size, std::uintptr_t virt);
 void vm_map_large(void * phys, std::size_t size, std::uintptr_t virt);
 void vm_map_huge(void * phys, std::size_t size, std::uintptr_t virt);
 
+std::uintptr_t get_cr3_value();
+
 inline constexpr auto kernel_base = 0xffffffff80000000;
 inline constexpr auto physmem_base = 0xffff800000000000;
 }

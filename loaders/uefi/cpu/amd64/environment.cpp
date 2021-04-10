@@ -15,10 +15,16 @@
  */
 
 #include "environment.h"
+#include "paging.h"
+
+extern "C" void load_gdt();
 
 namespace efi_loader::inline amd64
 {
 void prepare_environment()
 {
+    asm volatile("cli;" ::: "memory");
+    load_gdt();
+    asm volatile("movq %0, %%cr3;" ::"r"(get_cr3_value()) : "memory");
 }
 }

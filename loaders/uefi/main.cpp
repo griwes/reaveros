@@ -27,6 +27,9 @@
 
 #include <cstring>
 
+extern "C" char image_base[];
+extern "C" char image_end[];
+
 extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::EFI_HANDLE image_handle,
     efi_loader::EFI_SYSTEM_TABLE * system_table)
@@ -92,6 +95,16 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
         efi_loader::prepare_paging();
 
+        efi_loader::console::print(u" > Identity mapping the loader code...\n\r");
+        efi_loader::vm_map(image_base, image_end - image_base, reinterpret_cast<std::uintptr_t>(image_base));
+
+        efi_loader::console::print(u" > Identity mapping the loader stack...\n\r");
+        auto approximately_stack = reinterpret_cast<std::uint8_t *>(&image_handle);
+        efi_loader::vm_map(
+            approximately_stack - 16 * 4096,
+            17 * 4096,
+            reinterpret_cast<std::uintptr_t>(approximately_stack - 16 * 4096));
+
         efi_loader::console::print(
             u" > Mapping the kernel at ", reinterpret_cast<void *>(efi_loader::kernel_base), u"...\n\r");
         efi_loader::vm_map(kernel_region, kernel.size, efi_loader::kernel_base);
@@ -118,11 +131,9 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::console::print(u"[EFI] Loader done, giving up boot services and invoking kernel.\n\r");
 
     efi_loader::exit_boot_services(memmap);
-
-    *(volatile std::uint64_t *)nullptr = 0xdeadc0de;
-    efi_loader::halt();
-
     efi_loader::prepare_environment();
+
+    efi_loader::halt();
 
     using kernel_entry_t = void (*)(std::size_t, std::uintptr_t);
     auto kernel_entry = reinterpret_cast<kernel_entry_t>(efi_loader::kernel_base);
