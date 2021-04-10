@@ -13,3 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#ifdef __amd64__
+#include "amd64/paging.h"
+#else
+#error unknown architecture
+#endif

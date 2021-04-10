@@ -6,6 +6,12 @@ file(GLOB_RECURSE sources
     *.cpp
 )
 
+set_source_files_properties(
+    ${sources}
+    PROPERTIES
+        COMPILE_FLAGS "-DHAVE_USE_MS_ABI -fshort-wchar"
+)
+
 file(GLOB asm_sources
     CONFIGURE_DEPENDS
     *.asm
@@ -16,6 +22,7 @@ set_source_files_properties(
     ${asm_sources}
     PROPERTIES
         LANGUAGE ASM
+        COMPILE_FLAGS -integrated-as
 )
 
 add_executable(loader-uefi-elf
@@ -31,7 +38,6 @@ set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/loader.lds)
 
 set_target_properties(loader-uefi-elf
     PROPERTIES
-        COMPILE_FLAGS "-DHAVE_USE_MS_ABI -fshort-wchar"
         LINK_FLAGS "-T ${linker_script} -Bsymbolic"
         LINK_DEPENDS ${linker_script}
 )

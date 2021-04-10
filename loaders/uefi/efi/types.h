@@ -70,7 +70,9 @@ enum class EFI_MEMORY_TYPE : std::uint32_t
 
     reaveros_kernel = 0x80000000,
     reaveros_initrd = 0x80000001,
-    reaveros_backbuffer = 0x80001000
+    reaveros_paging = 0x80000002,
+    reaveros_memory_map = 0x80000003,
+    reaveros_backbuffer = 0x80001000,
 };
 
 struct EFI_TIME
@@ -86,5 +88,14 @@ struct EFI_TIME
     std::int16_t time_zone;   // -1440 to 1440 or 2047
     std::uint8_t daylight;
     std::uint8_t pad2;
+};
+
+struct EFI_MEMORY_DESCRIPTOR
+{
+    EFI_MEMORY_TYPE type;
+    std::uintptr_t physical_start;
+    std::uintptr_t virtual_start;
+    std::uint64_t number_of_pages;
+    std::uint64_t attributes;
 };
 }

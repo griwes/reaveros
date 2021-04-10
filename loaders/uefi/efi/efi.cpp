@@ -32,7 +32,12 @@ using EFI_ALLOCATE_PAGES = EFIAPI EFI_STATUS (*)(EFI_ALLOCATE_TYPE, EFI_MEMORY_T
 
 using EFI_FREE_PAGES = void (*)();
 
-using EFI_GET_MEMORY_MAP = void (*)();
+using EFI_GET_MEMORY_MAP = EFIAPI EFI_STATUS (*)(
+    std::size_t *,
+    EFI_MEMORY_DESCRIPTOR *,
+    std::size_t *,
+    std::size_t *,
+    std::uint32_t *);
 
 using EFI_ALLOCATE_POOL = EFIAPI EFI_STATUS (*)(EFI_MEMORY_TYPE, std::size_t, void **);
 
@@ -56,7 +61,9 @@ using EFI_IMAGE_LOAD = void (*)();
 using EFI_IMAGE_START = void (*)();
 using EFI_EXIT = void (*)();
 using EFI_IMAGE_UNLOAD = void (*)();
-using EFI_EXIT_BOOT_SERVICES = void (*)();
+
+using EFI_EXIT_BOOT_SERVICES = EFIAPI EFI_STATUS (*)(EFI_HANDLE, std::size_t);
+
 using EFI_GET_NEXT_MONOTONIC_COUNT = void (*)();
 using EFI_STALL = void (*)();
 using EFI_SET_WATCHDOG_TIMER = void (*)();
@@ -204,6 +211,156 @@ void * allocate_pages(std::size_t size, EFI_MEMORY_TYPE type)
             console::print(u"[ERR] Error allocating pages: ", status & ~high_bit, u".\n\r");
             halt();
     }
+}
+
+memory_map get_memory_map()
+{
+    std::size_t size = 0;
+    std::size_t descriptor_size = 0;
+    std::uint32_t descriptor_version = 0;
+
+    switch (auto status = system_table->boot_services->get_memory_map(
+                &size, nullptr, nullptr, &descriptor_size, &descriptor_version))
+    {
+        case EFI_BUFFER_TOO_SMALL:
+            break;
+
+        default:
+            console::print(u"[ERR] Error getting memory map size: ", status & ~high_bit, u".\n\r");
+            halt();
+    }
+
+    size /= descriptor_size;
+
+    console::print(
+        u" > Detected memory map descriptor version ",
+        descriptor_version,
+        u", size: ",
+        descriptor_size,
+        u".\n\r");
+    console::print(u" > Memory map size prior to map buffer allocation: ", size, u".\n\r");
+
+    // Amortize for the allocations we are about to make.
+    size += 5;
+
+    memory_map map;
+
+    map.efi_entry_size = descriptor_size;
+    map.efi_entries =
+        reinterpret_cast<char *>(allocate_pages(descriptor_size * size, EFI_MEMORY_TYPE::efi_loader_data));
+    map.entries = reinterpret_cast<kernel_memory_map_entry *>(
+        allocate_pages(sizeof(kernel_memory_map_entry) * size, EFI_MEMORY_TYPE::reaveros_memory_map));
+
+    size *= descriptor_size;
+
+    switch (auto status = system_table->boot_services->get_memory_map(
+                &size, map.get_efi_entry(0), &map.key, &descriptor_size, &descriptor_version))
+    {
+        case EFI_SUCCESS:
+            break;
+
+        default:
+            console::print(u"[ERR] Error getting the memory map: ", status & ~high_bit, u".\n\r");
+            halt();
+    }
+
+    size /= descriptor_size;
+
+    map.size = size;
+
+    console::print(u" > Actual size: ", size, u".\n\r");
+
+    for (auto i = 0ull; i < size; ++i)
+    {
+        auto & efi_entry = *map.get_efi_entry(i);
+        auto & entry = map.entries[i];
+
+        entry.physical_start = efi_entry.physical_start;
+        entry.length = efi_entry.number_of_pages * 4096;
+        entry.attributes = 0; // TODO; forward attributes once needed
+
+        switch (efi_entry.type)
+        {
+            case EFI_MEMORY_TYPE::efi_reserved_memory_type:
+                entry.type = kernel_memory_type::unusable;
+                break;
+            case EFI_MEMORY_TYPE::efi_loader_code:
+                entry.type = kernel_memory_type::loader;
+                break;
+            case EFI_MEMORY_TYPE::efi_loader_data:
+                entry.type = kernel_memory_type::loader;
+                break;
+            case EFI_MEMORY_TYPE::efi_boot_services_code:
+                entry.type = kernel_memory_type::free;
+                break;
+            case EFI_MEMORY_TYPE::efi_boot_services_data:
+                entry.type = kernel_memory_type::free;
+                break;
+            case EFI_MEMORY_TYPE::efi_runtime_services_code:
+                entry.type = kernel_memory_type::preserve;
+                break;
+            case EFI_MEMORY_TYPE::efi_runtime_services_data:
+                entry.type = kernel_memory_type::preserve;
+                break;
+            case EFI_MEMORY_TYPE::efi_conventional_memory:
+                entry.type = kernel_memory_type::free;
+                break;
+            case EFI_MEMORY_TYPE::efi_unusable_memory:
+                entry.type = kernel_memory_type::unusable;
+                break;
+            case EFI_MEMORY_TYPE::efi_acpi_reclaim_memory:
+                entry.type = kernel_memory_type::acpi_reclaimable;
+                break;
+            case EFI_MEMORY_TYPE::efi_acpi_memory_nvs:
+                entry.type = kernel_memory_type::preserve;
+                break;
+            case EFI_MEMORY_TYPE::efi_memory_mapped_io:
+                entry.type = kernel_memory_type::unusable;
+                break;
+            case EFI_MEMORY_TYPE::efi_memory_mapped_io_port_space:
+                entry.type = kernel_memory_type::unusable;
+                break;
+            case EFI_MEMORY_TYPE::efi_pal_code:
+                entry.type = kernel_memory_type::preserve;
+                break;
+            case EFI_MEMORY_TYPE::efi_persistent_memory:
+                entry.type = kernel_memory_type::persistent;
+                break;
+
+            case EFI_MEMORY_TYPE::reaveros_kernel:
+                entry.type = kernel_memory_type::kernel;
+                break;
+            case EFI_MEMORY_TYPE::reaveros_initrd:
+                entry.type = kernel_memory_type::initrd;
+                break;
+            case EFI_MEMORY_TYPE::reaveros_paging:
+                entry.type = kernel_memory_type::paging;
+                break;
+            case EFI_MEMORY_TYPE::reaveros_memory_map:
+                entry.type = kernel_memory_type::memory_map;
+                break;
+            case EFI_MEMORY_TYPE::reaveros_backbuffer:
+                entry.type = kernel_memory_type::backbuffer;
+                break;
+
+            default:
+                entry.type = kernel_memory_type::unusable;
+                console::print(
+                    "[WRN] Unknown memory type found for entry at ",
+                    reinterpret_cast<void *>(efi_entry.physical_start),
+                    u": ",
+                    static_cast<std::uint32_t>(efi_entry.type),
+                    u", marking as unusable.\n\r");
+                break;
+        }
+    }
+
+    return map;
+}
+
+void exit_boot_services(const memory_map & map)
+{
+    system_table->boot_services->exit_boot_services(image_handle, map.key);
 }
 }
 

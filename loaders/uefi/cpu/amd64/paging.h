@@ -13,3 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+
+namespace efi_loader::inline amd64
+{
+void prepare_paging();
+void vm_map(void * phys, std::size_t size, std::uintptr_t virt);
+void vm_map_large(void * phys, std::size_t size, std::uintptr_t virt);
+void vm_map_huge(void * phys, std::size_t size, std::uintptr_t virt);
+
+inline constexpr auto kernel_base = 0xffffffff80000000;
+inline constexpr auto physmem_base = 0xffff800000000000;
+}
