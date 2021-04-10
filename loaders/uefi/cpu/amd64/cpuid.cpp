@@ -71,14 +71,38 @@ cpu_capabilities detect_cpu()
         console::print(u"> CPU vendor: unknown (", vendor, u")\r\n");
     }
 
-    std::uint32_t eax;
+    std::uint32_t eax, edx;
     cpuid(0x80000000, eax, _, _, _);
-    if (eax >= 0x80000004)
+
+    auto max_supported = eax;
+
+    if (max_supported >= 0x80000004)
     {
         detect_brand(caps);
     }
 
     console::print(u" > CPU brand string: ", caps.brand_string, u"\n\r");
+
+    if (max_supported >= 0x80000001)
+    {
+        cpuid(0x80000001, _, _, _, edx);
+        caps.huge_pages_supported = edx & (1 << 26);
+    }
+
+    console::print(u" > Huge pages supported? ", caps.huge_pages_supported ? u"yes" : u"no", u".\n\r");
+
+    if (max_supported >= 0x80000008)
+    {
+        cpuid(0x80000008, eax, _, _, _);
+        caps.physical_address_bits = eax & 0xff;
+    }
+    else
+    {
+        // TODO: should this be asserted? Can this branch ever be taken per the spec?
+        caps.physical_address_bits = 36;
+    }
+
+    console::print(u" > CPU physical address bits: ", caps.physical_address_bits, u".\n\r");
 
     return caps;
 }

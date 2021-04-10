@@ -39,7 +39,7 @@ struct pixel_format_masks
 
 struct kernel_video_mode
 {
-    std::uintptr_t framebuffer_base;
+    void * framebuffer_base;
     std::size_t framebuffer_size;
     std::uint32_t x;
     std::uint32_t y;

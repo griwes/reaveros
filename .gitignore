@@ -7,3 +7,4 @@ tools
 *.ELF
 build
 compile_flags.txt
+tags

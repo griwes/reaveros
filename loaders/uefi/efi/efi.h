@@ -97,6 +97,48 @@ void * open_protocol_by_guid(EFI_HANDLE, const EFI_GUID &, const char *);
 void * open_protocol_by_guid(const EFI_GUID &, const char *);
 
 void * allocate_pages(std::size_t, EFI_MEMORY_TYPE type);
+void deallocate_pages(void *, std::size_t);
+
+enum class kernel_memory_type : std::uint32_t
+{
+    unusable,
+    free,
+    loader,
+    preserve,
+    acpi_reclaimable,
+    persistent,
+
+    kernel = 0x80000000,
+    initrd = 0x80000001,
+    paging = 0x80000002,
+    memory_map = 0x80000003,
+    backbuffer = 0x80001000
+};
+
+struct kernel_memory_map_entry
+{
+    std::uintptr_t physical_start;
+    std::size_t length;
+    kernel_memory_type type;
+    std::uint32_t attributes;
+};
+
+struct memory_map
+{
+    std::size_t key;
+    std::size_t size;
+    std::uint32_t efi_entry_size;
+    char * efi_entries;
+    kernel_memory_map_entry * entries;
+
+    EFI_MEMORY_DESCRIPTOR * get_efi_entry(std::size_t index)
+    {
+        return reinterpret_cast<EFI_MEMORY_DESCRIPTOR *>(efi_entries + efi_entry_size * index);
+    }
+};
+
+memory_map get_memory_map();
+void exit_boot_services(const memory_map &);
 }
 
 #define PROTO_GUID(PROTO) EFI_##PROTO##_PROTOCOL_GUID

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace efi_loader::inline amd64
 {
 enum class cpu_manufacturer
@@ -29,6 +31,8 @@ struct cpu_capabilities
 {
     cpu_manufacturer manufacturer = cpu_manufacturer::unknown;
     char brand_string[48] = "Unknown CPU brand";
+    std::uint64_t huge_pages_supported : 1 = 0;
+    std::uint8_t physical_address_bits = 0;
 };
 
 cpu_capabilities detect_cpu();

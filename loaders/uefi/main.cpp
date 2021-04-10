@@ -18,10 +18,10 @@
 #include "cpu/detection.h"
 #include "cpu/environment.h"
 #include "cpu/halt.h"
+#include "cpu/paging.h"
 #include "efi/console.h"
 #include "efi/efi.h"
 #include "efi/filesystem.h"
-#include "efi/memory_map.h"
 #include "efi/system_table.h"
 #include "efi/video_mode.h"
 
@@ -65,9 +65,11 @@ extern "C" efi_loader::EFI_STATUS efi_main(
             efi_loader::set_mode(video_mode);
         }
 
+        void * backbuffer_region = nullptr;
+
         if (video_mode.valid)
         {
-            efi_loader::allocate_pages(
+            backbuffer_region = efi_loader::allocate_pages(
                 video_mode.info.framebuffer_size, efi_loader::EFI_MEMORY_TYPE::reaveros_backbuffer);
         }
 
@@ -84,19 +86,47 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
         std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
 
-        efi_loader::console::print(u"[CPU] Preparing controlled execution environment structures...\n\r");
-        efi_loader::prepare_environment();
+        efi_loader::console::print(u" > Kernel physical address: ", kernel_region, u"\n\r");
+        efi_loader::console::print(u" > Initrd physical address: ", initrd_region, u"\n\r");
 
-        /*efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
-        if (video_mode.valid) {
-        efi_loader::console::print(u"[GFX] Will set video mode.\n\r");
-        efi_loader::allocate_pages(video buffer size, 0x80001000);
-        }*/
+        efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
+        efi_loader::prepare_paging();
+
+        efi_loader::console::print(
+            u" > Mapping the kernel at ", reinterpret_cast<void *>(efi_loader::kernel_base), u"...\n\r");
+        efi_loader::vm_map(kernel_region, kernel.size, efi_loader::kernel_base);
+
+        efi_loader::console::print(
+            u" > Mapping supported physical address space at ",
+            reinterpret_cast<void *>(efi_loader::physmem_base),
+            u"...\n\r");
+        if (cpu_caps.huge_pages_supported)
+        {
+            efi_loader::vm_map_huge(
+                nullptr, 1ull << cpu_caps.physical_address_bits, efi_loader::physmem_base);
+        }
+        else
+        {
+            efi_loader::vm_map_large(
+                nullptr, 1ull << cpu_caps.physical_address_bits, efi_loader::physmem_base);
+        }
     }
-    /*efi_loader::console::print(
-        u"[EFI] Bootloader done. Giving up EFI boot services and invoking the kernel.\n\r");*/
+
+    efi_loader::console::print(u"[EFI] Retrieving the memory map...\n\r");
+    auto memmap = efi_loader::get_memory_map();
+
+    efi_loader::console::print(u"[EFI] Loader done, giving up boot services and invoking kernel.\n\r");
+
+    efi_loader::exit_boot_services(memmap);
 
     *(volatile std::uint64_t *)nullptr = 0xdeadc0de;
-    for (;;)
-        ;
+    efi_loader::halt();
+
+    efi_loader::prepare_environment();
+
+    using kernel_entry_t = void (*)(std::size_t, std::uintptr_t);
+    auto kernel_entry = reinterpret_cast<kernel_entry_t>(efi_loader::kernel_base);
+    kernel_entry(memmap.size, efi_loader::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
+
+    __builtin_unreachable();
 }

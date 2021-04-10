@@ -247,7 +247,7 @@ void set_mode(video_mode & mode)
             auto efi_mode = proto->mode;
             auto info = efi_mode->info;
 
-            mode.info.framebuffer_base = efi_mode->frame_buffer_base;
+            mode.info.framebuffer_base = reinterpret_cast<void *>(efi_mode->frame_buffer_base);
             mode.info.framebuffer_size = efi_mode->frame_buffer_size;
 
             switch (info->pixel_format)
