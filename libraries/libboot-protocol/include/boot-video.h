@@ -16,22 +16,33 @@
 
 #pragma once
 
-#include <boot-video.h>
-
 #include <cstddef>
 #include <cstdint>
 
-namespace efi_loader
+namespace boot_protocol
 {
-struct config;
+enum class pixel_format
+{
+    rgb,
+    bgr,
+    mask
+};
+
+struct pixel_format_masks
+{
+    std::uint32_t red;
+    std::uint32_t green;
+    std::uint32_t blue;
+};
 
 struct video_mode
 {
-    bool valid = false;
-    std::uint32_t mode_number;
-    boot_protocol::video_mode info;
+    void * framebuffer_base;
+    std::size_t framebuffer_size;
+    std::uint32_t x;
+    std::uint32_t y;
+    std::uint32_t ppl;
+    pixel_format format;
+    pixel_format_masks masks;
 };
-
-video_mode choose_mode(const config & cfg);
-void set_mode(video_mode & mode);
 }

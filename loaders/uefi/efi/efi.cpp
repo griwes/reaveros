@@ -248,8 +248,8 @@ memory_map get_memory_map()
     map.efi_entry_size = descriptor_size;
     map.efi_entries =
         reinterpret_cast<char *>(allocate_pages(descriptor_size * size, EFI_MEMORY_TYPE::efi_loader_data));
-    map.entries = reinterpret_cast<kernel_memory_map_entry *>(
-        allocate_pages(sizeof(kernel_memory_map_entry) * size, EFI_MEMORY_TYPE::reaveros_memory_map));
+    map.entries = reinterpret_cast<boot_protocol::memory_map_entry *>(
+        allocate_pages(sizeof(boot_protocol::memory_map_entry) * size, EFI_MEMORY_TYPE::reaveros_memory_map));
 
     size *= descriptor_size;
 
@@ -282,69 +282,69 @@ memory_map get_memory_map()
         switch (efi_entry.type)
         {
             case EFI_MEMORY_TYPE::efi_reserved_memory_type:
-                entry.type = kernel_memory_type::unusable;
+                entry.type = boot_protocol::memory_type::unusable;
                 break;
             case EFI_MEMORY_TYPE::efi_loader_code:
-                entry.type = kernel_memory_type::loader;
+                entry.type = boot_protocol::memory_type::loader;
                 break;
             case EFI_MEMORY_TYPE::efi_loader_data:
-                entry.type = kernel_memory_type::loader;
+                entry.type = boot_protocol::memory_type::loader;
                 break;
             case EFI_MEMORY_TYPE::efi_boot_services_code:
-                entry.type = kernel_memory_type::free;
+                entry.type = boot_protocol::memory_type::free;
                 break;
             case EFI_MEMORY_TYPE::efi_boot_services_data:
-                entry.type = kernel_memory_type::free;
+                entry.type = boot_protocol::memory_type::free;
                 break;
             case EFI_MEMORY_TYPE::efi_runtime_services_code:
-                entry.type = kernel_memory_type::preserve;
+                entry.type = boot_protocol::memory_type::preserve;
                 break;
             case EFI_MEMORY_TYPE::efi_runtime_services_data:
-                entry.type = kernel_memory_type::preserve;
+                entry.type = boot_protocol::memory_type::preserve;
                 break;
             case EFI_MEMORY_TYPE::efi_conventional_memory:
-                entry.type = kernel_memory_type::free;
+                entry.type = boot_protocol::memory_type::free;
                 break;
             case EFI_MEMORY_TYPE::efi_unusable_memory:
-                entry.type = kernel_memory_type::unusable;
+                entry.type = boot_protocol::memory_type::unusable;
                 break;
             case EFI_MEMORY_TYPE::efi_acpi_reclaim_memory:
-                entry.type = kernel_memory_type::acpi_reclaimable;
+                entry.type = boot_protocol::memory_type::acpi_reclaimable;
                 break;
             case EFI_MEMORY_TYPE::efi_acpi_memory_nvs:
-                entry.type = kernel_memory_type::preserve;
+                entry.type = boot_protocol::memory_type::preserve;
                 break;
             case EFI_MEMORY_TYPE::efi_memory_mapped_io:
-                entry.type = kernel_memory_type::unusable;
+                entry.type = boot_protocol::memory_type::unusable;
                 break;
             case EFI_MEMORY_TYPE::efi_memory_mapped_io_port_space:
-                entry.type = kernel_memory_type::unusable;
+                entry.type = boot_protocol::memory_type::unusable;
                 break;
             case EFI_MEMORY_TYPE::efi_pal_code:
-                entry.type = kernel_memory_type::preserve;
+                entry.type = boot_protocol::memory_type::preserve;
                 break;
             case EFI_MEMORY_TYPE::efi_persistent_memory:
-                entry.type = kernel_memory_type::persistent;
+                entry.type = boot_protocol::memory_type::persistent;
                 break;
 
             case EFI_MEMORY_TYPE::reaveros_kernel:
-                entry.type = kernel_memory_type::kernel;
+                entry.type = boot_protocol::memory_type::kernel;
                 break;
             case EFI_MEMORY_TYPE::reaveros_initrd:
-                entry.type = kernel_memory_type::initrd;
+                entry.type = boot_protocol::memory_type::initrd;
                 break;
             case EFI_MEMORY_TYPE::reaveros_paging:
-                entry.type = kernel_memory_type::paging;
+                entry.type = boot_protocol::memory_type::paging;
                 break;
             case EFI_MEMORY_TYPE::reaveros_memory_map:
-                entry.type = kernel_memory_type::memory_map;
+                entry.type = boot_protocol::memory_type::memory_map;
                 break;
             case EFI_MEMORY_TYPE::reaveros_backbuffer:
-                entry.type = kernel_memory_type::backbuffer;
+                entry.type = boot_protocol::memory_type::backbuffer;
                 break;
 
             default:
-                entry.type = kernel_memory_type::unusable;
+                entry.type = boot_protocol::memory_type::unusable;
                 console::print(
                     "[WRN] Unknown memory type found for entry at ",
                     reinterpret_cast<void *>(efi_entry.physical_start),

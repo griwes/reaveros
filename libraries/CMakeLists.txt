@@ -29,12 +29,19 @@ function(_reaveros_libraries_add_library directory mode architecture toolchain)
     reaveros_register_target(${library_name}-install ${toolchain} ${architecture} ${mode} libraries)
 endfunction()
 
-file(GLOB directories RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *)
+set(kernel_libraries
+    libfreestanding
+    libboot-protocol
+)
+
+set(user_libraries
+    libfreestanding
+)
 
 foreach (toolchain IN LISTS REAVEROS_TOOLCHAINS)
     foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
-        foreach (directory IN LISTS directories)
-            foreach (mode IN ITEMS kernel user)
+        foreach (mode IN ITEMS kernel user)
+            foreach (directory IN LISTS ${mode}_libraries)
                 if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${directory})
                     _reaveros_libraries_add_library(
                         ${directory}

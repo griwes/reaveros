@@ -253,15 +253,15 @@ void set_mode(video_mode & mode)
             switch (info->pixel_format)
             {
                 case EFI_GRAPHICS_PIXEL_FORMAT::pixel_red_green_blue_reserved_8bit_per_color:
-                    mode.info.format = pixel_format::rgb;
+                    mode.info.format = boot_protocol::pixel_format::rgb;
                     break;
 
                 case EFI_GRAPHICS_PIXEL_FORMAT::pixel_blue_green_red_reserved_8bit_per_color:
-                    mode.info.format = pixel_format::bgr;
+                    mode.info.format = boot_protocol::pixel_format::bgr;
                     break;
 
                 case EFI_GRAPHICS_PIXEL_FORMAT::pixel_bit_mask:
-                    mode.info.format = pixel_format::mask;
+                    mode.info.format = boot_protocol::pixel_format::mask;
                     mode.info.masks.red = info->pixel_information.red_mask;
                     mode.info.masks.green = info->pixel_information.green_mask;
                     mode.info.masks.blue = info->pixel_information.blue_mask;
