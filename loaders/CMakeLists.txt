@@ -11,7 +11,7 @@ if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
 
             STEP_TARGETS install
 
-            DEPENDS toolchain-llvm-install all-${toolchain}-amd64-kernel-libraries
+            DEPENDS toolchain-${toolchain}-install all-${toolchain}-amd64-kernel-libraries
 
             INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/loaders/uefi-amd64-${toolchain}
 

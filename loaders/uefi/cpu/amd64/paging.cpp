@@ -130,6 +130,10 @@ template<int I, int Lowest>
 
     /*
     console::print(
+        I,
+        u"/",
+        Lowest,
+        u": ",
         reinterpret_cast<void *>(virt_start),
         u"-",
         reinterpret_cast<void *>(virt_end),
@@ -143,7 +147,8 @@ template<int I, int Lowest>
     while (virt_start < virt_end)
     {
         auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
-        entry_virt_end = entry_virt_end < virt_end ? entry_virt_end : virt_end;
+        entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
+        //                                 ^ this is a protection against overflow on highest addresses
 
         if constexpr (I == Lowest)
         {

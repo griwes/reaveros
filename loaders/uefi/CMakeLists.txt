@@ -38,7 +38,7 @@ set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/loader.lds)
 
 set_target_properties(loader-uefi-elf
     PROPERTIES
-        LINK_FLAGS "-T ${linker_script} -Bsymbolic"
+        LINK_FLAGS "-T ${linker_script} -Bsymbolic -Map=loader.map --pie"
         LINK_DEPENDS ${linker_script}
 )
 
