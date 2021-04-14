@@ -16,22 +16,12 @@
 
 #pragma once
 
-#include <boot-video.h>
-
-#include <cstddef>
-#include <cstdint>
-
-namespace efi_loader
+namespace boot_protocol
 {
-struct config;
-
-struct video_mode
-{
-    bool valid = false;
-    std::uint32_t mode_number;
-    boot_protocol::video_mode info;
-};
-
-video_mode choose_mode(const config & cfg);
-void set_mode(video_mode & mode);
+#ifdef __amd64__
+inline constexpr auto kernel_base = 0xffffffff80000000;
+inline constexpr auto physmem_base = 0xffff800000000000;
+#else
+#error unknown architecture
+#endif
 }

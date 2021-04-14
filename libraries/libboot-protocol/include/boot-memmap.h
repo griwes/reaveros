@@ -16,22 +16,32 @@
 
 #pragma once
 
-#include <boot-video.h>
-
 #include <cstddef>
 #include <cstdint>
 
-namespace efi_loader
+namespace boot_protocol
 {
-struct config;
+enum class memory_type : std::uint32_t
+{
+    unusable,
+    free,
+    loader,
+    preserve,
+    acpi_reclaimable,
+    persistent,
 
-struct video_mode
-{
-    bool valid = false;
-    std::uint32_t mode_number;
-    boot_protocol::video_mode info;
+    kernel,
+    initrd,
+    paging,
+    memory_map,
+    backbuffer
 };
 
-video_mode choose_mode(const config & cfg);
-void set_mode(video_mode & mode);
+struct memory_map_entry
+{
+    std::uintptr_t physical_start;
+    std::size_t length;
+    memory_type type;
+    std::uint32_t attributes;
+};
 }

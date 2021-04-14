@@ -25,6 +25,8 @@
 #include "efi/system_table.h"
 #include "efi/video_mode.h"
 
+#include <boot-constants.h>
+
 #include <cstring>
 
 extern "C" char image_base[];
@@ -106,22 +108,22 @@ extern "C" efi_loader::EFI_STATUS efi_main(
             reinterpret_cast<std::uintptr_t>(approximately_stack - 2 * 4096));
 
         efi_loader::console::print(
-            u" > Mapping the kernel at ", reinterpret_cast<void *>(efi_loader::kernel_base), u"...\n\r");
-        efi_loader::vm_map(kernel_region, kernel.size, efi_loader::kernel_base);
+            u" > Mapping the kernel at ", reinterpret_cast<void *>(boot_protocol::kernel_base), u"...\n\r");
+        efi_loader::vm_map(kernel_region, kernel.size, boot_protocol::kernel_base);
 
         efi_loader::console::print(
             u" > Mapping supported physical address space at ",
-            reinterpret_cast<void *>(efi_loader::physmem_base),
+            reinterpret_cast<void *>(boot_protocol::physmem_base),
             u"...\n\r");
         if (cpu_caps.huge_pages_supported)
         {
             efi_loader::vm_map_huge(
-                nullptr, 1ull << cpu_caps.physical_address_bits, efi_loader::physmem_base);
+                nullptr, 1ull << cpu_caps.physical_address_bits, boot_protocol::physmem_base);
         }
         else
         {
             efi_loader::vm_map_large(
-                nullptr, 1ull << cpu_caps.physical_address_bits, efi_loader::physmem_base);
+                nullptr, 1ull << cpu_caps.physical_address_bits, boot_protocol::physmem_base);
         }
     }
 
@@ -134,8 +136,8 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::prepare_environment();
 
     using kernel_entry_t = void (*)(std::size_t, std::uintptr_t);
-    auto kernel_entry = reinterpret_cast<kernel_entry_t>(efi_loader::kernel_base);
-    kernel_entry(memmap.size, efi_loader::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
+    auto kernel_entry = reinterpret_cast<kernel_entry_t>(boot_protocol::kernel_base);
+    kernel_entry(memmap.size, boot_protocol::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
 
     __builtin_unreachable();
 }
