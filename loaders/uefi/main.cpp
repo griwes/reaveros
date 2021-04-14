@@ -101,9 +101,9 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         efi_loader::console::print(u" > Identity mapping the loader stack...\n\r");
         auto approximately_stack = reinterpret_cast<std::uint8_t *>(&image_handle);
         efi_loader::vm_map(
-            approximately_stack - 16 * 4096,
-            17 * 4096,
-            reinterpret_cast<std::uintptr_t>(approximately_stack - 16 * 4096));
+            approximately_stack - 2 * 4096,
+            3 * 4096,
+            reinterpret_cast<std::uintptr_t>(approximately_stack - 2 * 4096));
 
         efi_loader::console::print(
             u" > Mapping the kernel at ", reinterpret_cast<void *>(efi_loader::kernel_base), u"...\n\r");
@@ -132,8 +132,6 @@ extern "C" efi_loader::EFI_STATUS efi_main(
 
     efi_loader::exit_boot_services(memmap);
     efi_loader::prepare_environment();
-
-    efi_loader::halt();
 
     using kernel_entry_t = void (*)(std::size_t, std::uintptr_t);
     auto kernel_entry = reinterpret_cast<kernel_entry_t>(efi_loader::kernel_base);

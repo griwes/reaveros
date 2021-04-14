@@ -17,7 +17,7 @@ set(CMAKE_ASM_FLAGS "-masm=intel")
 set(CMAKE_C_COMPILER ${tools}/clang)
 set(CMAKE_C_COMPILER_TARGET ${triple})
 set(CMAKE_C_FLAGS "-nostdlib")
-set(CMAKE_C_COMPILE_FLAGS "-fPIC -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-redzone")
+set(CMAKE_C_COMPILE_FLAGS "-fPIC -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone")
 
 set(CMAKE_C_COMPILE_OBJECT
     "<CMAKE_C_COMPILER> ${CMAKE_C_COMPILE_FLAGS} <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>"
