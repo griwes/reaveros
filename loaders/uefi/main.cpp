@@ -36,6 +36,8 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::EFI_HANDLE image_handle,
     efi_loader::EFI_SYSTEM_TABLE * system_table)
 {
+    efi_loader::video_mode video_mode;
+
     {
         if (system_table->header.signature != efi_loader::EFI_SYSTEM_TABLE_SIGNATURE)
         {
@@ -62,7 +64,7 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         auto config = efi_loader::config{ efi_loader::load_file(source_directory / u"reaveros.conf") };
 
         efi_loader::console::print(u"[GFX] Choosing video mode...\n\r");
-        auto video_mode = efi_loader::choose_mode(config);
+        video_mode = efi_loader::choose_mode(config);
 
         if (video_mode.valid)
         {
@@ -135,9 +137,13 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::exit_boot_services(memmap);
     efi_loader::prepare_environment();
 
-    using kernel_entry_t = void (*)(std::size_t, std::uintptr_t);
+    auto memmap_entries_remapped = reinterpret_cast<boot_protocol::memory_map_entry *>(
+        boot_protocol::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
+
+    using kernel_entry_t =
+        void (*)(std::size_t, boot_protocol::memory_map_entry *, bool, boot_protocol::video_mode *);
     auto kernel_entry = reinterpret_cast<kernel_entry_t>(boot_protocol::kernel_base);
-    kernel_entry(memmap.size, boot_protocol::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
+    kernel_entry(memmap.size, memmap_entries_remapped, video_mode.valid, &video_mode.info);
 
     __builtin_unreachable();
 }
