@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#include <boot-constants.h>
+#include <boot-memmap.h>
+#include <boot-video.h>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -31,7 +35,41 @@ void __init()
 
 [[gnu::section(".reaveros_entry")]] extern "C" void kernel_main(
     std::size_t memmap_size,
-    std::uintptr_t memmap_entries)
+    boot_protocol::memory_map_entry * memmap_entries,
+    bool has_video_mode,
+    boot_protocol::video_mode * video_mode)
 {
-    asm volatile("cli; hlt;");
+    /*
+    kernel::log::initialize();
+    if (has_video_mode)
+    {
+        kernel::screen::initialize(video_mode);
+    }
+
+    std::println("ReaverOS: Reaver Project Operating System, \"Rose\"");
+    std::println("Version: 0.0.1 dev; Release #1 \"Cotyledon\", built on {} at {}", __DATE__, , __TIME__);
+    std::println("Copyright © 2021 Reaver Project Team");
+    std::println("");
+
+    kernel::pmm::initialize(memmap_size, memmap_entries);
+    kernel::vas::initialize();
+
+    kernel::pmm::boot_report();
+
+    kernel::cpu::initialize();
+
+    kernel::scheduler::initialize();
+
+    // find initrd
+    // find the boot init file in the initrd
+    // clone the VAS
+    // map the boot init file in the clone
+    // map the initrd in the clone
+    // jump to userspace at the boot init address
+    */
+
+    while (true)
+    {
+        asm volatile("hlt");
+    }
 }
