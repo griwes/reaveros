@@ -46,7 +46,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/loader-uefi
     DEPENDS loader-uefi-elf
 
     COMMAND
-        ${CMAKE_OBJCOPY} -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64
+        ${BINUTILS_OBJCOPY} -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64
             $<TARGET_FILE:loader-uefi-elf>
             ${CMAKE_BINARY_DIR}/loader-uefi
 )

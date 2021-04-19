@@ -342,6 +342,9 @@ memory_map get_memory_map()
             case EFI_MEMORY_TYPE::reaveros_backbuffer:
                 entry.type = boot_protocol::memory_type::backbuffer;
                 break;
+            case EFI_MEMORY_TYPE::reaveros_log_buffer:
+                entry.type = boot_protocol::memory_type::log_buffer;
+                break;
 
             default:
                 entry.type = boot_protocol::memory_type::unusable;

@@ -1,0 +1,157 @@
+/*
+ * Copyright © 2021 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "compare"
+#include "type_traits"
+
+namespace std
+{
+class error_category;
+const error_category & generic_category() noexcept;
+const error_category & system_category() noexcept;
+
+class error_code;
+class error_condition;
+class system_error;
+
+template<class _T>
+struct is_error_code_enum : public false_type
+{
+};
+
+template<class _T>
+struct is_error_condition_enum : public false_type
+{
+};
+
+enum class errc
+{
+    address_family_not_supported = 1,   // EAFNOSUPPORT
+    address_in_use,                     // EADDRINUSE
+    address_not_available,              // EADDRNOTAVAIL
+    already_connected,                  // EISCONN
+    argument_list_too_long,             // E2BIG
+    argument_out_of_domain,             // EDOM
+    bad_address,                        // EFAULT
+    bad_file_descriptor,                // EBADF
+    bad_message,                        // EBADMSG
+    broken_pipe,                        // EPIPE
+    connection_aborted,                 // ECONNABORTED
+    connection_already_in_progress,     // EALREADY
+    connection_refused,                 // ECONNREFUSED
+    connection_reset,                   // ECONNRESET
+    cross_device_link,                  // EXDEV
+    destination_address_required,       // EDESTADDRREQ
+    device_or_resource_busy,            // EBUSY
+    directory_not_empty,                // ENOTEMPTY
+    executable_format_error,            // ENOEXEC
+    file_exists,                        // EEXIST
+    file_too_large,                     // EFBIG
+    filename_too_long,                  // ENAMETOOLONG
+    function_not_supported,             // ENOSYS
+    host_unreachable,                   // EHOSTUNREACH
+    identifier_removed,                 // EIDRM
+    illegal_byte_sequence,              // EILSEQ
+    inappropriate_io_control_operation, // ENOTTY
+    interrupted,                        // EINTR
+    invalid_argument,                   // EINVAL
+    invalid_seek,                       // ESPIPE
+    io_error,                           // EIO
+    is_a_directory,                     // EISDIR
+    message_size,                       // EMSGSIZE
+    network_down,                       // ENETDOWN
+    network_reset,                      // ENETRESET
+    network_unreachable,                // ENETUNREACH
+    no_buffer_space,                    // ENOBUFS
+    no_child_process,                   // ECHILD
+    no_link,                            // ENOLINK
+    no_lock_available,                  // ENOLCK
+    no_message_available,               // ENODATA
+    no_message,                         // ENOMSG
+    no_protocol_option,                 // ENOPROTOOPT
+    no_space_on_device,                 // ENOSPC
+    no_stream_resources,                // ENOSR
+    no_such_device_or_address,          // ENXIO
+    no_such_device,                     // ENODEV
+    no_such_file_or_directory,          // ENOENT
+    no_such_process,                    // ESRCH
+    not_a_directory,                    // ENOTDIR
+    not_a_socket,                       // ENOTSOCK
+    not_a_stream,                       // ENOSTR
+    not_connected,                      // ENOTCONN
+    not_enough_memory,                  // ENOMEM
+    not_supported,                      // ENOTSUP
+    operation_canceled,                 // ECANCELED
+    operation_in_progress,              // EINPROGRESS
+    operation_not_permitted,            // EPERM
+    operation_not_supported,            // EOPNOTSUPP
+    operation_would_block,              // EWOULDBLOCK
+    owner_dead,                         // EOWNERDEAD
+    permission_denied,                  // EACCES
+    protocol_error,                     // EPROTO
+    protocol_not_supported,             // EPROTONOSUPPORT
+    read_only_file_system,              // EROFS
+    resource_deadlock_would_occur,      // EDEADLK
+    resource_unavailable_try_again,     // EAGAIN
+    result_out_of_range,                // ERANGE
+    state_not_recoverable,              // ENOTRECOVERABLE
+    stream_timeout,                     // ETIME
+    text_file_busy,                     // ETXTBSY
+    timed_out,                          // ETIMEDOUT
+    too_many_files_open_in_system,      // ENFILE
+    too_many_files_open,                // EMFILE
+    too_many_links,                     // EMLINK
+    too_many_symbolic_link_levels,      // ELOOP
+    value_too_large,                    // EOVERFLOW
+    wrong_protocol_type,                // EPROTOTYPE
+};
+
+template<>
+struct is_error_condition_enum<errc> : true_type
+{
+};
+
+error_code make_error_code(errc __e) noexcept;
+
+/*
+template<class charT, class traits>
+basic_ostream<charT, traits> & operator<<(basic_ostream<charT, traits> & os, const error_code & ec);
+*/
+
+error_condition make_error_condition(errc __e) noexcept;
+
+bool operator==(const error_code & __lhs, const error_code & __rhs) noexcept;
+bool operator==(const error_code & __lhs, const error_condition & __rhs) noexcept;
+bool operator==(const error_condition & __lhs, const error_condition & __rhs) noexcept;
+strong_ordering operator<=>(const error_code & __lhs, const error_code & __rhs) noexcept;
+strong_ordering operator<=>(const error_condition & __lhs, const error_condition & __rhs) noexcept;
+
+template<class _T>
+struct hash;
+template<>
+struct hash<error_code>;
+template<>
+struct hash<error_condition>;
+
+template<class _T>
+inline constexpr bool is_error_code_enum_v = is_error_code_enum<_T>::value;
+template<class _T>
+inline constexpr bool is_error_condition_enum_v = is_error_condition_enum<_T>::value;
+}
+
+// vim: ft=cpp

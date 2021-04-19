@@ -1,0 +1,207 @@
+/*
+ * Copyright © 2021 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "cstddef"
+
+namespace std
+{
+enum class __ord
+{
+    __equal = 0,
+    __equivalent = __equal,
+    __less = -1,
+    __greater = 1
+};
+
+enum class __ncmp
+{
+    __unordered = -127
+};
+
+class partial_ordering
+{
+    int __value;
+    bool __is_ordered;
+
+    constexpr explicit partial_ordering(__ord __v) noexcept : __value(int(__v)), __is_ordered(true)
+    {
+    }
+
+    constexpr explicit partial_ordering(__ncmp __v) noexcept : __value(int(__v)), __is_ordered(false)
+    {
+    }
+
+public:
+    static const partial_ordering less;
+    static const partial_ordering equivalent;
+    static const partial_ordering greater;
+    static const partial_ordering unordered;
+
+    friend constexpr bool operator==(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator==(partial_ordering __v, partial_ordering __w) noexcept = default;
+    friend constexpr bool operator<(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<=(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>=(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<(nullptr_t, partial_ordering __v) noexcept;
+    friend constexpr bool operator>(nullptr_t, partial_ordering __v) noexcept;
+    friend constexpr bool operator<=(nullptr_t, partial_ordering __v) noexcept;
+    friend constexpr bool operator>=(nullptr_t, partial_ordering __v) noexcept;
+    friend constexpr partial_ordering operator<=>(partial_ordering __v, nullptr_t) noexcept;
+    friend constexpr partial_ordering operator<=>(nullptr_t, partial_ordering __v) noexcept;
+};
+
+inline constexpr partial_ordering partial_ordering::less(__ord::__less);
+inline constexpr partial_ordering partial_ordering::equivalent(__ord::__equivalent);
+inline constexpr partial_ordering partial_ordering::greater(__ord::__greater);
+inline constexpr partial_ordering partial_ordering::unordered(__ncmp::__unordered);
+
+class weak_ordering
+{
+    int __value;
+
+    constexpr explicit weak_ordering(__ord __v) noexcept : __value(int(__v))
+    {
+    }
+
+public:
+    static const weak_ordering less;
+    static const weak_ordering equivalent;
+    static const weak_ordering greater;
+
+    constexpr operator partial_ordering() const noexcept;
+
+    friend constexpr bool operator==(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator==(weak_ordering __v, weak_ordering __w) noexcept = default;
+    friend constexpr bool operator<(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<=(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>=(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<(nullptr_t, weak_ordering __v) noexcept;
+    friend constexpr bool operator>(nullptr_t, weak_ordering __v) noexcept;
+    friend constexpr bool operator<=(nullptr_t, weak_ordering __v) noexcept;
+    friend constexpr bool operator>=(nullptr_t, weak_ordering __v) noexcept;
+    friend constexpr weak_ordering operator<=>(weak_ordering __v, nullptr_t) noexcept;
+    friend constexpr weak_ordering operator<=>(nullptr_t, weak_ordering __v) noexcept;
+};
+
+inline constexpr weak_ordering weak_ordering::less(__ord::__less);
+inline constexpr weak_ordering weak_ordering::equivalent(__ord::__equivalent);
+inline constexpr weak_ordering weak_ordering::greater(__ord::__greater);
+
+class strong_ordering
+{
+    int __value;
+
+    constexpr explicit strong_ordering(__ord __v) noexcept : __value(int(__v))
+    {
+    }
+
+public:
+    static const strong_ordering less;
+    static const strong_ordering equal;
+    static const strong_ordering equivalent;
+    static const strong_ordering greater;
+
+    constexpr operator partial_ordering() const noexcept;
+    constexpr operator weak_ordering() const noexcept;
+
+    friend constexpr bool operator==(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator==(strong_ordering __v, strong_ordering __w) noexcept = default;
+    friend constexpr bool operator<(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<=(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator>=(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr bool operator<(nullptr_t, strong_ordering __v) noexcept;
+    friend constexpr bool operator>(nullptr_t, strong_ordering __v) noexcept;
+    friend constexpr bool operator<=(nullptr_t, strong_ordering __v) noexcept;
+    friend constexpr bool operator>=(nullptr_t, strong_ordering __v) noexcept;
+    friend constexpr strong_ordering operator<=>(strong_ordering __v, nullptr_t) noexcept;
+    friend constexpr strong_ordering operator<=>(nullptr_t, strong_ordering __v) noexcept;
+};
+
+inline constexpr strong_ordering strong_ordering::less(__ord::__less);
+inline constexpr strong_ordering strong_ordering::equal(__ord::__equal);
+inline constexpr strong_ordering strong_ordering::equivalent(__ord::__equivalent);
+inline constexpr strong_ordering strong_ordering::greater(__ord::__greater);
+
+/*
+constexpr bool is_eq(partial_ordering __cmp) noexcept
+{
+    return __cmp == 0;
+}
+
+constexpr bool is_neq(partial_ordering __cmp) noexcept
+{
+    return __cmp != 0;
+}
+
+constexpr bool is_lt(partial_ordering __cmp) noexcept
+{
+    return __cmp < 0;
+}
+
+constexpr bool is_lteq(partial_ordering __cmp) noexcept
+{
+    return __cmp <= 0;
+}
+
+constexpr bool is_gt(partial_ordering __cmp) noexcept
+{
+    return __cmp > 0;
+}
+
+constexpr bool is_gteq(partial_ordering __cmp) noexcept
+{
+    return __cmp >= 0;
+}
+
+template<class... _Ts>
+struct common_comparison_category
+{
+    using type = see below;
+};
+template<class... _Ts>
+using common_comparison_category_t = typename common_comparison_category<_Ts...>::type;
+
+template<class _T, class _Cat = partial_ordering>
+concept three_way_comparable = see below;
+template<class _T, class _U, class _Cat = partial_ordering>
+concept three_way_comparable_with = see below;
+
+template<class _T, class _U = _T>
+struct compare_three_way_result;
+
+template<class _T, class _U = _T>
+using compare_three_way_result_t = typename compare_three_way_result<_T, _U>::type;
+
+struct compare_three_way;
+
+inline namespace unspecified
+{
+    inline constexpr unspecified strong_order = unspecified;
+    inline constexpr unspecified weak_order = unspecified;
+    inline constexpr unspecified partial_order = unspecified;
+    inline constexpr unspecified compare_strong_order_fallback = unspecified;
+    inline constexpr unspecified compare_weak_order_fallback = unspecified;
+    inline constexpr unspecified compare_partial_order_fallback = unspecified;
+}
+*/
+}
+
+// vim: ft=cpp

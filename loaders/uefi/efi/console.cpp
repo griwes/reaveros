@@ -103,7 +103,7 @@ void console::print(void * ptr)
 
     for (auto idx = 0; idx < 16; ++idx)
     {
-        buffer[idx + 2] = u"0123456789ABCDEF"[(iptr >> ((15 - idx) * 4)) & 0xF];
+        buffer[idx + 2] = u"0123456789abcdef"[(iptr >> ((15 - idx) * 4)) & 0xF];
     }
     buffer[18] = u'\0';
 

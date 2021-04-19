@@ -72,6 +72,7 @@ enum class EFI_MEMORY_TYPE : std::uint32_t
     reaveros_initrd = 0x80000001,
     reaveros_paging = 0x80000002,
     reaveros_memory_map = 0x80000003,
+    reaveros_log_buffer = 0x80000004,
     reaveros_backbuffer = 0x80001000,
 };
 
