@@ -30,11 +30,12 @@ enum class memory_type : std::uint32_t
     acpi_reclaimable,
     persistent,
 
-    kernel,
-    initrd,
-    paging,
-    memory_map,
-    backbuffer
+    kernel,     // must be present exactly once
+    initrd,     // must be present exactly once
+    paging,     // may be present an arbitrary number of times
+    memory_map, // must be present exactly once
+    backbuffer, // must be present exactly once if video mode information is passed to the kernel
+    log_buffer  // must be present exactly once and be exactly 2MiB in size
 };
 
 struct memory_map_entry
@@ -44,4 +45,20 @@ struct memory_map_entry
     memory_type type;
     std::uint32_t attributes;
 };
+
+inline memory_map_entry * find_entry(
+    std::size_t memmap_size,
+    memory_map_entry * memmap,
+    boot_protocol::memory_type type)
+{
+    for (auto i = 0ull; i < memmap_size; ++i)
+    {
+        if (memmap[i].type == type)
+        {
+            return memmap + i;
+        }
+    }
+
+    return nullptr;
+}
 }

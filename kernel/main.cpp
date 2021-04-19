@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include "boot/screen.h"
+#include "util/log.h"
+
 #include <boot-constants.h>
 #include <boot-memmap.h>
 #include <boot-video.h>
@@ -39,18 +42,20 @@ void __init()
     bool has_video_mode,
     boot_protocol::video_mode * video_mode)
 {
-    /*
-    kernel::log::initialize();
+    kernel::log::initialize(memmap_size, memmap_entries);
+
     if (has_video_mode)
     {
-        kernel::screen::initialize(video_mode);
+        kernel::boot_screen::initialize(video_mode, memmap_size, memmap_entries);
     }
 
-    std::println("ReaverOS: Reaver Project Operating System, \"Rose\"");
-    std::println("Version: 0.0.1 dev; Release #1 \"Cotyledon\", built on {} at {}", __DATE__, , __TIME__);
-    std::println("Copyright © 2021 Reaver Project Team");
-    std::println("");
+    kernel::log::println("ReaverOS: Reaver Project Operating System, \"Rose\"");
+    kernel::log::println(
+        "Version: 0.0.5 dev; Release #1 \"Cotyledon\", built on {} at {}", __DATE__, __TIME__);
+    kernel::log::println("Copyright (C) 2021 Reaver Project Team");
+    kernel::log::println("");
 
+    /*
     kernel::pmm::initialize(memmap_size, memmap_entries);
     kernel::vas::initialize();
 

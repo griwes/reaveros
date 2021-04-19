@@ -5,10 +5,14 @@ set(includes
     cstring
     cwchar
 
+    charconv
+    compare
     concepts
+    format
     iterator
     memory
     string_view
+    system_error
     type_traits
     utility
 

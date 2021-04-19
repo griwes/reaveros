@@ -13,19 +13,12 @@ SECTIONS
         *(.gnu.linkonce.t*)
     }
 
-    .init :
-    {
-        KEEP(*(.init))
-    }
-
     .rodata : ALIGN (0x1000)
     {
         *(.rodata*)
         *(.gnu.linkonce.r*)
-    }
+        KEEP(*(.init))
 
-    .init_array : ALIGN (0x1000)
-    {
         __start_ctors = .;
         KEEP(*(SORT(.init_array.*)))
         KEEP(*(.ctors .init_array))
@@ -37,14 +30,11 @@ SECTIONS
         *(.data)
         *(.gnu.linkonce.d*)
 
+        . = ALIGN (0x1000);
         *(COMMON)
         *(.bss)
         *(.gnu.linkonce.b*)
     }
-
-    __begin_scratch_space = .;
-    . = . + 4 * 1024 * 1024;
-    __end_scratch_space = .;
 
     /DISCARD/ :
     {

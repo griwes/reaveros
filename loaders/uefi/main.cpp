@@ -89,12 +89,15 @@ extern "C" efi_loader::EFI_STATUS efi_main(
             efi_loader::allocate_pages(kernel.size, efi_loader::EFI_MEMORY_TYPE::reaveros_kernel);
         auto initrd_region =
             efi_loader::allocate_pages(initrd.size, efi_loader::EFI_MEMORY_TYPE::reaveros_initrd);
-
-        std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
-        std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
+        auto early_log_buffer =
+            efi_loader::allocate_pages(2 * 1024 * 1024, efi_loader::EFI_MEMORY_TYPE::reaveros_log_buffer);
 
         efi_loader::console::print(u" > Kernel physical address: ", kernel_region, u"\n\r");
         efi_loader::console::print(u" > Initrd physical address: ", initrd_region, u"\n\r");
+        efi_loader::console::print(u" > Early log buffer physical address: ", early_log_buffer, u"\n\r");
+
+        std::memcpy(kernel_region, kernel.buffer.get(), kernel.size);
+        std::memcpy(initrd_region, initrd.buffer.get(), initrd.size);
 
         efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
         efi_loader::prepare_paging();

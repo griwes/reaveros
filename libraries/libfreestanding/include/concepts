@@ -32,68 +32,212 @@ concept same_as = __same_as_impl<_T, _U> && __same_as_impl<_U, _T>;
 // template<class Derived, class Base>
 // concept derived_from = see below;
 
-// template<class From, class To>
-// concept convertible_to = see below;
+template<typename _From, typename _To>
+concept convertible_to = is_convertible_v<_From, _To> && requires(add_rvalue_reference_t<_From> (&__f)())
+{
+    static_cast<_To>(__f());
+};
 
-// template<class T, class U>
-// concept common_reference_with = see below;
+template<typename _T, typename _U>
+concept common_reference_with =
+    same_as<common_reference_t<_T, _U>, common_reference_t<_U, _T>> && convertible_to<
+        _T,
+        common_reference_t<_T, _U>> && convertible_to<_U, common_reference_t<_T, _U>>;
 
 // template<class T, class U>
 // concept common_with = see below;
 
 template<typename _T>
 concept integral = is_integral_v<_T>;
+
 template<typename _T>
 concept signed_integral = integral<_T> && is_signed_v<_T>;
+
 template<typename _T>
 concept unsigned_integral = integral<_T> && !signed_integral<_T>;
+
 template<typename _T>
 concept floating_point = is_floating_point_v<_T>;
 
-// template<class LHS, class RHS>
-// concept assignable_from = see below;
+template<typename _LHS, typename _RHS>
+concept assignable_from =
+    is_lvalue_reference_v<_LHS> && common_reference_with < const remove_reference_t<_LHS>
+&, const remove_reference_t<_RHS> & > &&requires(_LHS __lhs, _RHS && __rhs)
+{
+    {
+        __lhs = static_cast<_RHS &&>(__rhs)
+        } -> same_as<_LHS>;
+};
 
-// namespace ranges
-//{
-// inline namespace unspecified
-//{
-// inline constexpr unspecified swap = unspecified;
-//}
-//}
-// template<class T>
-// concept swappable = see below;
+template<typename _T>
+concept destructible = is_nothrow_destructible_v<_T>;
+
+template<typename _T, typename... _Args>
+concept constructible_from = destructible<_T> && is_constructible_v<_T, _Args...>;
+
+template<typename _T>
+concept move_constructible = constructible_from<_T, _T> && convertible_to<_T, _T>;
+
+namespace ranges
+{
+    inline namespace __swap_ns
+    {
+        namespace __adl_poison
+        {
+            template<typename _T>
+            void swap(_T &, _T &) = delete;
+
+            template<typename _T1, typename _T2>
+            concept __is_swap_valid = requires(_T1 & __t1, _T2 & __t2)
+            {
+                swap(__t1, __t2);
+            };
+
+            template<typename _T1, typename _T2>
+            void __swap(_T1 & __t1, _T2 & __t2)
+            {
+                swap(__t1, __t2);
+            }
+        }
+
+        struct __swap_cpo
+        {
+            template<typename _T1, typename _T2>
+            constexpr void operator()(_T1 & __t1, _T2 & __t2) const requires
+                __adl_poison::__is_swap_valid<_T1, _T2>
+            {
+                __adl_poison::__swap(__t1, __t2);
+            }
+
+            template<typename _T1, typename _T2>
+            constexpr void operator()(_T1 & __t1, _T2 & __t2) const requires(
+                !__adl_poison::__is_swap_valid<
+                    _T1,
+                    _T2> && is_array_v<_T1> && is_array_v<_T2> && extent_v<_T1> == extent_v<_T2> && requires(_T1 & __t1, _T2 & __t2) {
+                    operator()(*__t1, *__t2);
+                }) = delete;
+            // ^ TODO: swap_ranges
+
+            template<typename _T>
+            constexpr void operator()(_T & __t1, _T & __t2, ...) const requires
+                move_constructible<_T> && assignable_from<_T &, _T>
+            {
+                auto __tmp = static_cast<_T &&>(__t1);
+                __t1 = static_cast<_T &&>(__t2);
+                __t2 = static_cast<_T &&>(__tmp);
+            }
+        };
+
+        inline constexpr __swap_cpo swap;
+    }
+}
+
+template<typename _T>
+concept swappable = requires(_T & __a, _T & __b)
+{
+    ranges::swap(__a, __b);
+};
+
 // template<class T, class U>
 // concept swappable_with = see below;
 
-// template<class T>
-// concept destructible = see below;
+template<typename _T>
+concept __is_default_initializable = requires
+{
+    ::new _T;
+};
 
-// template<class T, class... Args>
-// concept constructible_from = see below;
+template<typename _T>
+concept default_initializable = constructible_from<_T> && __is_default_initializable<_T> && requires
+{
+    _T{};
+};
 
-// template<class T>
-// concept default_initializable = see below;
+template<typename _T>
+concept copy_constructible =
+    move_constructible<_T> && constructible_from<_T, _T &> && convertible_to<_T &, _T> && constructible_from<
+        _T,
+        const _T &> && convertible_to<const _T &, _T> && constructible_from<_T, const _T> && convertible_to<const _T, _T>;
 
-// template<class T>
-// concept move_constructible = see below;
+template<typename _T>
+concept __boolean_testable_impl = convertible_to<_T, bool>;
 
-// template<class T>
-// concept copy_constructible = see below;
+template<typename _T>
+concept __boolean_testable = __boolean_testable_impl<_T> && requires(_T && __t)
+{
+    {
+        !static_cast<_T &&>(__t)
+        } -> __boolean_testable_impl;
+};
 
-// template<class T>
-// concept equality_comparable = see below;
+template<typename _T, typename _U>
+concept __weakly_equality_comparable_with =
+    requires(const remove_reference_t<_T> & __t, const remove_reference_t<_U> & __u)
+{
+    {
+        __t == __u
+        } -> __boolean_testable;
+    {
+        __t != __u
+        } -> __boolean_testable;
+    {
+        __u == __t
+        } -> __boolean_testable;
+    {
+        __u != __t
+        } -> __boolean_testable;
+};
+
+template<typename _T>
+concept equality_comparable = __weakly_equality_comparable_with<_T, _T>;
+
 // template<class T, class U>
 // concept equality_comparable_with = see below;
 
-// template<class T>
-// concept totally_ordered = see below;
+template<typename _T, typename _U>
+concept __partially_ordered_with =
+    requires(const remove_reference_t<_T> & __t, const remove_reference_t<_U> & __u)
+{
+    {
+        __t < __u
+        } -> __boolean_testable;
+    {
+        __t > __u
+        } -> __boolean_testable;
+    {
+        __t <= __u
+        } -> __boolean_testable;
+    {
+        __t >= __u
+        } -> __boolean_testable;
+    {
+        __u < __t
+        } -> __boolean_testable;
+    {
+        __u > __t
+        } -> __boolean_testable;
+    {
+        __u <= __t
+        } -> __boolean_testable;
+    {
+        __u >= __t
+        } -> __boolean_testable;
+};
+
+template<typename _T>
+concept totally_ordered = equality_comparable<_T> && __partially_ordered_with<_T, _T>;
+
 // template<class T, class U>
 // concept totally_ordered_with = see below;
 
-// template<class T>
-// concept movable = see below;
-// template<class T>
-// concept copyable = see below;
+template<typename _T>
+concept movable = is_object_v<_T> && move_constructible<_T> && assignable_from<_T &, _T> && swappable<_T>;
+
+template<typename _T>
+concept copyable = copy_constructible<_T> && movable<_T> && assignable_from<_T &, _T &> && assignable_from<
+    _T &,
+    const _T &> && assignable_from<_T &, const _T>;
+
 // template<class T>
 // concept semiregular = see below;
 // template<class T>

@@ -66,9 +66,6 @@ constexpr add_const_t<_T> & as_const(_T & __t) noexcept;
 template<typename _T>
 void as_const(const _T &&) = delete;
 
-template<typename _T>
-add_rvalue_reference_t<_T> declval() noexcept; // as unevaluated operand
-
 template<typename _T, typename _U>
 constexpr bool cmp_equal(_T __t, _U __u) noexcept;
 template<typename _T, typename _U>

@@ -55,35 +55,30 @@ struct is_integral : bool_constant<__is_integral(_T)>
 #endif
 
 template<typename _T>
-struct is_floating_point;
-
-template<typename>
-struct is_array : false_type
-{
-};
-template<typename _T>
-struct is_array<_T[]> : true_type
-{
-};
-template<typename _T, size_t _N>
-struct is_array<_T[_N]> : true_type
+struct is_floating_point : bool_constant<__is_floating_point(_T)>
 {
 };
 
 template<typename _T>
-struct is_pointer : false_type
+struct is_array : bool_constant<__is_array(_T)>
 {
 };
 
 template<typename _T>
-struct is_pointer<_T *> : true_type
+struct is_pointer : bool_constant<__is_pointer(_T)>
 {
 };
 
 template<typename _T>
-struct is_lvalue_reference;
+struct is_lvalue_reference : bool_constant<__is_lvalue_reference(_T)>
+{
+};
+
 template<typename _T>
-struct is_rvalue_reference;
+struct is_rvalue_reference : bool_constant<__is_rvalue_reference(_T)>
+{
+};
+
 template<typename _T>
 struct is_member_object_pointer;
 template<typename _T>
@@ -103,8 +98,12 @@ template<typename _T>
 struct is_arithmetic;
 template<typename _T>
 struct is_fundamental;
+
 template<typename _T>
-struct is_object;
+struct is_object : bool_constant<__is_object(_T)>
+{
+};
+
 template<typename _T>
 struct is_scalar;
 template<typename _T>
@@ -134,7 +133,10 @@ template<typename _T>
 struct is_aggregate;
 
 template<typename _T>
-struct is_signed;
+struct is_signed : bool_constant<__is_signed(_T)>
+{
+};
+
 template<typename _T>
 struct is_unsigned;
 
@@ -159,8 +161,122 @@ struct is_unbounded_array<_T[]> : true_type
 template<typename _T>
 struct is_scoped_enum;
 
+template<typename _T>
+struct remove_reference
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct remove_reference<_T &>
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct remove_reference<_T &&>
+{
+    using type = _T;
+};
+
+template<typename _T>
+using remove_reference_t = typename remove_reference<_T>::type;
+
+template<typename _T>
+struct remove_const
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct remove_const<const _T>
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct remove_volatile
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct remove_volatile<volatile _T>
+{
+    using type = _T;
+};
+
+template<typename _T>
+using remove_const_t = typename remove_const<_T>::type;
+template<typename _T>
+using remove_volatile_t = typename remove_volatile<_T>::type;
+
+template<typename _T>
+struct remove_cv
+{
+    using type = remove_const_t<remove_volatile_t<_T>>;
+};
+
+template<typename _T>
+using remove_cv_t = typename remove_cv<_T>::type;
+
+template<typename _T>
+struct remove_cvref
+{
+    using type = remove_cv_t<remove_reference_t<_T>>;
+};
+
+template<typename _T, typename _U>
+struct is_same : false_type
+{
+};
+
+template<typename _T>
+struct is_same<_T, _T> : true_type
+{
+};
+
+template<typename _T>
+struct add_lvalue_reference
+{
+    using type = _T;
+};
+
+template<typename _T>
+requires(
+    is_object<_T>::value || (is_function<_T>::value && is_same<_T, typename remove_cvref<_T>::type>::value)
+    || is_reference<_T>::value) struct add_lvalue_reference<_T>
+{
+    using type = _T &;
+};
+
+template<typename _T>
+struct add_rvalue_reference
+{
+    using type = _T;
+};
+
+template<typename _T>
+requires(
+    is_object<_T>::value || (is_function<_T>::value && is_same<_T, typename remove_cvref<_T>::type>::value)
+    || is_reference<_T>::value) struct add_rvalue_reference<_T>
+{
+    using type = _T &&;
+};
+
+template<typename _T>
+using add_lvalue_reference_t = typename add_lvalue_reference<_T>::type;
+template<typename _T>
+using add_rvalue_reference_t = typename add_rvalue_reference<_T>::type;
+
+template<typename _T>
+add_rvalue_reference_t<_T> declval() noexcept;
+
 template<typename _T, typename... _Args>
-struct is_constructible;
+struct is_constructible : std::bool_constant<__is_constructible(_T, _Args...)>
+{
+};
+
 template<typename _T>
 struct is_default_constructible;
 template<typename _T>
@@ -227,7 +343,9 @@ template<typename _T>
 struct is_nothrow_swappable;
 
 template<typename _T>
-struct is_nothrow_destructible;
+struct is_nothrow_destructible : bool_constant<noexcept(declval<_T>().~_T())>
+{
+};
 
 template<typename _T>
 struct has_virtual_destructor;
@@ -242,20 +360,14 @@ struct rank;
 template<typename _T, unsigned _I = 0>
 struct extent;
 
-template<typename _T, typename _U>
-struct is_same : false_type
-{
-};
-
-template<typename _T>
-struct is_same<_T, _T> : true_type
-{
-};
-
 template<typename _Base, typename _Derived>
 struct is_base_of;
+
 template<typename _From, typename _To>
-struct is_convertible;
+struct is_convertible : bool_constant<__is_convertible(_From, _To)>
+{
+};
+
 template<typename _From, typename _To>
 struct is_nothrow_convertible;
 template<typename _T, typename _U>
@@ -274,12 +386,6 @@ template<typename _R, typename _Fn, typename... _ArgTypes>
 struct is_nothrow_invocable_r;
 
 template<typename _T>
-struct remove_const;
-template<typename _T>
-struct remove_volatile;
-template<typename _T>
-struct remove_cv;
-template<typename _T>
 struct add_const;
 template<typename _T>
 struct add_volatile;
@@ -287,47 +393,11 @@ template<typename _T>
 struct add_cv;
 
 template<typename _T>
-using remove_const_t = typename remove_const<_T>::type;
-template<typename _T>
-using remove_volatile_t = typename remove_volatile<_T>::type;
-template<typename _T>
-using remove_cv_t = typename remove_cv<_T>::type;
-template<typename _T>
 using add_const_t = typename add_const<_T>::type;
 template<typename _T>
 using add_volatile_t = typename add_volatile<_T>::type;
 template<typename _T>
 using add_cv_t = typename add_cv<_T>::type;
-
-template<typename _T>
-struct remove_reference
-{
-    using type = _T;
-};
-
-template<typename _T>
-struct remove_reference<_T &>
-{
-    using type = _T;
-};
-
-template<typename _T>
-struct remove_reference<_T &&>
-{
-    using type = _T;
-};
-
-template<typename _T>
-struct add_lvalue_reference;
-template<typename _T>
-struct add_rvalue_reference;
-
-template<typename _T>
-using remove_reference_t = typename remove_reference<_T>::type;
-template<typename _T>
-using add_lvalue_reference_t = typename add_lvalue_reference<_T>::type;
-template<typename _T>
-using add_rvalue_reference_t = typename add_rvalue_reference<_T>::type;
 
 template<typename _T>
 struct make_signed;
@@ -387,13 +457,16 @@ template<typename _T>
 using add_pointer_t = typename add_pointer<_T>::type;
 
 template<typename _T>
-struct type_identity;
+struct type_identity
+{
+    using type = _T;
+};
+
 template<size_t _Len, size_t _Align = 16> // see [meta.trans.other]
 struct aligned_storage;
 template<size_t _Len, typename... _Types>
 struct aligned_union;
-template<typename _T>
-struct remove_cvref;
+
 template<typename _T>
 struct decay;
 
@@ -409,15 +482,303 @@ struct enable_if<false, _T>
 };
 
 template<bool, typename _T, typename _F>
-struct conditional;
-template<typename... _T>
+struct conditional
+{
+    using type = _T;
+};
+
+template<typename _T, typename _F>
+struct conditional<false, _T, _F>
+{
+    using type = _F;
+};
+
+template<typename _T>
+using remove_cvref_t = typename remove_cvref<_T>::type;
+
+template<typename _T>
+using __cref = add_lvalue_reference_t<const remove_reference_t<_T>>;
+
+template<typename _T>
+struct __xref
+{
+    using __unrefd = typename remove_reference<_T>::type;
+
+    template<typename _U>
+    using __maybe_add_const = typename conditional<__is_const(__unrefd), const _U, _U>::type;
+
+    template<typename _U>
+    using __maybe_add_volatile =
+        typename conditional<__is_volatile(__unrefd), volatile __maybe_add_const<_U>, __maybe_add_const<_U>>::
+            type;
+
+    template<typename _U>
+    using __maybe_add_rvalue_ref = typename conditional<
+        __is_rvalue_reference(_T),
+        __maybe_add_volatile<_U> &&,
+        __maybe_add_volatile<_U>>::type;
+
+    template<typename _U>
+    using __maybe_add_lvalue_ref = typename conditional<
+        __is_lvalue_reference(_T),
+        __maybe_add_volatile<_U> &,
+        __maybe_add_rvalue_ref<_U>>::type;
+
+    template<typename _U>
+    using type = __maybe_add_lvalue_ref<_U>;
+};
+
+template<typename _S, typename _D>
+struct __copycv_impl
+{
+    using __maybe_add_const = typename conditional<__is_const(_S), const _D, _D>::type;
+
+    using __maybe_add_volatile =
+        typename conditional<__is_volatile(_S), volatile __maybe_add_const, __maybe_add_const>::type;
+
+    using type = __maybe_add_volatile;
+};
+
+template<typename _S, typename _D>
+using __copycv = typename __copycv_impl<_S, _D>::type;
+
+template<typename _T1, typename _T2>
+using __cond_res = decltype(false ? declval<_T1 (&)()>()() : declval<_T2 (&)()>()());
+
+template<typename _T1, typename _T2>
+struct __common_ref_impl;
+
+template<typename _T1, typename _T2>
+requires is_lvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value struct __common_ref_impl<_T1, _T2>
+{
+    using __x = remove_reference_t<_T1>;
+    using __y = remove_reference_t<_T2>;
+
+    template<typename _X, typename _Y>
+    struct __selector;
+
+    template<typename _X, typename _Y>
+    using __type1 = __cond_res<__copycv<_X, _Y> &, __copycv<_Y, _X> &>;
+    static const constexpr auto __use_type1 = requires
+    {
+        typename enable_if<is_lvalue_reference<__type1<__x, __y>>::value>::type;
+    };
+
+    template<typename _X, typename _Y>
+    requires __use_type1 struct __selector<_X, _Y>
+    {
+        using type = __type1<_X, _Y>;
+    };
+
+    template<typename _X, typename _Y>
+    using __type2 = remove_reference_t<typename __common_ref_impl<_X &, _Y &>::type> &&;
+
+    static const constexpr auto __use_type2 =
+        !__use_type1 && is_rvalue_reference<_T1>::value && is_rvalue_reference<_T2>::value && requires
+    {
+        typename __type2<__x, __y>;
+        typename enable_if<is_convertible<_T1, __type2<__x, __y>>::value>::type;
+        typename enable_if<is_convertible<_T2, __type2<__x, __y>>::value>::type;
+    };
+
+    template<typename _X, typename _Y>
+    requires __use_type2 struct __selector<_X, _Y>
+    {
+        using type = __type2<_X, _Y>;
+    };
+
+    template<typename _X, typename _Y>
+    using __type3 = typename __common_ref_impl<const _X &, _Y &>::type;
+
+    static const constexpr auto __use_type3 =
+        !__use_type2 && is_rvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value && requires
+    {
+        typename __type3<__x, __y>;
+        typename enable_if<is_convertible<_T1, __type3<__x, __y>>::value>::type;
+    };
+
+    template<typename _X, typename _Y>
+    requires __use_type3 struct __selector<_X, _Y>
+    {
+        using type = __type3<_X, _Y>;
+    };
+
+    template<typename _X, typename _Y>
+    using __type4 = __common_ref_impl<_X, _Y>;
+
+    static const constexpr auto __use_type4 =
+        !__use_type3 && is_lvalue_reference<_T1>::value && is_rvalue_reference<_T2>::value;
+
+    template<typename _X, typename _Y>
+    requires __use_type4 struct __selector<_X, _Y>
+    {
+        using type = __type4<_X, _Y>;
+    };
+
+    using type = typename __selector<__x, __y>::type;
+};
+
+template<typename _T1, typename _T2>
+using __common_ref = typename __common_ref_impl<_T1, _T2>::type;
+
+template<typename... _Ts>
 struct common_type;
+
+template<>
+struct common_type<>
+{
+};
+
+template<typename _T>
+struct common_type<_T> : common_type<_T, _T>
+{
+};
+
+template<typename _T1, typename _T2>
+concept __common_type_4_1 =
+    !is_same<_T1, typename decay<_T1>::type>::value || !is_same<_T2, typename decay<_T2>::type>::value;
+
+template<typename _T1, typename _T2>
+requires __common_type_4_1<_T1, _T2>
+struct common_type<_T1, _T2> : common_type<typename decay<_T1>::type, typename decay<_T2>::type>
+{
+};
+
+template<typename _T1, typename _T2>
+concept __common_type_4_3 = !__common_type_4_1<_T1, _T2> && requires
+{
+    typename decay<decltype(false ? declval<_T1>() : declval<_T2>())>::type;
+};
+
+template<typename _T1, typename _T2>
+requires __common_type_4_3<_T1, _T2>
+struct common_type<_T1, _T2>
+{
+    using type = typename decay<decltype(false ? declval<_T1>() : declval<_T2>())>::type;
+};
+
+template<typename _T1, typename _T2>
+concept __common_type_4_4 = !__common_type_4_3<_T1, _T2> && requires
+{
+    typename __cond_res<__cref<_T1>, __cref<_T2>>;
+};
+
+template<typename _T1, typename _T2>
+requires __common_type_4_4<_T1, _T2>
+struct common_type<_T1, _T2>
+{
+    using type = typename decay<__cond_res<__cref<_T1>, __cref<_T2>>>::type;
+};
+
+template<typename... _T>
+using common_type_t = typename common_type<_T...>::type;
+
 template<typename _T, typename _U, template<typename> typename _TQual, template<typename> typename _UQual>
 struct basic_common_reference
 {
 };
-template<typename... _T>
+
+template<typename... _Ts>
 struct common_reference;
+
+template<>
+struct common_reference<>
+{
+};
+
+template<typename _T>
+struct common_reference<_T>
+{
+    using type = _T;
+};
+
+template<typename _T1, typename _T2>
+concept __common_reference_3_1 = requires
+{
+    typename __common_ref<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+requires __common_reference_3_1<_T1, _T2>
+struct common_reference<_T1, _T2>
+{
+    using type = __common_ref<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+concept __common_reference_3_2 = !__common_reference_3_1<_T1, _T2> && requires
+{
+    typename basic_common_reference<
+        remove_cvref_t<_T1>,
+        remove_cvref_t<_T2>,
+        __xref<_T1>::template type,
+        __xref<_T2>::template type>::type;
+};
+
+template<typename _T1, typename _T2>
+requires __common_reference_3_2<_T1, _T2>
+struct common_reference<_T1, _T2>
+{
+    using type = typename basic_common_reference<
+        remove_cvref_t<_T1>,
+        remove_cvref_t<_T2>,
+        __xref<_T1>::template type,
+        __xref<_T2>::template type>::type;
+};
+
+template<typename _T1, typename _T2>
+concept __common_reference_3_3 =
+    !__common_reference_3_1<_T1, _T2> && !__common_reference_3_2<_T1, _T2> && requires
+{
+    typename __cond_res<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+requires __common_reference_3_3<_T1, _T2>
+struct common_reference<_T1, _T2>
+{
+    using type = __cond_res<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+concept __common_reference_3_4 =
+    !__common_reference_3_1<
+        _T1,
+        _T2> && !__common_reference_3_2<_T1, _T2> && !__common_reference_3_3<_T1, _T2> && requires
+{
+    typename common_type_t<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+requires __common_reference_3_4<_T1, _T2>
+struct common_reference<_T1, _T2>
+{
+    using type = common_type_t<_T1, _T2>;
+};
+
+template<typename _T1, typename _T2>
+struct common_reference<_T1, _T2>
+{
+};
+
+template<typename _T1, typename _T2, typename... _Rest>
+concept __common_reference_4_1 = requires
+{
+    typename common_reference<typename common_reference<_T1, _T2>::type, _Rest...>::type;
+};
+
+template<typename _T1, typename _T2, typename _T3, typename... _Rest>
+requires __common_reference_4_1<_T1, _T2, _T3, _Rest...>
+struct common_reference<_T1, _T2, _T3, _Rest...>
+{
+    using type = typename common_reference<typename common_reference<_T1, _T2>::type, _T3, _Rest...>::type;
+};
+
+template<typename... _All>
+struct common_reference
+{
+};
+
 template<typename _T>
 struct underlying_type;
 template<typename _Fn, typename... _ArgTypes>
@@ -434,15 +795,11 @@ using aligned_storage_t = typename aligned_storage<_Len, _Align>::type;
 template<size_t _Len, typename... _Types>
 using aligned_union_t = typename aligned_union<_Len, _Types...>::type;
 template<typename _T>
-using remove_cvref_t = typename remove_cvref<_T>::type;
-template<typename _T>
 using decay_t = typename decay<_T>::type;
 template<bool _B, typename _T = void>
 using enable_if_t = typename enable_if<_B, _T>::type;
 template<bool _B, typename _T, typename _F>
 using conditional_t = typename conditional<_B, _T, _F>::type;
-template<typename... _T>
-using common_type_t = typename common_type<_T...>::type;
 template<typename... _T>
 using common_reference_t = typename common_reference<_T...>::type;
 template<typename _T>
