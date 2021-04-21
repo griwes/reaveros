@@ -243,7 +243,11 @@ private:
     explicit basic_format_arg(nullptr_t) noexcept;
 
     template<class _T>
-    explicit basic_format_arg(const _T * p) noexcept;
+    explicit basic_format_arg(_T * __p)
+    {
+        __value.__cv_12 = __p;
+        __value_idx = 12;
+    }
 
     template<class _Context_, typename... _Args>
     friend __format_arg_store<_Context_, _Args...> make_format_args(const _Args &... __args);
