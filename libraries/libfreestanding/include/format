@@ -527,14 +527,14 @@ template<typename _Out, typename... _Args>
 _Out format_to(_Out __out, string_view __fmt, const _Args &... __args)
 {
     using __context = basic_format_context<_Out, decltype(__fmt)::value_type>;
-    return std::vformat_to(__out, __fmt, make_format_args<__context>(__args...));
+    return std::vformat_to(std::move(__out), __fmt, make_format_args<__context>(__args...));
 }
 
 template<typename _Out, typename... _Args>
 _Out format_to(_Out __out, wstring_view __fmt, const _Args &... __args)
 {
     using __context = basic_format_context<_Out, decltype(__fmt)::value_type>;
-    return std::vformat_to(__out, __fmt, make_format_args<__context>(__args...));
+    return std::vformat_to(std::move(__out), __fmt, make_format_args<__context>(__args...));
 }
 
 /*
