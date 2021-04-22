@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -xe
+
+sha=$(git rev-parse HEAD)
+
+docker pull debian:unstable
+
+docker run -v $(pwd):/reaveros -it --name reaveros-docker-build-${sha}-full debian:unstable /usr/bin/env bash -c '
+    set -xe
+    apt update
+    apt install build-essential automake cmake git python3 bison flex libssl-dev ccache -y
+    apt clean
+
+    mkdir /build
+    cd /build
+    cmake /reaveros
+    make all-toolchains -j$(nproc)
+'
+
+docker export reaveros-docker-build-${sha}-full \
+    | docker import - --change "CMD /usr/bin/env bash" ghcr.io/griwes/reaveros-build-env/unpruned:${sha}
+
+docker tag ghcr.io/griwes/reaveros-build-env/unpruned:${sha} ghcr.io/griwes/reaveros-build-env/unpruned:latest
+
