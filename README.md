@@ -31,13 +31,48 @@ apt install build-essential automake cmake git python3 bison flex libssl-dev
 ReaverOS builds the full toolchain that it uses for all builds internally, at versions fixed as git tags. This means that to
 build ReaverOS, you need internet access to fetch the repositories for all of the toolchains.
 
-This also means that an initial build using a given toolchain will take a long time, because it will build either full LLVM
-or full GCC+binutils with their dependencies. A docker image containing an already built toolchain will be provided at a future
-date, once the infrastructure for it has been prepared, to allow for building ReaverOS in a fresh checkout without requiring
-redoing a full toolchain build every time.
+This also means that an initial build using a given toolchain will take a long time, because it will build full LLVM.
+Two docker images containing pre-built binaries are available:
 
-To avoid rebuilding the toolchains from scratch when you do `make clean`, it is recommended to have `ccache` installed and
-enabled (see options below).
+* `ghcr.io/griwes/reaveros-build-env` contains just the necessary files, and not the toolchain checkouts and build directories
+(for mechanics of this, see notes about `prune` targets below). This has an advantage of making the image smaller, but will
+require rebuild from scratch (although using ccache) if any of the toolchains change.
+* `ghcr.io/griwes/reaveros-build-env/unpruned`, which is exactly the same as above, but prior to running `all-toolchains-prune`.
+This has the advantage of not requiring a full rebuild of toolchains when they change - at the price of a much larger size.
+(At the time of writing, about 1GiB for the pruned image vs 7GiB for the unpruned one.)
+
+The images expect the root directory of the git repository mounted in /reaveros. A possible way to achieve this is to:
+
+```bash
+git clone https://github.com/griwes/reaveros
+docker run -v $(pwd):/reaveros -it <image>
+# <image> is one of the URLs listed above
+```
+
+Inside the container, `cd /build`; from there, you can run all the normal ReaverOS build targets, as described below. To move
+the images out of the container (to be able to run them with QEMU, for instance), you can create a directory in your checkout
+directory and move appropriate files from within the build directory into that directory:
+
+```bash
+cd /reaveros
+mkdir build-results
+cd /build
+make all-images
+cp install/images/uefi-efipart-amd64-llvm.img /reaveros/build-results
+```
+
+Alternatively, you can create another docker volume, with `-v`, and copy the results there.
+
+Keep in mind that if you terminate the docker container, you will need to rebuild the ReaverOS code itself - but the build should
+be fairly quick regardless.
+
+The docker images are rebuilt daily, but unless a toolchain version changes, it should not affect them. However, if you do a git
+pull, and there are changes to the toolchain versions between your old copy of the repository and upstream, it is recommended to
+also restart the docker container and do `docker pull` on the image you are using, to get the latest versions of the prebuilt
+toolchain.
+
+Outside of docker, to avoid rebuilding the toolchains from scratch when you do `make clean`, it is recommended to have `ccache`
+installed and enabled (see options below).
 
 ### Configuration options
 
