@@ -1,0 +1,32 @@
+name: Daily maintenance
+
+on:
+    schedule:
+          - cron: '0 4 * * *'
+
+jobs:
+    update:
+        name: Update build-env containers
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Check out the repository
+            uses: actions/checkout@v2
+
+          - name: Update containers
+            run: ./docker/update-images
+
+          - name: Login to ghcr.io
+            run: |
+                docker login https://ghcr.io -u '${{ github.actor }}' -p '${{ secrets.GITHUB_TOKEN }}'
+
+          - name: Push containers
+            run: |
+                docker push ghcr.io/griwes/reaveros-build-env/unpruned:${{ github.sha }}
+                docker push ghcr.io/griwes/reaveros-build-env:${{ github.sha }}
+
+          - name: Push the latest tag
+            if: ${{ github.event_name == 'schedule' }}
+            run: |
+                docker push ghcr.io/griwes/reaveros-build-env/unpruned:latest
+                docker push ghcr.io/griwes/reaveros-build-env:latest
