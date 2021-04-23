@@ -1,0 +1,73 @@
+name: CI
+
+on:
+    push:
+        branches:
+          - main
+    pull_request:
+        branches:
+          - main
+
+jobs:
+    build-env:
+        name: Prepare build environment
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Check out the repository
+            uses: actions/checkout@v2
+
+          - name: Update containers
+            run: ./docker/update-images
+
+          - name: Remove unpruned images
+            run: |
+                docker system prune -f
+                docker images -q ghcr.io/griwes/reaveros-build-env/unpruned | xargs docker rmi -f
+
+          - name: Save the pruned image
+            run: docker save ghcr.io/griwes/reaveros-build-env:${{ github.sha }} | gzip > docker.tar.gz
+
+          - name: Save the pruned image as an artifact
+            uses: actions/upload-artifact@v2
+            with:
+                name: build-env
+                path: ./docker.tar.gz
+                retention-days: 3
+
+    image-build:
+        name: Build OS image
+        runs-on: ubuntu-latest
+        needs: build-env
+
+        strategy:
+            matrix:
+                image:
+                  - uefi-efipart-amd64-llvm
+
+        steps:
+          - name: Check out the repository
+            uses: actions/checkout@v2
+
+          - name: Download build-env
+            uses: actions/download-artifact@v2
+            with:
+                name: build-env
+                path: artifacts
+
+          - name: Import docker image
+            run: docker load --input artifacts/docker.tar.gz
+
+          - name: Build requested image
+            run: |
+                docker run -v $(pwd):/reaveros ghcr.io/griwes/reaveros-build-env:${{ github.sha }} bash -c '
+                    cd /build
+                    make image-${{ matrix.image }} -j$(nproc)
+                    cp install/images/${{ matrix.image }}.img /reaveros/artifacts
+                '
+
+          - name: Save the built image as an artifact
+            uses: actions/upload-artifact@v2
+            with:
+                name: image-${{ matrix.image }}
+                path: artifacts/${{ matrix.image }}.img
