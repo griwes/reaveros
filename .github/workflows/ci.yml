@@ -17,6 +17,12 @@ jobs:
           - name: Check out the repository
             uses: actions/checkout@v2
 
+          - name: Free up some space on the rootfs
+            run: |
+                sudo rm -rf /usr/share/rust
+                sudo rm -rf /usr/share/swift
+                sudo rm -rf /usr/share/dotnet
+
           - name: Update containers
             run: ./docker/update-images
 
@@ -71,3 +77,27 @@ jobs:
             with:
                 name: image-${{ matrix.image }}
                 path: artifacts/${{ matrix.image }}.img
+
+    automerge:
+        name: Auto-merge if PR is automatic
+        runs-on: ubuntu-latest
+        needs: image-build
+
+        if: github.event_name == 'pull_request'
+
+        steps:
+          - name: Merge the PR if automatic
+            run: |
+                set -e
+                url=$(jq -r '.pull_request.url' "${GITHUB_EVENT_PATH}")
+                sha=$(jq -r '.pull_request.head.sha' "${GITHUB_EVENT_PATH}")
+                if curl "${url}" | jq -r '.labels[].name' | egrep -q '^automatic:'
+                then
+                    curl \
+                        -X PUT \
+                        -H "Accept: application/vnd.github.v3+json" \
+                        -H "Authorization: token ${{ secrets.CI_TOKEN }}" \
+                        "${url}/merge" \
+                        -d "{ \"merge_method\": \"rebase\", \"sha\": \"${sha}\"}"
+                fi
+
