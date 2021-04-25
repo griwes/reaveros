@@ -52,12 +52,16 @@ namespace console
             return;
         }
 
-        else if (!(a > 0 || a == 0))
+        if constexpr (std::is_signed<T>::value)
         {
-            *buffer_ptr++ = u'-';
+            if (!(a > 0 || a == 0))
+            {
+                *buffer_ptr++ = u'-';
+            }
         }
 
-        auto impl = [&buffer_ptr](auto && self, auto a) -> void {
+        auto impl = [&buffer_ptr](auto && self, auto a) -> void
+        {
             T div = a / 10;
             T mod = a % 10;
 
@@ -103,7 +107,8 @@ namespace console
     template<typename... Ts>
     void print(Ts &&... ts) requires(sizeof...(Ts) > 1)
     {
-        (void)(int[]){ (print(std::forward<Ts>(ts)), 0)... };
+        using swallow = int[];
+        (void)swallow{ (print(std::forward<Ts>(ts)), 0)... };
     }
 }
 }

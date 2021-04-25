@@ -138,7 +138,9 @@ struct is_signed : bool_constant<__is_signed(_T)>
 };
 
 template<typename _T>
-struct is_unsigned;
+struct is_unsigned : bool_constant<__is_unsigned(_T)>
+{
+};
 
 template<typename>
 struct is_bounded_array : false_type

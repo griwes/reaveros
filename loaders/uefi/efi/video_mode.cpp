@@ -214,7 +214,7 @@ video_mode choose_mode(const config & cfg)
         delete info;
     }
 
-    if (preferred_index == -1)
+    if (preferred_index == ~static_cast<std::uint32_t>(0))
     {
         console::print(u" > No suitable video mode found, proceeding without graphic output.\n\r");
         return {};
