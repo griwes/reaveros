@@ -1,6 +1,9 @@
 name: Daily maintenance
 
 on:
+    push:
+        branch:
+          - automatic-toolchain-upgrades
     schedule:
           - cron: '0 4 * * *'
 
@@ -30,3 +33,21 @@ jobs:
             run: |
                 docker push ghcr.io/griwes/reaveros-build-env/unpruned:latest
                 docker push ghcr.io/griwes/reaveros-build-env:latest
+
+    versions:
+        name: Update toolchain versions
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Check out the repository
+            uses: actions/checkout@v2
+
+          - name: Setup git
+            run: |
+                git config user.name "Github Actions"
+                git config user.email "griwes+github-actions@griwes.info"
+
+          - name: Run toolchain update
+            env:
+                GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+            run: ./maintenance/update-toolchains --pr

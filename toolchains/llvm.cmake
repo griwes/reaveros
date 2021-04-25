@@ -1,8 +1,7 @@
 set(REAVEROS_LLVM_PARALLEL_LINK_JOBS 8 CACHE STRING "Sets the limit for parallel link jobs of LLVM.")
 
-set(REAVEROS_LLVM_TAG llvmorg-12.0.0-rc3)
 ExternalProject_Add(toolchain-llvm
-    GIT_REPOSITORY https://github.com/llvm/llvm-project
+    GIT_REPOSITORY ${REAVEROS_LLVM_REPO}
     GIT_TAG ${REAVEROS_LLVM_TAG}
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
@@ -35,9 +34,8 @@ ExternalProject_Add(toolchain-llvm
 reaveros_add_ep_prune_target(toolchain-llvm)
 reaveros_add_ep_fetch_tag_target(toolchain-llvm)
 
-set(REAVEROS_LLVM_BINUTILS_EXTRA_TAG binutils-2_36_1)
 ExternalProject_Add(toolchain-llvm-binutils-extra
-    GIT_REPOSITORY git://sourceware.org/git/binutils-gdb.git
+    GIT_REPOSITORY ${REAVEROS_LLVM_BINUTILS_EXTRA_REPO}
     GIT_TAG ${REAVEROS_LLVM_BINUTILS_EXTRA_TAG}
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
