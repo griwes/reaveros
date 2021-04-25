@@ -21,6 +21,8 @@ endforeach()
 
 add_custom_target(all-toolchains-prune)
 
+include(config.cmake)
+
 include(cmake.cmake)
 
 if ("uefi" IN_LIST REAVEROS_LOADERS)
