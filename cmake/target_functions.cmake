@@ -68,8 +68,14 @@ function(reaveros_add_ep_prune_target external_project)
     get_property(has_git_tag TARGET ${external_project} PROPERTY _EP_GIT_TAG SET)
     if (has_git_tag)
         get_property(GIT_TAG TARGET ${external_project} PROPERTY _EP_GIT_TAG)
-        file(GLOB force_download_stamps ${STAMP_DIR}/${external_project}-force-download-*)
-        list(REMOVE_ITEM force_download_stamps ${STAMP_DIR}/${external_project}-force-download-${GIT_TAG})
+        set(force_download_stamp_rm_cmd
+            find ${STAMP_DIR}
+                -name "${external_project}-force-download-*"
+                ! -name "${external_project}-force-download-${GIT_TAG}"
+                -delete
+        )
+    else()
+        set(force_download_stamp_rm_cmd true)
     endif()
 
     file(TOUCH ${STAMP_DIR}/${external_project}-skip-update)
@@ -79,7 +85,7 @@ function(reaveros_add_ep_prune_target external_project)
 
     set(_commands
         COMMAND rm -rf <SOURCE_DIR> <BINARY_DIR>
-        COMMAND rm -rf ${force_download_stamps}
+        COMMAND ${force_download_stamp_rm_cmd}
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt
         COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
         COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
@@ -120,7 +126,10 @@ function(reaveros_add_ep_fetch_tag_target external_project)
 
     ExternalProject_Add_Step(${external_project}
         force-download-${GIT_TAG}
-        COMMAND rm -rf ${force_download_stamps}
+        COMMAND find ${STAMP_DIR}
+            -name "${external_project}-force-download-*"
+            ! -name "${external_project}-force-download-${GIT_TAG}"
+            -delete
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-mkdir
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-download
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt

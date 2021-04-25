@@ -9,9 +9,18 @@ jobs:
         name: Update build-env containers
         runs-on: ubuntu-latest
 
+        strategy:
+            max_parallel: 1
+
         steps:
           - name: Check out the repository
             uses: actions/checkout@v2
+
+          - name: Free up some space on the rootfs
+            run: |
+                sudo rm -rf /usr/share/rust
+                sudo rm -rf /usr/share/swift
+                sudo rm -rf /usr/share/dotnet
 
           - name: Update containers
             run: ./docker/update-images
@@ -30,3 +39,24 @@ jobs:
             run: |
                 docker push ghcr.io/griwes/reaveros-build-env/unpruned:latest
                 docker push ghcr.io/griwes/reaveros-build-env:latest
+
+    versions:
+        name: Trigger toolchain version updates
+        runs-on: ubuntu-latest
+
+        strategy:
+            max_parallel: 1
+
+        steps:
+          - name: Check out the repository
+            uses: actions/checkout@v2
+
+          - name: Setup git
+            run: |
+                git config user.name "Reaver Project CI"
+                git config user.email "ci@reaver-project.org"
+
+          - name: Run toolchain update
+            env:
+                GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
+            run: ./maintenance/update-toolchains --pr
