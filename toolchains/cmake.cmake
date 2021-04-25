@@ -1,6 +1,5 @@
-set(REAVEROS_CMAKE_TAG v3.20.0)
 ExternalProject_Add(toolchain-cmake
-    GIT_REPOSITORY https://github.com/Kitware/CMake
+    GIT_REPOSITORY ${REAVEROS_CMAKE_REPO}
     GIT_TAG ${REAVEROS_CMAKE_TAG}
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
