@@ -28,8 +28,8 @@ struct config;
 struct video_mode
 {
     bool valid = false;
-    std::uint32_t mode_number;
-    boot_protocol::video_mode info;
+    std::uint32_t mode_number = 0;
+    boot_protocol::video_mode info{};
 };
 
 video_mode choose_mode(const config & cfg);
