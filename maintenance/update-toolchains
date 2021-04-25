@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -e
+
+pr=""
+
+if [[ $# == 1 ]]
+then
+    if [[ $1 == "--pr" ]]
+    then
+        echo "Will open PRs."
+        pr="--pr"
+    elif [[ $1 == "--check" ]]
+    then
+        echo "Will check for new versions."
+    elif [[ $1 == "--help" || $1 == "-h" ]]
+    then
+        echo "Usage:"
+        echo "    update-toolchains [--pr|--check]"
+        echo ""
+        echo "Options:"
+        echo "    --pr          open Github PRs to bump the toolchain versions."
+        echo "    --check       print possible toolchain updates only."
+        exit 0
+    else
+        echo "Unknown argument: $1."
+        exit 1
+    fi
+fi
+
+if [[ $# -gt 1 ]]
+then
+    echo "Too many arguments."
+    exit 1
+fi
+
+source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+
+git_toolchains=(
+    cmake
+    llvm
+    llvm_binutils_extra
+    dosfstools
+)
+
+for toolchain in ${git_toolchains[@]}
+do
+    "${source_dir}/update.git.sh" ${toolchain} ${pr}
+done
+
+"${source_dir}/update-mtools.sh" ${pr}
+
