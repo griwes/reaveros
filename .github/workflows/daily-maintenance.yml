@@ -10,7 +10,7 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
-            max_parallel: 1
+            max-parallel: 1
 
         steps:
           - name: Check out the repository
@@ -45,7 +45,7 @@ jobs:
         runs-on: ubuntu-latest
 
         strategy:
-            max_parallel: 1
+            max-parallel: 1
 
         steps:
           - name: Check out the repository
