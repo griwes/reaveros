@@ -16,16 +16,64 @@
 
 #pragma once
 
-#include "../boot/log_iterator.h"
-
 #include <boot-memmap.h>
 
 #include <format>
 #include <string_view>
 
+namespace kernel::boot_log
+{
+struct buffer_chunk;
+
+void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
+
+class iterator
+{
+public:
+    class proxy
+    {
+    public:
+        proxy() = default;
+
+        proxy(const proxy &) = delete;
+        proxy & operator=(const proxy &) = delete;
+
+        const proxy & operator=(char c) const;
+    };
+
+    using iterator_category = std::output_iterator_tag;
+    using value_type = char;
+    using difference_type = std::ptrdiff_t;
+    using pointer = char *;
+    using reference = proxy;
+
+    iterator();
+    ~iterator();
+
+    iterator(const iterator &) = default;
+    iterator(iterator &&) = default;
+    iterator & operator=(const iterator &) = default;
+    iterator & operator=(iterator &&) = default;
+
+    proxy operator*() const
+    {
+        return {};
+    }
+
+    iterator & operator++()
+    {
+        return *this;
+    }
+
+    iterator operator++(int)
+    {
+        return *this;
+    }
+};
+}
+
 namespace kernel::log
 {
-void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
 void * get_syslog_mailbox();
 
 template<typename... Ts>
@@ -37,7 +85,7 @@ void println(std::string_view fmt, const Ts &... args)
         *(volatile bool *)0 = false;
     }
 
-    auto it = std::format_to(kernel::boot::log_iterator(), fmt, args...);
+    auto it = std::format_to(kernel::boot_log::iterator(), fmt, args...);
     *it = '\n';
 }
 }

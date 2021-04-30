@@ -16,17 +16,7 @@
 
 #pragma once
 
-#include <boot-memmap.h>
-#include <boot-video.h>
-
-namespace kernel::boot_screen
+namespace kernel::boot_serial
 {
-void initialize(
-    boot_protocol::video_mode * mode,
-    std::size_t memmap_size,
-    boot_protocol::memory_map_entry * memmap);
-
-void clear();
-void scroll();
 void put_char(char c);
 }

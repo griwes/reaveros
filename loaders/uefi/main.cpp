@@ -78,6 +78,8 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         {
             backbuffer_region = efi_loader::allocate_pages(
                 video_mode.info.framebuffer_size, efi_loader::EFI_MEMORY_TYPE::reaveros_backbuffer);
+
+            efi_loader::console::print(u" > Video backbuffer physical address: ", backbuffer_region, u"\n\r");
         }
 
         efi_loader::console::print(u"[DSK] Loading kernel and initrd...\n\r");

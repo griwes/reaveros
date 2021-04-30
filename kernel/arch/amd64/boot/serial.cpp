@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "serial.h"
 
-#include <boot-memmap.h>
-#include <boot-video.h>
+#include <cstdint>
 
-namespace kernel::boot_screen
+namespace
 {
-void initialize(
-    boot_protocol::video_mode * mode,
-    std::size_t memmap_size,
-    boot_protocol::memory_map_entry * memmap);
+void outb(std::uint16_t port, std::uint8_t byte)
+{
+    asm volatile("outb %1, %0;" ::"dN"(port), "a"(byte));
+}
+}
 
-void clear();
-void scroll();
-void put_char(char c);
+namespace kernel::boot_serial
+{
+void put_char(char c)
+{
+    outb(0x3f8, c);
+}
 }

@@ -18,19 +18,46 @@
 
 namespace std
 {
+namespace
+{
+    template<typename Repr>
+    void * __memcpy(void * s1, const void * s2, size_t n)
+    {
+        auto s1_repr = reinterpret_cast<Repr *>(s1);
+        auto s2_repr = reinterpret_cast<const Repr *>(s2);
+
+        n /= sizeof(Repr);
+
+        while (n--)
+        {
+            *s1_repr++ = *s2_repr++;
+        }
+
+        return s1;
+    }
+}
+
 extern "C"
 {
     void * memcpy(void * s1, const void * s2, size_t n)
     {
-        auto s1_u8 = reinterpret_cast<uint8_t *>(s1);
-        auto s2_u8 = reinterpret_cast<const uint8_t *>(s2);
+        auto s1_uint = reinterpret_cast<std::uintptr_t>(s1);
+        auto s2_uint = reinterpret_cast<std::uintptr_t>(s2);
 
-        while (n--)
+        auto common = s1_uint | s2_uint | n;
+        auto ffs = __builtin_ffsll(common);
+
+        switch (ffs)
         {
-            *s1_u8++ = *s2_u8++;
+            case 1:
+                return __memcpy<std::uint8_t>(s1, s2, n);
+            case 2:
+                return __memcpy<std::uint16_t>(s1, s2, n);
+            case 3:
+                return __memcpy<std::uint32_t>(s1, s2, n);
+            default:
+                return __memcpy<std::uint64_t>(s1, s2, n);
         }
-
-        return s1;
     }
 
     int memcmp(const void * s1, const void * s2, size_t n)
@@ -44,6 +71,9 @@ extern "C"
             {
                 return *s1_u8 - *s2_u8;
             }
+
+            ++s1_u8;
+            ++s2_u8;
         }
 
         return 0;
@@ -68,10 +98,11 @@ extern "C"
     void * memset(void * s, int c, size_t n)
     {
         auto s_u8 = reinterpret_cast<uint8_t *>(s);
+        auto end = s_u8 + n;
 
-        while (n--)
+        while (s_u8 != end)
         {
-            *s_u8 = c;
+            *s_u8++ = c;
         }
 
         return s;
@@ -79,14 +110,13 @@ extern "C"
 
     size_t strlen(const char * s)
     {
-        std::size_t ret = 0;
+        auto start = s;
 
         while (*s++)
         {
-            ++ret;
         }
 
-        return ret;
+        return s - start;
     }
 }
 
@@ -95,5 +125,3 @@ const void * memchr(const void * s, int c, size_t n)
     return memchr(const_cast<void *>(s), c, n);
 }
 }
-
-// vim: ft=cpp

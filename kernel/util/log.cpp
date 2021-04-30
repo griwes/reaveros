@@ -18,19 +18,30 @@
 #include "boot-constants.h"
 #include "boot-memmap.h"
 
-namespace
+#ifdef __amd64__
+#include "../arch/amd64/boot/serial.h"
+#else
+#error unknown architecture
+#endif
+
+#include "../boot/screen.h"
+
+namespace kernel::boot_log
 {
 struct buffer_chunk
 {
     buffer_chunk * previous = nullptr;
-    char buffer[2 * 1024 * 1024 - sizeof(buffer_chunk *)]{};
+    char buffer[2 * 1024 * 1024 - sizeof(previous)]{}; // NOLINT(bugprone-sizeof-expression)
 };
+}
 
-buffer_chunk * latest_chunk = nullptr;
+namespace
+{
+kernel::boot_log::buffer_chunk * latest_chunk = nullptr;
 char * log_cursor = nullptr;
 }
 
-namespace kernel::log
+namespace kernel::boot_log
 {
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap)
 {
@@ -42,6 +53,32 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
     log_cursor = latest_chunk->buffer;
 }
 
+iterator::iterator()
+{
+}
+
+iterator::~iterator()
+{
+}
+
+const iterator::proxy & iterator::proxy::operator=(char c) const
+{
+    *log_cursor++ = c;
+    if (log_cursor == std::end(latest_chunk->buffer))
+    {
+        // allocate more, but need PMM for that
+        asm volatile("ud2");
+    }
+
+    boot_screen::put_char(c);
+    boot_serial::put_char(c);
+
+    return *this;
+}
+}
+
+namespace kernel::log
+{
 void * get_syslog_mailbox()
 {
     return nullptr;

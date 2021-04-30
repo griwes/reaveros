@@ -26,7 +26,7 @@ add_executable(kernel-elf
 )
 
 target_link_libraries(kernel-elf
-    freestanding
+    ${CMAKE_SYSROOT}/usr/lib/libfreestanding.a
 )
 
 set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/arch/${REAVEROS_ARCH}/kernel.lds)
@@ -42,7 +42,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/kernel
     DEPENDS kernel-elf
 
     COMMAND
-        ${CMAKE_OBJCOPY} -O binary -j .text -j .rodata -j .data
+        ${CMAKE_OBJCOPY} -O binary -j .text -j .rodata -j .data -j .bss --set-section-flags .bss=alloc,load,contents
             $<TARGET_FILE:kernel-elf>
             ${CMAKE_BINARY_DIR}/kernel
 )

@@ -31,7 +31,7 @@ add_executable(loader-uefi-elf
 )
 
 target_link_libraries(loader-uefi-elf
-    freestanding
+    ${CMAKE_SYSROOT}/usr/lib/libfreestanding.a
 )
 
 set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/loader.lds)

@@ -42,7 +42,7 @@ void __init()
     bool has_video_mode,
     boot_protocol::video_mode * video_mode)
 {
-    kernel::log::initialize(memmap_size, memmap_entries);
+    kernel::boot_log::initialize(memmap_size, memmap_entries);
 
     if (has_video_mode)
     {
