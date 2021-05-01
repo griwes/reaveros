@@ -57,11 +57,9 @@ void __init()
     kernel::log::println("");
 
     kernel::pmm::initialize(memmap_size, memmap_entries);
+    kernel::pmm::report();
+
     /*
-    kernel::vas::initialize();
-
-    kernel::pmm::boot_report();
-
     kernel::cpu::initialize();
 
     kernel::scheduler::initialize();

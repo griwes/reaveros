@@ -51,4 +51,5 @@ private:
 };
 
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
+void report();
 }
