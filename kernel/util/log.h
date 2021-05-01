@@ -21,6 +21,11 @@
 #include <format>
 #include <string_view>
 
+// TODO: sane abstraction for this
+#define PANIC(...)                                                                                           \
+    kernel::log::println("PANIC: " __VA_ARGS__);                                                             \
+    asm volatile("cli; hlt;")
+
 namespace kernel::boot_log
 {
 struct buffer_chunk;

@@ -15,6 +15,7 @@
  */
 
 #include "boot/screen.h"
+#include "memory/pmm.h"
 #include "util/log.h"
 
 #include <boot-constants.h>
@@ -55,8 +56,8 @@ void __init()
     kernel::log::println("Copyright (C) 2021 Reaver Project Team");
     kernel::log::println("");
 
-    /*
     kernel::pmm::initialize(memmap_size, memmap_entries);
+    /*
     kernel::vas::initialize();
 
     kernel::pmm::boot_report();

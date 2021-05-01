@@ -13,8 +13,9 @@ SECTIONS
         *(.gnu.linkonce.t*)
     }
 
-    .rodata : ALIGN (0x1000)
+    .data :
     {
+        . = ALIGN(0x1000);
         *(.rodata*)
         *(.gnu.linkonce.r*)
         KEEP(*(.init))
@@ -23,16 +24,12 @@ SECTIONS
         KEEP(*(SORT(.init_array.*)))
         KEEP(*(.ctors .init_array))
         __end_ctors = .;
-    }
 
-    .data : ALIGN (0x1000)
-    {
+        . = ALIGN(0x1000);
         *(.data)
         *(.gnu.linkonce.d*)
-    }
 
-    .bss : ALIGN (0x1000)
-    {
+        . = ALIGN(0x1000);
         *(COMMON)
         *(.bss)
         *(.gnu.linkonce.b*)

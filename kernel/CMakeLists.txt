@@ -42,7 +42,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/kernel
     DEPENDS kernel-elf
 
     COMMAND
-        ${CMAKE_OBJCOPY} -O binary -j .text -j .rodata -j .data -j .bss --set-section-flags .bss=alloc,load,contents
+        ${CMAKE_OBJCOPY} -O binary -j .text -j .data
             $<TARGET_FILE:kernel-elf>
             ${CMAKE_BINARY_DIR}/kernel
 )

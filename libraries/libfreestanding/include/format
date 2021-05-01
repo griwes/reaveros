@@ -232,7 +232,11 @@ private:
     }
 
     template<class _Traits>
-    explicit basic_format_arg(basic_string_view<char_type, _Traits> __s) noexcept;
+    explicit basic_format_arg(basic_string_view<char_type, _Traits> __s) noexcept
+    {
+        __value.__strv_11 = basic_string_view<char_type>(__s.begin(), __s.size());
+        __value_idx = 11;
+    }
 
     /*
     template<class traits, class Allocator>
