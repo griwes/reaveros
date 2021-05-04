@@ -4,16 +4,20 @@ project(reaveros-kernel ASM CXX)
 file(GLOB_RECURSE sources
     CONFIGURE_DEPENDS
     *.cpp
+    *.asm
 )
 
 file(GLOB_RECURSE arch_sources
     CONFIGURE_DEPENDS
     arch/*.cpp
+    arch/*.asm
 )
 
 file(GLOB_RECURSE current_arch_sources
     CONFIGURE_DEPENDS
+    arch/common/*.cpp
     arch/${REAVEROS_ARCH}/*.cpp
+    arch/${REAVEROS_ARCH}/*.asm
 )
 
 # Without current arch sources, arch_sources will be a list of sources of *other* arches.

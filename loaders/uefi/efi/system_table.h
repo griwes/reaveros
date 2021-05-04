@@ -26,7 +26,11 @@ struct EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL;
 struct EFI_RUNTIME_SERVICES;
 struct EFI_BOOT_SERVICES;
 
-struct EFI_CONFIGURATION_TABLE;
+struct EFI_CONFIGURATION_TABLE
+{
+    EFI_GUID vendor_guid;
+    void * vendor_table;
+};
 
 struct EFI_SYSTEM_TABLE
 {

@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace efi_loader
 {
@@ -30,6 +31,8 @@ struct EFI_GUID
     std::uint16_t data2;
     std::uint16_t data3;
     std::uint8_t data4[8];
+
+    bool operator==(const EFI_GUID &) const = default;
 };
 
 struct EFI_TABLE_HEADER

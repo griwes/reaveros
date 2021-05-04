@@ -36,6 +36,13 @@ public:
     {
     }
 
+    template<typename OtherT>
+    explicit tagged_address_type(
+        const tagged_address_type<OtherT, Tag> & other) requires std::is_convertible<T, OtherT>::value
+        : _repr(other._repr)
+    {
+    }
+
     T value() const
     {
         return _repr;
@@ -43,7 +50,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    tagged_address_type operator op(Other oth) requires std::integral<Other>                                 \
+    tagged_address_type operator op(Other oth) const requires std::integral<Other>                           \
     {                                                                                                        \
         return tagged_address_type{ _repr op oth };                                                          \
     }
@@ -55,7 +62,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    Other operator op(Other oth) requires std::integral<Other>                                               \
+    Other operator op(Other oth) const requires std::integral<Other>                                         \
     {                                                                                                        \
         return _repr op oth;                                                                                 \
     }
@@ -79,7 +86,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    auto operator op(Other oth) requires std::integral<Other>                                                \
+    auto operator op(Other oth) const requires std::integral<Other>                                          \
     {                                                                                                        \
         return _repr op oth;                                                                                 \
     }
@@ -89,10 +96,14 @@ public:
 
 #undef DEFINE_OPERATOR
 
+    template<typename U, typename OtherTag>
+    friend class tagged_address_type;
+
 private:
-    std::uintptr_t _repr;
+    T _repr;
 };
 
+using phys_addr32_t = tagged_address_type<std::uint32_t, physical_address_tag>;
 using phys_addr_t = tagged_address_type<std::uintptr_t, physical_address_tag>;
 using virt_addr_t = tagged_address_type<std::uintptr_t, virtual_address_tag>;
 

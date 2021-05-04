@@ -101,6 +101,14 @@ void * open_protocol_by_guid(const EFI_GUID &, const char *);
 void * allocate_pages(std::size_t, EFI_MEMORY_TYPE type);
 void deallocate_pages(void *, std::size_t);
 
+struct acpi_information
+{
+    std::size_t revision;
+    std::uintptr_t root;
+};
+
+acpi_information find_acpi_root();
+
 struct memory_map
 {
     std::size_t key;

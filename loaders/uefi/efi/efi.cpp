@@ -213,6 +213,43 @@ void * allocate_pages(std::size_t size, EFI_MEMORY_TYPE type)
     }
 }
 
+struct acpi_guid_description
+{
+    EFI_GUID guid;
+    std::size_t revision;
+};
+
+acpi_guid_description acpi_guids[] = {
+    { EFI_GUID{ 0x8868e871, 0xe4f1, 0x11d3, { 0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81 } }, 20 },
+    { EFI_GUID{ 0xeb9d2d30, 0x2d88, 0x11d3, { 0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d } }, 10 }
+};
+
+acpi_information find_acpi_root()
+{
+    for (auto && guid_info : acpi_guids)
+    {
+        for (auto i = 0ull; i < system_table->number_of_table_entries; ++i)
+        {
+            if (system_table->configuration_table[i].vendor_guid == guid_info.guid)
+            {
+                auto ret = acpi_information{ guid_info.revision,
+                                             reinterpret_cast<std::uintptr_t>(
+                                                 system_table->configuration_table[i].vendor_table) };
+                console::print(
+                    u" > Found ACPI root, revision ",
+                    ret.revision,
+                    u", physical address: ",
+                    ret.root,
+                    u".\n\r");
+                return ret;
+            }
+        }
+    }
+
+    console::print(u"[ERR] Failed to find ACPI root!");
+    halt();
+}
+
 memory_map get_memory_map()
 {
     std::size_t size = 0;

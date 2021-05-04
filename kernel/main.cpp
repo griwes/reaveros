@@ -14,10 +14,13 @@
  * limitations under the License.
  */
 
+#include "arch/common/acpi/acpi.h"
+#include "arch/cpu.h"
 #include "boot/screen.h"
 #include "memory/pmm.h"
 #include "util/log.h"
 
+#include <boot-arguments.h>
 #include <boot-constants.h>
 #include <boot-memmap.h>
 #include <boot-video.h>
@@ -37,17 +40,17 @@ void __init()
     }
 }
 
-[[gnu::section(".reaveros_entry")]] extern "C" void kernel_main(
-    std::size_t memmap_size,
-    boot_protocol::memory_map_entry * memmap_entries,
-    bool has_video_mode,
-    boot_protocol::video_mode * video_mode)
+extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 {
-    kernel::boot_log::initialize(memmap_size, memmap_entries);
+}
 
-    if (has_video_mode)
+[[gnu::section(".reaveros_entry")]] extern "C" void kernel_main(boot_protocol::kernel_arguments args)
+{
+    kernel::boot_log::initialize(args.memory_map_size, args.memory_map_entries);
+
+    if (args.has_video_mode)
     {
-        kernel::boot_screen::initialize(video_mode, memmap_size, memmap_entries);
+        kernel::boot_screen::initialize(args.video_mode, args.memory_map_size, args.memory_map_entries);
     }
 
     kernel::log::println("ReaverOS: Reaver Project Operating System, \"Rose\"");
@@ -56,12 +59,13 @@ void __init()
     kernel::log::println("Copyright (C) 2021 Reaver Project Team");
     kernel::log::println("");
 
-    kernel::pmm::initialize(memmap_size, memmap_entries);
+    kernel::pmm::initialize(args.memory_map_size, args.memory_map_entries);
     kernel::pmm::report();
 
-    /*
+    kernel::acpi::initialize(args.acpi_revision, kernel::phys_addr_t{ args.acpi_root });
     kernel::cpu::initialize();
 
+    /*
     kernel::scheduler::initialize();
 
     // find initrd

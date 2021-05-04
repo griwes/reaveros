@@ -25,6 +25,7 @@
 #include "efi/system_table.h"
 #include "efi/video_mode.h"
 
+#include <boot-arguments.h>
 #include <boot-constants.h>
 
 #include <cstring>
@@ -134,6 +135,9 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         }
     }
 
+    efi_loader::console::print(u"[EFI] Locating the ACPI root...\n\r");
+    auto acpi_info = efi_loader::find_acpi_root();
+
     efi_loader::console::print(u"[EFI] Retrieving the memory map...\n\r");
     auto memmap = efi_loader::get_memory_map();
 
@@ -145,10 +149,19 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     auto memmap_entries_remapped = reinterpret_cast<boot_protocol::memory_map_entry *>(
         boot_protocol::physmem_base + reinterpret_cast<std::uintptr_t>(memmap.entries));
 
-    using kernel_entry_t =
-        void (*)(std::size_t, boot_protocol::memory_map_entry *, bool, boot_protocol::video_mode *);
+    boot_protocol::kernel_arguments args{};
+
+    args.memory_map_size = memmap.size;
+    args.memory_map_entries = memmap_entries_remapped;
+    args.has_video_mode = video_mode.valid;
+    args.video_mode = &video_mode.info;
+
+    args.acpi_revision = acpi_info.revision;
+    args.acpi_root = acpi_info.root;
+
+    using kernel_entry_t = void (*)(boot_protocol::kernel_arguments);
     auto kernel_entry = reinterpret_cast<kernel_entry_t>(boot_protocol::kernel_base);
-    kernel_entry(memmap.size, memmap_entries_remapped, video_mode.valid, &video_mode.info);
+    kernel_entry(args);
 
     __builtin_unreachable();
 }

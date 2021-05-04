@@ -24,7 +24,8 @@
 // TODO: sane abstraction for this
 #define PANIC(...)                                                                                           \
     kernel::log::println("PANIC: " __VA_ARGS__);                                                             \
-    asm volatile("cli; hlt;")
+    asm volatile("cli; hlt;");                                                                               \
+    __builtin_unreachable()
 
 namespace kernel::boot_log
 {

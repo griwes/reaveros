@@ -11,6 +11,7 @@ set(includes
     format
     iterator
     memory
+    new
     string_view
     system_error
     type_traits

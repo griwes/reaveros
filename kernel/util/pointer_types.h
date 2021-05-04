@@ -20,24 +20,36 @@
 
 namespace kernel
 {
-template<typename T>
+template<typename T, typename Storage = std::uintptr_t>
 class phys_ptr_t
 {
 public:
     phys_ptr_t() = default;
 
-    explicit phys_ptr_t(tagged_address_type<std::uintptr_t, physical_address_tag> address) : _repr(address)
+    explicit phys_ptr_t(tagged_address_type<Storage, physical_address_tag> address) : _repr(address)
     {
     }
 
-    explicit phys_ptr_t(T * pointer)
-        : _repr(reinterpret_cast<std::uintptr_t>(pointer) - boot_protocol::physmem_base)
+    explicit phys_ptr_t(T * pointer) : _repr(reinterpret_cast<Storage>(pointer) - boot_protocol::physmem_base)
     {
+    }
+
+    template<typename OtherStorage>
+    phys_ptr_t & operator=(
+        const phys_ptr_t<T, OtherStorage> & other) requires std::is_convertible<OtherStorage, Storage>::value
+    {
+        _repr = tagged_address_type<Storage, physical_address_tag>(other._repr.value());
+        return *this;
     }
 
     T * value() const
     {
         return reinterpret_cast<T *>(_repr.value() + boot_protocol::physmem_base);
+    }
+
+    void * raw_value() const
+    {
+        return reinterpret_cast<void *>(_repr.value());
     }
 
     T * operator->() const
@@ -50,8 +62,23 @@ public:
         return *value();
     }
 
-private : tagged_address_type<std::uintptr_t, physical_address_tag> _repr;
+    explicit operator bool() const
+    {
+        return _repr.value();
+    }
+
+    bool operator!() const
+    {
+        return !_repr.value();
+    }
+
+    template<typename U, typename OtherStorage>
+    friend class phys_ptr_t;
+
+private:
+    tagged_address_type<Storage, physical_address_tag> _repr;
 };
 
 static_assert(sizeof(phys_ptr_t<void>) == sizeof(void *));
+static_assert(sizeof(phys_ptr_t<void, std::uint32_t>) == sizeof(std::uint32_t));
 }

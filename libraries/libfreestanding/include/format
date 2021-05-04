@@ -1054,6 +1054,7 @@ struct formatter<const void *, _CharT>
     {
         __basefmt.__strfmt.__throw_on_trailing = false;
         __basefmt.__strfmt.__is_numeric = true;
+        __basefmt.__strfmt.__alt_repr = true;
         __basefmt.__strfmt.__align = decltype(__basefmt.__strfmt)::__right;
         auto __it = __basefmt.__strfmt.parse(__ctx);
 
