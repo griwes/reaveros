@@ -16,7 +16,9 @@
 
 #pragma once
 
+#include "concepts"
 #include "cstddef"
+#include "type_traits"
 
 namespace std
 {
@@ -170,20 +172,63 @@ constexpr bool is_gteq(partial_ordering __cmp) noexcept
 {
     return __cmp >= 0;
 }
+*/
 
-template<class... _Ts>
+template<typename... _Ts>
 struct common_comparison_category
 {
-    using type = see below;
+    using type = conditional_t<
+        ((is_same_v<
+              _Ts,
+              strong_ordering> || is_same_v<_Ts, weak_ordering> || is_same_v<_Ts, partial_ordering>)&&...),
+        common_type_t<_Ts...>,
+        void>;
 };
-template<class... _Ts>
+
+template<>
+struct common_comparison_category<>
+{
+    using type = strong_ordering;
+};
+
+template<typename... _Ts>
 using common_comparison_category_t = typename common_comparison_category<_Ts...>::type;
 
-template<class _T, class _Cat = partial_ordering>
-concept three_way_comparable = see below;
-template<class _T, class _U, class _Cat = partial_ordering>
-concept three_way_comparable_with = see below;
+template<typename _T, typename _Cat>
+concept __compares_as = same_as<common_comparison_category_t<_T, _Cat>, _Cat>;
 
+template<typename _T, typename _Cat = partial_ordering>
+concept three_way_comparable =
+    __weakly_equality_comparable_with<_T, _T> && __partially_ordered_with<_T, _T> && requires(
+        const remove_reference_t<_T> & __a,
+        const remove_reference_t<_T> & __b)
+{
+    {
+        __a <=> __b
+        } -> __compares_as<_Cat>;
+};
+
+template<typename _T, typename _U, typename _Cat = partial_ordering>
+concept three_way_comparable_with =
+    three_way_comparable<_T, _Cat> && three_way_comparable<_U, _Cat> && common_reference_with
+    < const remove_reference_t<_T>
+&,
+    const remove_reference_t<_U> & > &&three_way_comparable<
+        common_reference_t<const remove_reference_t<_T> &, const remove_reference_t<_U> &>,
+        _Cat> && __weakly_equality_comparable_with<_T, _U> &&
+                                         __partially_ordered_with<_T, _U> && requires(
+                                             const remove_reference_t<_T> & __t,
+                                             const remove_reference_t<_U> & __u)
+{
+    {
+        __t <=> __u
+        } -> __compares_as<_Cat>;
+    {
+        __u <=> __t
+        } -> __compares_as<_Cat>;
+};
+
+/*
 template<class _T, class _U = _T>
 struct compare_three_way_result;
 

@@ -117,8 +117,12 @@ template<typename _T>
 struct is_volatile;
 template<typename _T>
 struct is_trivial;
+
 template<typename _T>
-struct is_trivially_copyable;
+struct is_trivially_copyable : bool_constant<__is_trivially_copyable(_T)>
+{
+};
+
 template<typename _T>
 struct is_standard_layout;
 template<typename _T>
@@ -469,20 +473,6 @@ struct aligned_storage;
 template<size_t _Len, typename... _Types>
 struct aligned_union;
 
-template<typename _T>
-struct decay;
-
-template<bool _B, typename _T = void>
-struct enable_if
-{
-    using type = _T;
-};
-
-template<typename _T>
-struct enable_if<false, _T>
-{
-};
-
 template<bool, typename _T, typename _F>
 struct conditional
 {
@@ -497,6 +487,46 @@ struct conditional<false, _T, _F>
 
 template<typename _T>
 using remove_cvref_t = typename remove_cvref<_T>::type;
+
+template<typename _T>
+struct decay
+{
+    using _U = remove_reference_t<_T>;
+
+    template<typename _U>
+    struct __case1
+    {
+        using type = remove_extent_t<_U> *;
+    };
+
+    template<typename _U>
+    struct __case2
+    {
+        using type = add_pointer_t<_U>;
+    };
+
+    template<typename _U>
+    struct __case3
+    {
+        using type = remove_cv_t<_U>;
+    };
+
+    using type = typename conditional<
+        __is_array(_U),
+        __case1<_U>,
+        typename conditional<__is_function(_U), __case2<_U>, __case3<_U>>::type>::type::type;
+};
+
+template<bool _B, typename _T = void>
+struct enable_if
+{
+    using type = _T;
+};
+
+template<typename _T>
+struct enable_if<false, _T>
+{
+};
 
 template<typename _T>
 using __cref = add_lvalue_reference_t<const remove_reference_t<_T>>;
@@ -624,7 +654,9 @@ template<typename _T1, typename _T2>
 using __common_ref = typename __common_ref_impl<_T1, _T2>::type;
 
 template<typename... _Ts>
-struct common_type;
+struct common_type
+{
+};
 
 template<>
 struct common_type<>
@@ -670,6 +702,14 @@ requires __common_type_4_4<_T1, _T2>
 struct common_type<_T1, _T2>
 {
     using type = typename decay<__cond_res<__cref<_T1>, __cref<_T2>>>::type;
+};
+
+template<typename _T1, typename _T2, typename... Rest>
+requires(sizeof...(Rest) > 0 && requires {
+    typename common_type<_T1, _T2>::type;
+}) struct common_type<_T1, _T2, Rest...>
+{
+    using type = typename common_type<typename common_type<_T1, _T2>::type, Rest...>::type;
 };
 
 template<typename... _T>

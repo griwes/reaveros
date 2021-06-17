@@ -16,6 +16,7 @@
 
 #include "lapic.h"
 
+#include "../../../time/time.h"
 #include "../../../util/log.h"
 #include "../cpu/lapic.h"
 
@@ -29,7 +30,11 @@ void initialize()
     lapic::write_timer_divisor(1);
     lapic::write_timer_counter(-1);
 
-    // trigger hpet interrupt
+    volatile bool interrupt_fired = false;
+
+    using namespace std::literals;
+    time::high_precision_clock().one_shot(
+        1ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
 
     std::uint32_t ticks = -1;
     ticks -= lapic::read_timer_counter();

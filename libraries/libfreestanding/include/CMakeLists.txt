@@ -6,12 +6,14 @@ set(includes
     cwchar
 
     charconv
+    chrono
     compare
     concepts
     format
     iterator
     memory
     new
+    ratio
     string_view
     system_error
     type_traits

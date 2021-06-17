@@ -18,6 +18,11 @@
 #include "../arch/timers.h"
 #include "../util/log.h"
 
+namespace
+{
+kernel::time::timer * hpc = nullptr;
+}
+
 namespace kernel::time
 {
 void initialize()
@@ -25,5 +30,15 @@ void initialize()
     log::println("[TIME] Initializing the time subsystem...");
 
     arch::timers::initialize();
+}
+
+timer & high_precision_clock()
+{
+    if (!hpc)
+    {
+        PANIC("High precision clock requested, but not registered!");
+    }
+
+    return *hpc;
 }
 }
