@@ -15,8 +15,8 @@
  */
 
 #include "lapic.h"
-#include "../../util/log.h"
-#include "../../util/pointer_types.h"
+#include "../../../util/log.h"
+#include "../../../util/pointer_types.h"
 #include "cpu.h"
 #include "irqs.h"
 

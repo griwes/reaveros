@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "address_types.h"
+#include "integer_types.h"
 
 namespace kernel
 {
@@ -26,7 +26,7 @@ class phys_ptr_t
 public:
     phys_ptr_t() = default;
 
-    explicit phys_ptr_t(tagged_address_type<Storage, physical_address_tag> address) : _repr(address)
+    explicit phys_ptr_t(tagged_integer_type<Storage, physical_address_tag> address) : _repr(address)
     {
     }
 
@@ -38,7 +38,7 @@ public:
     phys_ptr_t & operator=(
         const phys_ptr_t<T, OtherStorage> & other) requires std::is_convertible<OtherStorage, Storage>::value
     {
-        _repr = tagged_address_type<Storage, physical_address_tag>(other._repr.value());
+        _repr = tagged_integer_type<Storage, physical_address_tag>(other._repr.value());
         return *this;
     }
 
@@ -76,7 +76,7 @@ public:
     friend class phys_ptr_t;
 
 private:
-    tagged_address_type<Storage, physical_address_tag> _repr;
+    tagged_integer_type<Storage, physical_address_tag> _repr;
 };
 
 static_assert(sizeof(phys_ptr_t<void>) == sizeof(void *));

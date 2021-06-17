@@ -16,8 +16,6 @@
 
 #include "gdt.h"
 
-#include "../../util/log.h"
-
 #include <cstring>
 
 namespace

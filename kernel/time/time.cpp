@@ -14,26 +14,16 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "time.h"
+#include "../arch/timers.h"
+#include "../util/log.h"
 
-#include "../../../util/integer_types.h"
-#include "../../cpu.h"
-
-namespace kernel::acpi
+namespace kernel::time
 {
-void initialize(std::size_t revision, phys_addr_t acpi_root);
-
-struct madt_result
+void initialize()
 {
-    std::size_t core_count;
-    phys_addr_t lapic_base;
-};
-madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t core_count);
+    log::println("[TIME] Initializing the time subsystem...");
 
-struct hpet_result
-{
-    phys_addr_t base;
-    std::uint16_t min_tick;
-};
-hpet_result parse_hpet();
+    arch::timers::initialize();
+}
 }

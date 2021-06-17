@@ -25,20 +25,21 @@ namespace kernel
 {
 struct physical_address_tag;
 struct virtual_address_tag;
+struct pci_vendor_tag;
 
 template<typename T, typename Tag>
-class tagged_address_type
+class tagged_integer_type
 {
 public:
-    tagged_address_type() = default;
+    tagged_integer_type() = default;
 
-    explicit tagged_address_type(std::uintptr_t repr) : _repr(repr)
+    explicit tagged_integer_type(std::uintptr_t repr) : _repr(repr)
     {
     }
 
     template<typename OtherT>
-    explicit tagged_address_type(
-        const tagged_address_type<OtherT, Tag> & other) requires std::is_convertible<T, OtherT>::value
+    explicit tagged_integer_type(
+        const tagged_integer_type<OtherT, Tag> & other) requires std::is_convertible<T, OtherT>::value
         : _repr(other._repr)
     {
     }
@@ -50,9 +51,9 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    tagged_address_type operator op(Other oth) const requires std::integral<Other>                           \
+    tagged_integer_type operator op(Other oth) const requires std::integral<Other>                           \
     {                                                                                                        \
-        return tagged_address_type{ _repr op oth };                                                          \
+        return tagged_integer_type{ _repr op oth };                                                          \
     }
 
     DEFINE_OPERATOR(+);
@@ -73,7 +74,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    tagged_address_type & operator op(Other oth) requires std::integral<Other>                               \
+    tagged_integer_type & operator op(Other oth) requires std::integral<Other>                               \
     {                                                                                                        \
         _repr op oth;                                                                                        \
         return *this;                                                                                        \
@@ -97,15 +98,16 @@ public:
 #undef DEFINE_OPERATOR
 
     template<typename U, typename OtherTag>
-    friend class tagged_address_type;
+    friend class tagged_integer_type;
 
 private:
     T _repr;
 };
 
-using phys_addr32_t = tagged_address_type<std::uint32_t, physical_address_tag>;
-using phys_addr_t = tagged_address_type<std::uintptr_t, physical_address_tag>;
-using virt_addr_t = tagged_address_type<std::uintptr_t, virtual_address_tag>;
+using phys_addr32_t = tagged_integer_type<std::uint32_t, physical_address_tag>;
+using phys_addr_t = tagged_integer_type<std::uintptr_t, physical_address_tag>;
+using virt_addr_t = tagged_integer_type<std::uintptr_t, virtual_address_tag>;
+using pci_vendor_t = tagged_integer_type<std::uint16_t, pci_vendor_tag>;
 
 static_assert(sizeof(phys_addr_t) == sizeof(std::uintptr_t));
 static_assert(sizeof(virt_addr_t) == sizeof(std::uintptr_t));

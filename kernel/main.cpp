@@ -18,6 +18,7 @@
 #include "arch/cpu.h"
 #include "boot/screen.h"
 #include "memory/pmm.h"
+#include "time/time.h"
 #include "util/log.h"
 
 #include <boot-arguments.h>
@@ -63,9 +64,11 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     kernel::pmm::report();
 
     kernel::acpi::initialize(args.acpi_revision, kernel::phys_addr_t{ args.acpi_root });
-    kernel::cpu::initialize();
+    kernel::arch::cpu::initialize();
+    kernel::time::initialize();
 
     /*
+    kernel::smp::boot();
     kernel::scheduler::initialize();
 
     // find initrd

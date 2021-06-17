@@ -185,6 +185,31 @@ struct [[gnu::packed]] madt : public description_header
 kernel::phys_ptr_t<rsdt> root_rsdt{ nullptr };
 kernel::phys_ptr_t<xsdt> root_xsdt{ nullptr };
 
+struct address_structure
+{
+    std::uint8_t address_space_id;
+    std::uint8_t register_bit_width;
+    std::uint8_t register_bit_offset;
+    std::uint8_t reserved;
+    kernel::phys_addr_t address;
+} __attribute__((packed));
+
+struct hpet : public description_header
+{
+    static const constexpr char expected_signature[] = "HPET";
+
+    std::uint8_t hardware_rev_id;
+    std::uint8_t comparator_count : 5;
+    std::uint8_t counter_size : 1;
+    std::uint8_t reserved : 1;
+    std::uint8_t legacy_replacement : 1;
+    kernel::pci_vendor_t pci_vendor_id;
+    address_structure address;
+    std::uint8_t hpet_number;
+    std::uint16_t minimum_tick;
+    std::uint8_t page_protection;
+} __attribute__((packed));
+
 template<typename Table, typename Root>
 kernel::phys_ptr_t<Table> find_table(Root root)
 {
@@ -249,7 +274,7 @@ void initialize(std::size_t, phys_addr_t acpi_root)
     } while (false);
 }
 
-kernel::acpi::madt_result parse_madt(cpu::core * cores_storage, std::size_t max_core_count)
+kernel::acpi::madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t max_core_count)
 {
     auto madt_ptr = find_table<madt>();
     if (!madt_ptr)
@@ -432,5 +457,28 @@ kernel::acpi::madt_result parse_madt(cpu::core * cores_storage, std::size_t max_
     }
 
     return { detected_cores, lapic_address };
+}
+
+hpet_result parse_hpet()
+{
+    auto hpet_ptr = find_table<hpet>();
+
+    log::println(" > Found HPET table.");
+    log::println(
+        " > Number: {}, PCI vendor ID: {:04x}.", hpet_ptr->hpet_number, hpet_ptr->pci_vendor_id.value());
+    log::println(
+        " > Number of comparators: {}, 64 bit counter? {}.",
+        hpet_ptr->comparator_count + 1,
+        static_cast<bool>(hpet_ptr->counter_size));
+    log::println(" > Min tick: {}.", hpet_ptr->minimum_tick);
+
+    if (hpet_ptr->address.address_space_id == 1)
+    {
+        PANIC("Found HPET, but in system I/O space, not in system memory!");
+    }
+
+    log::println(" > Base address: {:#018x}.", hpet_ptr->address.address.value());
+
+    return { hpet_ptr->address.address, hpet_ptr->minimum_tick };
 }
 }

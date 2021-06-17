@@ -17,14 +17,14 @@
 #pragma once
 
 #ifdef __amd64__
-#include "amd64/core.h"
-#include "amd64/cpu.h"
-#else
-#error "unknown architecture"
-#endif
+#include "amd64/cpu/core.h"
+#include "amd64/cpu/cpu.h"
 
-namespace kernel::cpu
+namespace kernel::arch::cpu
 {
 using amd64::cpu::core;
 using amd64::cpu::initialize;
 }
+#else
+#error "unknown architecture"
+#endif

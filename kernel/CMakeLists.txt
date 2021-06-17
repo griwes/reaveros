@@ -3,14 +3,10 @@ project(reaveros-kernel ASM CXX)
 
 file(GLOB_RECURSE sources
     CONFIGURE_DEPENDS
-    *.cpp
-    *.asm
-)
-
-file(GLOB_RECURSE arch_sources
-    CONFIGURE_DEPENDS
-    arch/*.cpp
-    arch/*.asm
+    boot/*.cpp
+    memory/*.cpp
+    time/*.cpp
+    util/*.cpp
 )
 
 file(GLOB_RECURSE current_arch_sources
@@ -20,13 +16,10 @@ file(GLOB_RECURSE current_arch_sources
     arch/${REAVEROS_ARCH}/*.asm
 )
 
-# Without current arch sources, arch_sources will be a list of sources of *other* arches.
-list(REMOVE_ITEM arch_sources ${current_arch_sources})
-# And we can just remove that from the main list of sources.
-list(REMOVE_ITEM sources ${arch_sources})
-
 add_executable(kernel-elf
+    main.cpp
     ${sources}
+    ${current_arch_sources}
 )
 
 target_link_libraries(kernel-elf

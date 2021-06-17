@@ -24,6 +24,7 @@ static const constexpr auto free_start = 0x20;
 static const constexpr auto free_end = 0xf0;
 
 static const constexpr auto lapic_timer = 0xf0;
+static const constexpr auto hpet_timer = 0xf1;
 static const constexpr auto lapic_spurious = 0xff;
 
 struct [[gnu::packed]] context

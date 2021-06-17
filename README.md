@@ -116,7 +116,7 @@ you should be very careful of pruning a toolchain if you disabled build caching 
 files to have your cache evict the previous stored build results, and do not wish to possibly wait for full GCC or LLVM builds
 to finish whenever you pull the main branch.
 
-### Running the OS (or, for now, its UEFI bootloader)
+### Running the OS (as far as it goes, at least)
 
 This last mentioned target - `image-uefi-efipart-amd64-llvm` - will create a file containing a FAT filesystem image that includes
 the UEFI bootloader for the amd64 architecture. If you install QEMU and OVMF, you can then run it and see what happens with a
@@ -124,6 +124,10 @@ command like this (this is the exact command I have been using to test at the ti
 sid):
 
 ```
-qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -drive format=raw,file=install/images/uefi-efipart-amd64-llvm.img -monitor stdio -parallel file:/dev/stdout -cpu qemu64,+sse3,+sse4.1,+sse4.2 -m 2048 -smp 4 -vga std -M pc-i440fx-2.1 -netdev user,id=net0 -device e1000e,romfile=,netdev=net0
+qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -drive format=raw,file=install/images/uefi-efipart-amd64-llvm.img -monitor stdio -serial file:/dev/stdout -cpu qemu64,+sse3,+sse4.1,+sse4.2 -m 2048 -smp 4 -vga std -M q35 -global hpet.msi=on -netdev user,id=net0 -device e1000e,romfile=,netdev=net0
 ```
 
+Platform requirements:
+* `amd64`:
+1. UEFI.
+2. HPET w/ FSB interrupt delivery; this is achieved in QEMU with `-global hpet.msi=on`.

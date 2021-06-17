@@ -15,8 +15,8 @@
  */
 
 #include "cpu.h"
-#include "../../util/log.h"
-#include "../common/acpi/acpi.h"
+#include "../../../util/log.h"
+#include "../../common/acpi/acpi.h"
 #include "core.h"
 #include "gdt.h"
 #include "idt.h"
@@ -45,12 +45,6 @@ void initialize()
     bsp_core->load_gdt();
     idt::initialize();
     idt::load();
-
-    // time::hpet::initialize();
-    // time::real::initialize();
-    // time::lapic::initialize();
-
-    // smp::boot();
 }
 
 core * current_core()

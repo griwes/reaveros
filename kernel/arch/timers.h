@@ -16,24 +16,13 @@
 
 #pragma once
 
-#include "../../../util/integer_types.h"
-#include "../../cpu.h"
+#ifdef __amd64__
+#include "amd64/timers/timers.h"
 
-namespace kernel::acpi
+namespace kernel::arch::timers
 {
-void initialize(std::size_t revision, phys_addr_t acpi_root);
-
-struct madt_result
-{
-    std::size_t core_count;
-    phys_addr_t lapic_base;
-};
-madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t core_count);
-
-struct hpet_result
-{
-    phys_addr_t base;
-    std::uint16_t min_tick;
-};
-hpet_result parse_hpet();
+using amd64::timers::initialize;
 }
+#else
+#error uknown architecture
+#endif

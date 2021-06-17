@@ -14,26 +14,14 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "irqs.h"
 
-#include "../../../util/integer_types.h"
-#include "../../cpu.h"
+#include "../../../util/log.h"
 
-namespace kernel::acpi
+namespace kernel::amd64::irq
 {
-void initialize(std::size_t revision, phys_addr_t acpi_root);
-
-struct madt_result
+void handle(context & ctx)
 {
-    std::size_t core_count;
-    phys_addr_t lapic_base;
-};
-madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t core_count);
-
-struct hpet_result
-{
-    phys_addr_t base;
-    std::uint16_t min_tick;
-};
-hpet_result parse_hpet();
+    PANIC("IRQ! {:x}, {}", ctx.number, ctx.error);
+}
 }

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "../../util/address_types.h"
+#include "../../../util/integer_types.h"
 
 namespace kernel::amd64::lapic
 {

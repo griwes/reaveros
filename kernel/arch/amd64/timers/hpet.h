@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-#include "irqs.h"
+#pragma once
 
-#include "../../util/log.h"
-
-namespace kernel::amd64::irq
+namespace kernel::amd64::hpet
 {
-void handle(context & ctx)
-{
-    PANIC("IRQ! {}, {}", ctx.number, ctx.error);
-}
+void initialize();
 }
