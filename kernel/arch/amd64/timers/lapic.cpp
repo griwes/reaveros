@@ -16,9 +16,24 @@
 
 #include "lapic.h"
 
+#include "../../../util/log.h"
+#include "../cpu/lapic.h"
+
 namespace kernel::amd64::lapic_timer
 {
 void initialize()
 {
+    log::println(" > Initializing LAPIC timer...");
+
+    log::println(" >> Estimating tick period...");
+    lapic::write_timer_divisor(1);
+    lapic::write_timer_counter(-1);
+
+    // trigger hpet interrupt
+
+    std::uint32_t ticks = -1;
+    ticks -= lapic::read_timer_counter();
+
+    lapic::write_timer_counter(0);
 }
 }

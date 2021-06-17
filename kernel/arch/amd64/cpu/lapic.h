@@ -22,4 +22,15 @@ namespace kernel::amd64::lapic
 {
 void initialize(phys_addr_t lapic_base);
 std::uint32_t id();
+
+enum class timer_mode
+{
+    one_shot,
+    periodic
+};
+
+void write_timer_divisor(std::uint8_t);
+void write_timer_counter(std::uint32_t);
+std::uint32_t read_timer_counter();
+void enable_timer(timer_mode);
 }

@@ -63,7 +63,7 @@ class hpet_timer
             if (!(conf_and_caps & (1 << 15)))
             {
                 kernel::log::println(
-                    " >> Comparator {} does not support FSB interrupt mappings; disabling.", _timer);
+                    " >>> Comparator {} does not support FSB interrupt mappings; disabling.", _timer);
                 _parent = nullptr;
                 return false;
             }
@@ -71,7 +71,7 @@ class hpet_timer
             if (!(conf_and_caps & (1 << 5)))
             {
                 kernel::log ::println(
-                    " >> Comparator {} does not support 64 bit operations; disabling.", _timer);
+                    " >>> Comparator {} does not support 64 bit operations; disabling.", _timer);
                 _parent = nullptr;
                 return false;
             }
@@ -135,13 +135,13 @@ public:
         _base = base;
         _min_tick = min_tick;
 
-        kernel::log::println(" > Initializing HPET with information from registers...");
+        kernel::log::println(" >> Initializing HPET with information from registers...");
 
         _write(_registers::general_configuration, 0x1);
         auto caps = _read(_registers::general_capabilities);
 
         _comparator_count = ((caps & 0b111110000000) >> 8) + 1;
-        kernel::log::println(" > HPET comparator count: {}.", _comparator_count);
+        kernel::log::println(" >> HPET comparator count: {}.", _comparator_count);
 
         _period = caps >> 32;
         auto frequency = 1000000000000000ull / _period;
@@ -163,13 +163,13 @@ public:
             _max_tick = (~0ull / 1000000) * _period;
         }
 
-        kernel::log::println(" > HPET counter period: {}fs.", _period);
-        kernel::log::println(" > HPET counter frequency: {}Hz", frequency);
+        kernel::log::println(" >> HPET counter period: {}fs.", _period);
+        kernel::log::println(" >> HPET counter frequency: {}Hz", frequency);
 
         auto object_idx = 0ull;
         for (auto comparator = 0ull; comparator < _comparator_count; ++comparator)
         {
-            kernel::log::println(" > Initializing comparator {}...", comparator);
+            kernel::log::println(" >> Initializing comparator {}...", comparator);
             if (_comparators[object_idx].initialize(comparator, this))
             {
                 ++object_idx;

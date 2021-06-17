@@ -27,6 +27,7 @@ namespace
 {
 class xapic_t
 {
+public:
     enum class _registers_rw
     {
         local_apic_id = 0x20,
@@ -86,7 +87,6 @@ class xapic_t
         eoi = 0xb0
     };
 
-public:
     xapic_t(kernel::phys_addr_t base) : _register{ base }
     {
         _write(_registers_rw::destination_format, _read(_registers_rw::destination_format) & 0xF0000000);
@@ -113,14 +113,10 @@ public:
             ((_read(_registers_r::local_apic_version) >> 16) & 0xFF) + 1);
     }
 
-    std::uint32_t id() const
-    {
-        return _read(_registers_rw::local_apic_id);
-    }
-
 private:
     kernel::phys_addr_t _register;
 
+public:
     std::uint32_t _read(_registers_r reg) const
     {
         return *kernel::phys_ptr_t<std::uint32_t>{ _register + static_cast<std::uintptr_t>(reg) };
@@ -144,6 +140,7 @@ private:
 
 class x2apic_t
 {
+public:
     enum class _registers_rw
     {
         apic_base = 0x01b,
@@ -201,7 +198,6 @@ class x2apic_t
         self_ipi = 0x83f
     };
 
-public:
     x2apic_t()
     {
         _write(_registers_rw::apic_base, _read(_registers_rw::apic_base) | (1 << 10));
@@ -227,12 +223,6 @@ public:
             ((_read(_registers_r::local_apic_version) >> 16) & 0xFF) + 1);
     }
 
-    std::uint32_t id() const
-    {
-        return _read(_registers_r::local_apic_id);
-    }
-
-private:
     std::uint64_t _read(_registers_r reg) const
     {
         return kernel::amd64::cpu::rdmsr(static_cast<std::uint32_t>(reg));
@@ -296,6 +286,58 @@ void initialize(phys_addr_t lapic_base)
 
 std::uint32_t id()
 {
-    return x2apic_enabled ? lapic_storage.x2apic.id() : lapic_storage.xapic.id();
+    return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::local_apic_id)
+                          : lapic_storage.xapic._read(xapic_t::_registers_rw::local_apic_id);
+}
+
+void write_timer_divisor(std::uint8_t val)
+{
+    std::uint32_t bit_pattern;
+    switch (val)
+    {
+        case 1:
+            bit_pattern = 0b1011;
+            break;
+        case 2:
+            bit_pattern = 0b0000;
+            break;
+        case 4:
+            bit_pattern = 0b0001;
+            break;
+        case 8:
+            bit_pattern = 0b0010;
+            break;
+        case 16:
+            bit_pattern = 0b0011;
+            break;
+        case 32:
+            bit_pattern = 0b1000;
+            break;
+        case 64:
+            bit_pattern = 0b1001;
+            break;
+        case 128:
+            bit_pattern = 0b1010;
+            break;
+
+        default:
+            PANIC("Invalid LAPIC timer divisor requested: {}!", val);
+    }
+
+    x2apic_enabled
+        ? lapic_storage.x2apic._write(x2apic_t::_registers_rw::timer_divide_configuration, bit_pattern)
+        : lapic_storage.xapic._write(xapic_t::_registers_rw::timer_divide_configuration, bit_pattern);
+}
+
+void write_timer_counter(std::uint32_t val)
+{
+    x2apic_enabled ? lapic_storage.x2apic._write(x2apic_t::_registers_rw::timer_initial_count, val)
+                   : lapic_storage.xapic._write(xapic_t::_registers_rw::timer_initial_count, val);
+}
+
+std::uint32_t read_timer_counter()
+{
+    return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::timer_current_count)
+                          : lapic_storage.xapic._read(xapic_t::_registers_r::timer_current_count);
 }
 }
