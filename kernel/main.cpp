@@ -33,10 +33,15 @@ using ctor_t = void (*)();
 extern "C" ctor_t __start_ctors;
 extern "C" ctor_t __end_ctors;
 
-void __init()
+int count = 0;
+ctor_t ctor = nullptr;
+
+extern "C" void __init()
 {
     for (auto ctor = &__start_ctors; ctor != &__end_ctors; ++ctor)
     {
+        ++count;
+        ::ctor = *ctor;
         (*ctor)();
     }
 }
@@ -45,8 +50,15 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 {
 }
 
+[[noreturn]] extern "C" void __cxa_pure_virtual()
+{
+    PANIC("Pure virtual method called!");
+}
+
 [[gnu::section(".reaveros_entry")]] extern "C" void kernel_main(boot_protocol::kernel_arguments args)
 {
+    __init();
+
     kernel::boot_log::initialize(args.memory_map_size, args.memory_map_entries);
 
     if (args.has_video_mode)

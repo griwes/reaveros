@@ -20,26 +20,37 @@
 
 namespace std
 {
+constexpr intmax_t __gcd(intmax_t __a, intmax_t __b)
+{
+    auto __old_a = __a;
+    auto __old_b = __b;
+
+    while (__b)
+    {
+        __a = __old_b;
+        __b = __old_a % __old_b;
+
+        __old_a = __a;
+        __old_b = __b;
+    }
+
+    return __a;
+}
+
+constexpr intmax_t __lcm(intmax_t __a, intmax_t __b)
+{
+    auto ret = (__a / __gcd(__a, __b)) * __b;
+    if (ret < 0)
+    {
+        ret = -ret;
+    }
+
+    return ret;
+}
+
 template<intmax_t _N, intmax_t _D = 1>
 class ratio
 {
-    static constexpr intmax_t __gcd(intmax_t __a, intmax_t __b)
-    {
-        auto __old_a = __a;
-        auto __old_b = __b;
-
-        while (__b)
-        {
-            __a = __old_b;
-            __b = __old_a % __old_b;
-
-            __old_a = __a;
-            __old_b = __b;
-        }
-
-        return __a;
-    }
-
 public:
     static constexpr intmax_t num = _N / __gcd(_N, _D);
     static constexpr intmax_t den = _D / __gcd(_N, _D);

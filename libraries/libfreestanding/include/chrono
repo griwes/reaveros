@@ -40,7 +40,6 @@ namespace chrono
         using rep = _Rep;
         using period = typename _Period::type;
 
-    public:
         constexpr duration() = default;
 
         template<typename _Rep2>
@@ -87,14 +86,56 @@ namespace chrono
     };
 
     template<class _Clock, class _Duration = typename _Clock::duration>
-    class time_point;
+    class time_point
+    {
+    public:
+        using clock = _Clock;
+        using duration = _Duration;
+        using rep = typename duration::rep;
+        using period = typename duration::period;
+
+        constexpr time_point() = default;
+
+        constexpr explicit time_point(const duration & __d) : __d(__d)
+        {
+        }
+
+        template<class _Duration2>
+        constexpr time_point(const time_point<clock, _Duration2> & __t);
+
+        constexpr duration time_since_epoch() const
+        {
+            return __d;
+        }
+
+        constexpr time_point & operator++();
+        constexpr time_point operator++(int);
+        constexpr time_point & operator--();
+        constexpr time_point operator--(int);
+        constexpr time_point & operator+=(const duration & __d);
+        constexpr time_point & operator-=(const duration & __d);
+
+        static constexpr time_point min() noexcept;
+        static constexpr time_point max() noexcept;
+
+    private:
+        duration __d;
+    };
 }
 
 template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-struct common_type<chrono::duration<_Rep1, _Period1>, chrono::duration<_Rep2, _Period2>>;
+struct common_type<chrono::duration<_Rep1, _Period1>, chrono::duration<_Rep2, _Period2>>
+{
+    using type = chrono::duration<
+        common_type_t<_Rep1, _Rep2>,
+        ratio<__gcd(_Period1::num, _Period2::num), __lcm(_Period1::den, _Period2::den)>>;
+};
 
 template<typename _Clock, typename _Duration1, typename _Duration2>
-struct common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2>>;
+struct common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2>>
+{
+    using type = chrono::time_point<_Clock, common_type_t<_Duration1, _Duration2>>;
+};
 
 namespace chrono
 {
@@ -107,13 +148,19 @@ namespace chrono
     inline constexpr bool is_clock_v = is_clock<_T>::value;
 
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>> operator+(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr auto operator+(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>;
+        return _Ret(_Ret(__lhs).count() + _Ret(__rhs).count());
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>> operator-(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr auto operator-(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>;
+        return _Ret(_Ret(__lhs).count() - _Ret(__rhs).count());
+    }
+
     template<typename _Rep1, typename _Period, typename _Rep2>
     constexpr duration<common_type_t<_Rep1, _Rep2>, _Period> operator*(
         const duration<_Rep1, _Period> & __d,
@@ -142,27 +189,51 @@ namespace chrono
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
     constexpr bool operator==(
         const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _CT = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>::type;
+        return _CT(__lhs).count() == _CT(__rhs).count();
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr bool operator<(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr bool operator<(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _CT = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>::type;
+        return _CT(__lhs).count() < _CT(__rhs).count();
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr bool operator>(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr bool operator>(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        return __rhs < __lhs;
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
     constexpr bool operator<=(
         const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        return !(__rhs < __lhs);
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
     constexpr bool operator>=(
         const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
-    // template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    // requires see below constexpr auto operator<=>(
-    // const duration<Rep1, Period1> & __lhs,
-    // const duration<Rep2, Period2> & __rhs);
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        return !(__lhs < __rhs);
+    }
+
+    template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
+    requires three_way_comparable<
+        typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>::type::rep>
+    constexpr auto operator<=>(
+        const duration<_Rep1, _Period1> & __lhs,
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _CT = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>::type;
+        return _CT(__lhs).count() <=> _CT(__rhs).count();
+    }
 
     template<typename _ToDuration, typename _Rep, typename _Period>
     constexpr _ToDuration duration_cast(const duration<_Rep, _Period> & __d)
@@ -228,46 +299,88 @@ namespace chrono
     using months = duration<int_least32_t, ratio_divide<years::period, ratio<12>>>;
 
     template<typename _Clock, typename _Duration1, typename _Rep2, typename _Period2>
-    constexpr time_point<_Clock, common_type_t<_Duration1, duration<_Rep2, _Period2>>> operator+(
+    constexpr auto operator+(
         const time_point<_Clock, _Duration1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = time_point<_Clock, common_type_t<_Duration1, duration<_Rep2, _Period2>>>;
+        using _Duration = typename _Ret::duration;
+        return _Ret(_Duration(__lhs.time_since_epoch()) + _Duration(__rhs));
+    }
+
     template<typename _Rep1, typename _Period1, typename _Clock, typename _Duration2>
     constexpr time_point<_Clock, common_type_t<duration<_Rep1, _Period1>, _Duration2>> operator+(
         const duration<_Rep1, _Period1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __rhs + __lhs;
+    }
+
     template<typename _Clock, typename _Duration1, typename _Rep2, typename _Period2>
-    constexpr time_point<_Clock, common_type_t<_Duration1, duration<_Rep2, _Period2>>> operator-(
+    constexpr auto operator-(
         const time_point<_Clock, _Duration1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+        const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = time_point<_Clock, common_type_t<_Duration1, duration<_Rep2, _Period2>>>;
+        using _Duration = typename _Ret::duration;
+        return _Ret(_Duration(__lhs.time_since_epoch()) - _Duration(__rhs));
+    }
+
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr common_type_t<_Duration1, _Duration2> operator-(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __lhs.time_since_epoch() - __rhs.time_since_epoch();
+    }
 
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr bool operator==(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __lhs.time_since_epoch() == __rhs.time_since_epoch();
+    }
+
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr bool operator<(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __lhs.time_since_epoch() < __rhs.time_since_epoch();
+    }
+
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr bool operator>(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __rhs < __lhs;
+    }
+
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr bool operator<=(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return !(__rhs < __lhs);
+    }
+
     template<typename _Clock, typename _Duration1, typename _Duration2>
     constexpr bool operator>=(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return !(__lhs < __rhs);
+    }
+
     template<typename _Clock, typename _Duration1, three_way_comparable_with<_Duration1> _Duration2>
     constexpr auto operator<=>(
         const time_point<_Clock, _Duration1> & __lhs,
-        const time_point<_Clock, _Duration2> & __rhs);
+        const time_point<_Clock, _Duration2> & __rhs)
+    {
+        return __lhs.time_since_epoch() <=> __rhs.time_since_epoch();
+    }
 
     // [time.point.cast], conversions
     template<typename _ToDuration, typename _Clock, typename _Duration>

@@ -33,12 +33,21 @@ void initialize()
     volatile bool interrupt_fired = false;
 
     using namespace std::literals;
-    time::high_precision_clock().one_shot(
-        1ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
+    time::get_high_precision_timer().one_shot(
+        10ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
+
+    asm volatile("sti;");
+
+    while (!interrupt_fired)
+    {
+        asm volatile("hlt");
+    }
 
     std::uint32_t ticks = -1;
     ticks -= lapic::read_timer_counter();
 
     lapic::write_timer_counter(0);
+
+    log::println(" >> Tick rate estimate: {} per 1ms.", ticks);
 }
 }

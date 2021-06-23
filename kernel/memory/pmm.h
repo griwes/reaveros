@@ -31,6 +31,8 @@ public:
     void push_2M(phys_addr_t first_frame);
     void push_1G(phys_addr_t first_frame);
 
+    phys_addr_t pop_4k();
+
 private:
     struct _frame_header
     {
@@ -52,4 +54,6 @@ private:
 
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
 void report();
+
+phys_addr_t pop_4k();
 }

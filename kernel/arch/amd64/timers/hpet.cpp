@@ -15,6 +15,8 @@
  */
 
 #include "hpet.h"
+
+#include "../../../time/time.h"
 #include "../../../util/log.h"
 #include "../../../util/pointer_types.h"
 #include "../../common/acpi/acpi.h"
@@ -45,7 +47,7 @@ class hpet_timer
         return static_cast<_registers>(timer * 0x20 + static_cast<std::uintptr_t>(reg));
     }
 
-    class hpet_comparator
+    class hpet_comparator : public kernel::time::timer
     {
     public:
         bool valid() const
@@ -110,9 +112,45 @@ class hpet_timer
             return true;
         }
 
+    protected:
+        virtual void _update_now() override final
+        {
+            _raw_now = _parent->_read(hpet_timer::_registers::main_counter);
+            _now = std::chrono::time_point<kernel::time::timer>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::duration<__int128, std::femto>(
+                        static_cast<__int128>(_raw_now * _parent->_period))));
+        }
+
+        virtual void _one_shot_after(std::chrono::nanoseconds duration_ns) override final
+        {
+            auto duration_fs =
+                std::chrono::duration_cast<std::chrono::duration<__int128, std::femto>>(duration_ns);
+            auto count_fs = duration_fs.count();
+            auto actual_count_128 = count_fs / _parent->_period;
+
+            if (actual_count_128 > ~static_cast<std::uint64_t>(0)) [[unlikely]]
+            {
+                PANIC(
+                    "HPET: requested one shot duration not representable as 64 bits for the current clock!");
+            }
+
+            auto count = static_cast<std::uint64_t>(actual_count_128);
+            auto conf_and_caps = _read(_timer_registers::configuration);
+            _write(_timer_registers::configuration, conf_and_caps | (1 << 2));
+            _write(_timer_registers::comparator, _raw_now + count);
+            kernel::log::println("wrote {} + {} = {}", _raw_now, count, _raw_now + count);
+        }
+
+        virtual void _periodic_with_period(std::chrono::nanoseconds) override final
+        {
+            PANIC("unimplemented");
+        }
+
     private:
         hpet_timer * _parent = nullptr;
         std::uintptr_t _timer = -1;
+        std::uint64_t _raw_now;
 
         std::uint64_t _read(_timer_registers reg)
         {
@@ -182,6 +220,9 @@ public:
         {
             PANIC("Failed to initialize any of the HPET comparators!");
         }
+
+        kernel::time::register_high_precision_timer(
+            &_comparator_for(kernel::amd64::cpu::current_core()->apic_id()));
     }
 
 private:
@@ -190,6 +231,7 @@ private:
     std::uintptr_t _period;
     std::uintptr_t _min_tick;
     std::uintptr_t _max_tick;
+    bool _multicore_rebalanced = false;
     hpet_comparator _comparators[32];
 
     std::uint64_t _read(_registers reg)
@@ -200,6 +242,11 @@ private:
     void _write(_registers reg, std::uint64_t value)
     {
         *kernel::phys_ptr_t<std::uint64_t>{ _base + static_cast<std::uint64_t>(reg) } = value;
+    }
+
+    hpet_comparator & _comparator_for(std::uint64_t apic_id)
+    {
+        return _multicore_rebalanced ? _comparators[0] : _comparators[apic_id % _comparator_count];
     }
 };
 

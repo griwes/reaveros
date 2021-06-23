@@ -72,6 +72,11 @@ public:
         return !_repr.value();
     }
 
+    auto representation() const
+    {
+        return _repr;
+    }
+
     template<typename U, typename OtherStorage>
     friend class phys_ptr_t;
 

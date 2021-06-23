@@ -20,6 +20,7 @@ SECTIONS
         *(.gnu.linkonce.r*)
         KEEP(*(.init))
 
+        . = ALIGN(8);
         __start_ctors = .;
         KEEP(*(SORT(.init_array.*)))
         KEEP(*(.ctors .init_array))
@@ -27,6 +28,7 @@ SECTIONS
 
         . = ALIGN(0x1000);
         *(.data)
+        *(.data.*)
         *(.gnu.linkonce.d*)
 
         . = ALIGN(0x1000);

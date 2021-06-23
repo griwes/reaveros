@@ -113,6 +113,20 @@ void instance::_push(phys_addr_t frame, _stack_info & stack_info)
     ++stack_info.num_frames;
 }
 
+phys_addr_t instance::pop_4k()
+{
+    // TODO: lock
+
+    if (_info_4k.num_frames == 0)
+    {
+        PANIC("TODO: implement popping 2M frames now maybe");
+    }
+
+    auto ret = _info_4k.stack;
+    _info_4k.stack = ret->next;
+    return ret.representation();
+}
+
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap)
 {
     log::println("[PMM] Initializing physical memory manager...");
@@ -205,5 +219,15 @@ void report()
     log::println(" > Total free memory: {} GiB {} MiB {} KiB", free_gib, free_mib, free_kib);
     log::println(" > Total used memory: {} GiB {} MiB {} KiB", used_gib, used_mib, used_kib);
     log::println(" > Total memory: {} GiB {} MiB {} KiB", total_gib, total_mib, total_kib);
+}
+
+phys_addr_t pop_4k()
+{
+    auto ret = global_manager.pop_4k();
+
+    --free_4k_frames;
+    ++used_4k_frames;
+
+    return ret;
 }
 }

@@ -16,20 +16,39 @@
 
 #pragma once
 
+#include "../util/chained_allocator.h"
+#include "../util/linked_heap.h"
+
 #include <chrono>
 #include <type_traits>
 
 namespace kernel::time
 {
+class timer;
+
 void initialize();
+void register_high_precision_timer(timer *);
+timer & get_high_precision_timer();
 
 class event_token
 {
+public:
+    event_token(timer * tmr, std::size_t id) : _timer(tmr), _id(id)
+    {
+    }
+
+    void cancel() const;
+
+private:
+    timer * _timer;
+    std::size_t _id;
 };
 
 class timer
 {
 public:
+    using duration = std::chrono::nanoseconds;
+
     template<typename Rep, typename Period, typename Context>
     requires(std::is_trivially_copyable_v<Context> && sizeof(Context) <= 8) event_token
         one_shot(std::chrono::duration<Rep, Period> dur, void (*fptr)(Context), Context ctx)
@@ -37,7 +56,7 @@ public:
         std::uint64_t ctx_i;
         std::memcpy(&ctx_i, &ctx, sizeof(ctx));
 
-        return do_one_shot(
+        return _do(
             std::chrono::duration_cast<std::chrono::nanoseconds>(dur),
             +[](void * fptr, std::uint64_t ctx_i)
             {
@@ -47,15 +66,63 @@ public:
                 fptr_typed(ctx);
             },
             reinterpret_cast<void *>(fptr),
-            ctx_i);
+            ctx_i,
+            _mode::one_shot);
     }
 
-    virtual event_token do_one_shot(
+    void cancel(std::size_t id);
+
+    static void handle(timer * self);
+
+protected:
+    enum class _mode
+    {
+        one_shot,
+        periodic
+    };
+
+    event_token _do(
         std::chrono::nanoseconds dur,
         void (*fptr)(void *, std::uint64_t),
         void * erased_fptr,
-        std::uint64_t ctx) = 0;
-};
+        std::uint64_t ctx,
+        _mode mode);
 
-timer & high_precision_clock();
+    void _handle();
+    void _schedule_next();
+
+    virtual void _update_now() = 0;
+    virtual void _one_shot_after(std::chrono::nanoseconds) = 0;
+    virtual void _periodic_with_period(std::chrono::nanoseconds) = 0;
+
+    bool _periodic_capable = false;
+    std::size_t _usage = 0;
+    std::chrono::nanoseconds _min_tick;
+    std::chrono::nanoseconds _max_tick;
+    std::chrono::time_point<timer> _now;
+
+private:
+    struct _timer_descriptor : util::linked_heapable<_timer_descriptor>
+    {
+        _timer_descriptor() = default;
+
+        using fptr = void (*)(void *, std::uint64_t);
+
+        _timer_descriptor * parent = nullptr;
+
+        std::size_t id = 0;
+        std::chrono::time_point<timer> trigger_time;
+        fptr callback;
+        void * erased_callback;
+        std::uint64_t context;
+    };
+
+    struct _timer_descriptor_comparator
+    {
+        bool operator()(const _timer_descriptor & lhs, const _timer_descriptor & rhs) const;
+    };
+
+    util::linked_heap<_timer_descriptor, _timer_descriptor_comparator> _heap;
+    std::size_t _next_id = 0;
+};
 }

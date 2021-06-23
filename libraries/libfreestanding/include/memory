@@ -53,8 +53,8 @@ struct default_delete<_T[]>
     constexpr default_delete() noexcept = default;
 
     template<typename _U>
-    default_delete(const default_delete<_U[]> &) noexcept
-        requires __implicitly_convertible<_U (*)[], _T (*)[]>
+    default_delete(const default_delete<_U[]> &) noexcept requires
+        __implicitly_convertible<_U (*)[], _T (*)[]>
     {
     }
 
@@ -96,15 +96,15 @@ public:
     {
     }
 
-    unique_ptr(pointer __p, const type_identity_t<_D> & __d) noexcept
-        requires is_constructible_v<_D, decltype(__d)> : __ptr(__p),
-                                                         __deleter(forward<decltype(__d)>(__d))
+    unique_ptr(pointer __p, const type_identity_t<_D> & __d) noexcept requires
+        is_constructible_v<_D, decltype(__d)> : __ptr(__p),
+                                                __deleter(forward<decltype(__d)>(__d))
     {
     }
 
-    unique_ptr(pointer __p, remove_reference_t<_D> && __d) noexcept
-        requires is_constructible_v<_D, decltype(__d)> : __ptr(__p),
-                                                         __deleter(forward<decltype(__d)>(__d))
+    unique_ptr(pointer __p, remove_reference_t<_D> && __d) noexcept requires
+        is_constructible_v<_D, decltype(__d)> : __ptr(__p),
+                                                __deleter(forward<decltype(__d)>(__d))
 
     {
     }
@@ -114,7 +114,9 @@ public:
     {
     }
 
-    constexpr unique_ptr(nullptr_t) noexcept = default;
+    constexpr unique_ptr(nullptr_t) noexcept : __ptr(nullptr), __deleter()
+    {
+    }
 
     template<typename _U, typename _E>
     unique_ptr(unique_ptr<_U, _E> && __u) noexcept requires(
@@ -140,13 +142,22 @@ public:
     unique_ptr & operator=(nullptr_t) noexcept;
 
     add_lvalue_reference_t<_T> operator*() const;
-    pointer operator->() const noexcept;
+
+    pointer operator->() const noexcept
+    {
+        return __ptr;
+    }
+
     pointer get() const noexcept;
     deleter_type & get_deleter() noexcept;
     const deleter_type & get_deleter() const noexcept;
     explicit operator bool() const noexcept;
 
-    pointer release() noexcept;
+    pointer release() noexcept
+    {
+        return std::exchange(__ptr, nullptr);
+    }
+
     void reset(pointer __p = pointer()) noexcept;
     void swap(unique_ptr & __u) noexcept;
 
@@ -246,7 +257,8 @@ unique_ptr<_T> make_unique(size_t n) requires is_unbounded_array_v<_T>
 }
 
 template<typename _T, typename... _Args>
-void make_unique(_Args &&...) requires is_bounded_array_v<_T> = delete;
+void make_unique(_Args &&...) requires is_bounded_array_v<_T>
+= delete;
 
 template<typename _T>
 unique_ptr<_T> make_unique_for_overwrite() requires(!is_array_v<_T>)
@@ -261,7 +273,8 @@ unique_ptr<_T> make_unique_for_overwrite(size_t n) requires is_unbounded_array_v
 }
 
 template<typename _T, typename... _Args>
-void make_unique_for_overwrite(_Args &&...) requires is_bounded_array_v<_T> = delete;
+void make_unique_for_overwrite(_Args &&...) requires is_bounded_array_v<_T>
+= delete;
 }
 
 // vim: ft=cpp

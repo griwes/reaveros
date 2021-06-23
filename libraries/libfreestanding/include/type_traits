@@ -93,7 +93,10 @@ template<typename _T>
 struct is_function;
 
 template<typename _T>
-struct is_reference;
+struct is_reference : bool_constant<__is_reference(_T)>
+{
+};
+
 template<typename _T>
 struct is_arithmetic;
 template<typename _T>
