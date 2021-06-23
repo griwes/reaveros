@@ -17,11 +17,55 @@
 #include "irqs.h"
 
 #include "../../../util/log.h"
+#include "../cpu/lapic.h"
+
+namespace
+{
+struct irq_handler
+{
+    bool valid = false;
+    kernel::amd64::irq::erased_irq_handler fptr;
+    void * erased_fptr;
+    std::uint64_t context;
+};
+
+irq_handler irq_handlers[256];
+}
 
 namespace kernel::amd64::irq
 {
 void handle(context & ctx)
 {
-    PANIC("IRQ! {:x}, {}", ctx.number, ctx.error);
+    // TODO: lock?
+
+    auto & handler = irq_handlers[ctx.number];
+
+    if (!handler.valid)
+    {
+        PANIC("Unexpected IRQ: {:x}, {}", ctx.number, ctx.error);
+    }
+
+    handler.fptr(ctx, handler.erased_fptr, handler.context);
+
+    if (ctx.number >= 32)
+    {
+        lapic::eoi(ctx.number);
+    }
+}
+
+void register_erased_handler(
+    std::uint8_t irqn,
+    erased_irq_handler fptr,
+    void * erased_fptr,
+    std::uint64_t ctx)
+{
+    // TODO: lock?
+
+    auto & handler = irq_handlers[irqn];
+
+    handler.fptr = fptr;
+    handler.erased_fptr = erased_fptr;
+    handler.context = ctx;
+    handler.valid = true;
 }
 }

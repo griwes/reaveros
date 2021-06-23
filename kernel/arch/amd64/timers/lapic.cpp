@@ -34,9 +34,9 @@ void initialize()
 
     using namespace std::literals;
     time::get_high_precision_timer().one_shot(
-        10ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
+        50ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
 
-    asm volatile("sti;");
+    asm volatile("sti");
 
     while (!interrupt_fired)
     {
@@ -48,6 +48,11 @@ void initialize()
 
     lapic::write_timer_counter(0);
 
-    log::println(" >> Tick rate estimate: {} per 1ms.", ticks);
+    log::println(" >> Tick rate estimate: {} per 50ms", ticks);
+
+    auto period = std::chrono::duration_cast<std::chrono::duration<std::uint64_t, std::femto>>(50ms) / ticks;
+    log::println(" >> Tick period estimate: {}fs", period.count());
+    auto frequency = 1000000000000000ull / period.count();
+    log::println(" >> Tick frequency estimate: {}Hz", frequency);
 }
 }

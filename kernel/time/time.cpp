@@ -102,7 +102,7 @@ void timer::_schedule_next()
 
     _update_now();
 
-    for (auto top = _heap.peek(); top->trigger_time < _now; top = _heap.peek())
+    for (auto top = _heap.peek(); top && top->trigger_time < _now; top = _heap.peek())
     {
         auto desc = _heap.pop();
         // drop lock

@@ -119,15 +119,12 @@ class hpet_timer
             _now = std::chrono::time_point<kernel::time::timer>(
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
                     std::chrono::duration<__int128, std::femto>(
-                        static_cast<__int128>(_raw_now * _parent->_period))));
+                        static_cast<__int128>(_raw_now) * _parent->_period)));
         }
 
         virtual void _one_shot_after(std::chrono::nanoseconds duration_ns) override final
         {
-            auto duration_fs =
-                std::chrono::duration_cast<std::chrono::duration<__int128, std::femto>>(duration_ns);
-            auto count_fs = duration_fs.count();
-            auto actual_count_128 = count_fs / _parent->_period;
+            auto actual_count_128 = duration_ns / _parent->_period;
 
             if (actual_count_128 > ~static_cast<std::uint64_t>(0)) [[unlikely]]
             {
@@ -139,7 +136,6 @@ class hpet_timer
             auto conf_and_caps = _read(_timer_registers::configuration);
             _write(_timer_registers::configuration, conf_and_caps | (1 << 2));
             _write(_timer_registers::comparator, _raw_now + count);
-            kernel::log::println("wrote {} + {} = {}", _raw_now, count, _raw_now + count);
         }
 
         virtual void _periodic_with_period(std::chrono::nanoseconds) override final
@@ -181,14 +177,14 @@ public:
         _comparator_count = ((caps & 0b111110000000) >> 8) + 1;
         kernel::log::println(" >> HPET comparator count: {}.", _comparator_count);
 
-        _period = caps >> 32;
-        auto frequency = 1000000000000000ull / _period;
+        _period = std::chrono::duration<std::int64_t, std::femto>(caps >> 32);
+        auto frequency = 1000000000000000ull / _period.count();
 
         auto size = (caps & (1 << 13)) ? 64 : 32;
 
         if (size == 32)
         {
-            _max_tick = (~0u / 1000000) * _period;
+            _max_tick = (~0u / 1000000) * _period.count();
 
             if (!_max_tick)
             {
@@ -198,10 +194,10 @@ public:
 
         else
         {
-            _max_tick = (~0ull / 1000000) * _period;
+            _max_tick = (~0ull / 1000000) * _period.count();
         }
 
-        kernel::log::println(" >> HPET counter period: {}fs.", _period);
+        kernel::log::println(" >> HPET counter period: {}fs.", _period.count());
         kernel::log::println(" >> HPET counter frequency: {}Hz", frequency);
 
         auto object_idx = 0ull;
@@ -223,12 +219,19 @@ public:
 
         kernel::time::register_high_precision_timer(
             &_comparator_for(kernel::amd64::cpu::current_core()->apic_id()));
+        kernel::amd64::irq::register_handler(
+            kernel::amd64::irq::hpet_timer,
+            +[](kernel::amd64::irq::context &, hpet_timer * self) {
+                kernel::time::timer::handle(
+                    &self->_comparator_for(kernel::amd64::cpu::current_core()->apic_id()));
+            },
+            this);
     }
 
 private:
     kernel::phys_addr_t _base;
     std::uintptr_t _comparator_count;
-    std::uintptr_t _period;
+    std::chrono::duration<std::int64_t, std::femto> _period;
     std::uintptr_t _min_tick;
     std::uintptr_t _max_tick;
     bool _multicore_rebalanced = false;

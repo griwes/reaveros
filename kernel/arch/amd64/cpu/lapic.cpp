@@ -290,6 +290,15 @@ std::uint32_t id()
                           : lapic_storage.xapic._read(xapic_t::_registers_rw::local_apic_id);
 }
 
+void eoi(std::uint8_t number)
+{
+    if (number != irq::lapic_spurious)
+    {
+        x2apic_enabled ? lapic_storage.x2apic._write(x2apic_t::_registers_w::eoi, 0)
+                       : lapic_storage.xapic._write(xapic_t::_registers_w::eoi, 0);
+    }
+}
+
 void write_timer_divisor(std::uint8_t val)
 {
     std::uint32_t bit_pattern;

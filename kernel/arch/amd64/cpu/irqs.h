@@ -17,6 +17,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 namespace kernel::amd64::irq
 {
@@ -36,4 +38,31 @@ struct [[gnu::packed]] context
 };
 
 void handle(context & ctx);
+
+using erased_irq_handler = void (*)(context &, void *, std::uint64_t);
+void register_erased_handler(std::uint8_t, erased_irq_handler, void *, std::uint64_t);
+
+void register_handler(std::uint8_t irqn, void (*fptr)(context &));
+
+template<typename Context>
+requires(std::is_trivially_copyable_v<Context> && sizeof(Context) <= 8) void register_handler(
+    std::uint8_t irqn,
+    void (*fptr)(context &, Context),
+    Context ctx)
+{
+    std::uint64_t ctx_i;
+    std::memcpy(&ctx_i, &ctx, sizeof(ctx));
+
+    register_erased_handler(
+        irqn,
+        +[](context & irq_context, void * fptr, std::uint64_t ctx_i)
+        {
+            auto fptr_typed = reinterpret_cast<void (*)(context &, Context)>(fptr);
+            Context ctx;
+            std::memcpy(&ctx, &ctx_i, sizeof(Context));
+            fptr_typed(irq_context, ctx);
+        },
+        reinterpret_cast<void *>(fptr),
+        ctx_i);
+}
 }

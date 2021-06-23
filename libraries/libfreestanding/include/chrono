@@ -50,7 +50,13 @@ namespace chrono
         }
 
         template<typename _Rep2, typename _Period2>
-        constexpr duration(const duration<_Rep2, _Period2> & __d);
+        constexpr duration(const duration<_Rep2, _Period2> & __d) requires(
+            requires(_Rep2 __rep) { { _Rep{ __rep } }; }
+            && (treat_as_floating_point_v<
+                    _Rep> || (ratio_divide<_Period2, _Period>::den == 1 && !treat_as_floating_point_v<_Rep2>)))
+            : __rep(duration_cast<duration>(__d).count())
+        {
+        }
 
         ~duration() = default;
 
@@ -162,29 +168,46 @@ namespace chrono
     }
 
     template<typename _Rep1, typename _Period, typename _Rep2>
-    constexpr duration<common_type_t<_Rep1, _Rep2>, _Period> operator*(
-        const duration<_Rep1, _Period> & __d,
-        const _Rep2 & __s);
+    constexpr auto operator*(const duration<_Rep1, _Period> & __d, const _Rep2 & __s)
+    {
+        using _Ret = duration<common_type_t<_Rep1, _Rep2>, _Period>;
+        return _Ret(_Ret(__d).count() * __s);
+    }
+
     template<typename _Rep1, typename _Rep2, typename _Period>
-    constexpr duration<common_type_t<_Rep1, _Rep2>, _Period> operator*(
-        const _Rep1 & __s,
-        const duration<_Rep2, _Period> & __d);
+    constexpr auto operator*(const _Rep1 & __s, const duration<_Rep2, _Period> & __d)
+    {
+        using _Ret = duration<common_type_t<_Rep1, _Rep2>, _Period>;
+        return _Ret(_Ret(__d).count() * __s);
+    }
+
     template<typename _Rep1, typename _Period, typename _Rep2>
-    constexpr duration<common_type_t<_Rep1, _Rep2>, _Period> operator/(
-        const duration<_Rep1, _Period> & __d,
-        const _Rep2 & __s);
+    constexpr auto operator/(const duration<_Rep1, _Period> & __d, const _Rep2 & __s)
+    {
+        using _Ret = duration<common_type_t<_Rep1, _Rep2>, _Period>;
+        return _Ret(_Ret(__d).count() / __s);
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr common_type_t<_Rep1, _Rep2> operator/(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr auto operator/(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>;
+        return _Ret(__lhs).count() / _Ret(__rhs).count();
+    }
+
     template<typename _Rep1, typename _Period, typename _Rep2>
-    constexpr duration<common_type_t<_Rep1, _Rep2>, _Period> operator%(
-        const duration<_Rep1, _Period> & __d,
-        const _Rep2 & __s);
+    constexpr auto operator%(const duration<_Rep1, _Period> & __d, const _Rep2 & __s)
+    {
+        using _Ret = duration<common_type_t<_Rep1, _Rep2>, _Period>;
+        return _Ret(_Ret(__d).count() % __s);
+    }
+
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
-    constexpr common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>> operator%(
-        const duration<_Rep1, _Period1> & __lhs,
-        const duration<_Rep2, _Period2> & __rhs);
+    constexpr auto operator%(const duration<_Rep1, _Period1> & __lhs, const duration<_Rep2, _Period2> & __rhs)
+    {
+        using _Ret = common_type_t<duration<_Rep1, _Period1>, duration<_Rep2, _Period2>>;
+        return _Ret(__lhs).count() % _Ret(__rhs).count();
+    }
 
     template<typename _Rep1, typename _Period1, typename _Rep2, typename _Period2>
     constexpr bool operator==(
