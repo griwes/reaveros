@@ -49,6 +49,21 @@ class timer
 public:
     using duration = std::chrono::nanoseconds;
 
+    template<typename Rep, typename Period>
+    event_token one_shot(std::chrono::duration<Rep, Period> dur, void (*fptr)())
+    {
+        return _do(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(dur),
+            +[](void * fptr, std::uint64_t)
+            {
+                auto fptr_typed = reinterpret_cast<void (*)()>(fptr);
+                fptr_typed();
+            },
+            reinterpret_cast<void *>(fptr),
+            0,
+            _mode::one_shot);
+    }
+
     template<typename Rep, typename Period, typename Context>
     requires(std::is_trivially_copyable_v<Context> && sizeof(Context) <= 8) event_token
         one_shot(std::chrono::duration<Rep, Period> dur, void (*fptr)(Context), Context ctx)
@@ -93,9 +108,7 @@ protected:
 
     virtual void _update_now() = 0;
     virtual void _one_shot_after(std::chrono::nanoseconds) = 0;
-    virtual void _periodic_with_period(std::chrono::nanoseconds) = 0;
 
-    bool _periodic_capable = false;
     std::size_t _usage = 0;
     std::chrono::nanoseconds _min_tick;
     std::chrono::nanoseconds _max_tick;

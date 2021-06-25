@@ -128,19 +128,13 @@ class hpet_timer
 
             if (actual_count_128 > ~static_cast<std::uint64_t>(0)) [[unlikely]]
             {
-                PANIC(
-                    "HPET: requested one shot duration not representable as 64 bits for the current clock!");
+                actual_count_128 = ~static_cast<std::uint64_t>(0);
             }
 
             auto count = static_cast<std::uint64_t>(actual_count_128);
             auto conf_and_caps = _read(_timer_registers::configuration);
             _write(_timer_registers::configuration, conf_and_caps | (1 << 2));
             _write(_timer_registers::comparator, _raw_now + count);
-        }
-
-        virtual void _periodic_with_period(std::chrono::nanoseconds) override final
-        {
-            PANIC("unimplemented");
         }
 
     private:
@@ -178,7 +172,7 @@ public:
         kernel::log::println(" >> HPET comparator count: {}.", _comparator_count);
 
         _period = std::chrono::duration<std::int64_t, std::femto>(caps >> 32);
-        auto frequency = 1000000000000000ull / _period.count();
+        auto frequency = static_cast<std::uint64_t>(std::femto::den) / _period.count();
 
         auto size = (caps & (1 << 13)) ? 64 : 32;
 
@@ -198,7 +192,7 @@ public:
         }
 
         kernel::log::println(" >> HPET counter period: {}fs.", _period.count());
-        kernel::log::println(" >> HPET counter frequency: {}Hz", frequency);
+        kernel::log::println(" >> HPET counter frequency: {}Hz.", frequency);
 
         auto object_idx = 0ull;
         for (auto comparator = 0ull; comparator < _comparator_count; ++comparator)

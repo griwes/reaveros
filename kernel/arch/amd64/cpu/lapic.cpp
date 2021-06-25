@@ -102,7 +102,7 @@ public:
         _write(_registers_rw::lvt_lint1, 0x10000);
         _write(_registers_rw::lvt_pmc, 0x10000);
         _write(_registers_rw::lvt_thermal_sensor, 0x10000);
-        _write(_registers_rw::lvt_timer, 0x10000);
+        _write(_registers_rw::lvt_timer, kernel::amd64::irq::lapic_timer);
 
         _write(_registers_rw::spurious_interrupt_vector, kernel::amd64::irq::lapic_spurious | 0x100);
 
@@ -212,7 +212,7 @@ public:
         _write(_registers_rw::lvt_lint1, 0x10000);
         _write(_registers_rw::lvt_pmc, 0x10000);
         _write(_registers_rw::lvt_thermal_sensor, 0x10000);
-        _write(_registers_rw::lvt_timer, 0x10000);
+        _write(_registers_rw::lvt_timer, kernel::amd64::irq::lapic_timer);
 
         _write(_registers_rw::spurious_interrupt_vector, kernel::amd64::irq::lapic_spurious | 0x100);
 

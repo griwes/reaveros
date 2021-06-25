@@ -18,6 +18,8 @@
 
 #include "gdt.h"
 
+#include "../timers/lapic.h"
+
 #include <cstdint>
 
 namespace kernel::amd64::cpu
@@ -49,6 +51,11 @@ public:
         return _acpi_id;
     }
 
+    lapic_timer::timer * timer()
+    {
+        return &_preempt_timer;
+    }
+
     void initialize_gdt();
     void load_gdt();
     void initialize_idt();
@@ -66,5 +73,7 @@ private:
 
     gdt::entry _gdt[7];
     gdt::gdtr_t _gdtr;
+
+    lapic_timer::timer _preempt_timer;
 };
 }

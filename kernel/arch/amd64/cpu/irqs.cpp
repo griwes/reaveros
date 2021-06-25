@@ -63,9 +63,27 @@ void register_erased_handler(
 
     auto & handler = irq_handlers[irqn];
 
+    if (handler.valid)
+    {
+        PANIC("Overriding an already registered IRQ: {:x}!", irqn);
+    }
+
     handler.fptr = fptr;
     handler.erased_fptr = erased_fptr;
     handler.context = ctx;
     handler.valid = true;
+}
+
+void register_handler(std::uint8_t irqn, void (*fptr)(context &))
+{
+    register_erased_handler(
+        irqn,
+        +[](context & ctx, void * fptr, std::uint64_t)
+        {
+            auto fptr_typed = reinterpret_cast<void (*)(context &)>(fptr);
+            fptr_typed(ctx);
+        },
+        reinterpret_cast<void *>(fptr),
+        0);
 }
 }

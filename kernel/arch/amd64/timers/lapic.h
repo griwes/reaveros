@@ -16,7 +16,26 @@
 
 #pragma once
 
+#include "../../../time/time.h"
+
 namespace kernel::amd64::lapic_timer
 {
 void initialize();
+
+class timer : public time::timer
+{
+public:
+    void bsp_initialize();
+    void initialize(timer * bsp);
+
+protected:
+    virtual void _update_now() override final;
+    virtual void _one_shot_after(std::chrono::nanoseconds) override final;
+
+private:
+    std::chrono::time_point<time::timer, std::chrono::duration<__int128, std::femto>> _fine_now;
+    std::chrono::duration<std::int64_t, std::femto> _period;
+    std::uint32_t _last_written = 0;
+    std::uint8_t _last_divisor = 0;
+};
 }

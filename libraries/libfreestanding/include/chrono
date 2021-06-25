@@ -75,13 +75,41 @@ namespace chrono
         constexpr duration & operator--();
         constexpr duration operator--(int);
 
-        constexpr duration & operator+=(const duration & __d);
-        constexpr duration & operator-=(const duration & __d);
+        constexpr duration & operator+=(const duration & __d)
+        {
+            __rep += __d.count();
+            return *this;
+        }
 
-        constexpr duration & operator*=(const rep & __rhs);
-        constexpr duration & operator/=(const rep & __rhs);
-        constexpr duration & operator%=(const rep & __rhs);
-        constexpr duration & operator%=(const duration & __rhs);
+        constexpr duration & operator-=(const duration & __d)
+        {
+            __rep -= __d.count();
+            return *this;
+        }
+
+        constexpr duration & operator*=(const rep & __rhs)
+        {
+            __rep *= __rhs;
+            return *this;
+        }
+
+        constexpr duration & operator/=(const rep & __rhs)
+        {
+            __rep /= __rhs;
+            return *this;
+        }
+
+        constexpr duration & operator%=(const rep & __rhs)
+        {
+            __rep %= __rhs;
+            return *this;
+        }
+
+        constexpr duration & operator%=(const duration & __d)
+        {
+            __rep *= __d.count();
+            return *this;
+        }
 
         static constexpr duration zero() noexcept;
         static constexpr duration min() noexcept;
@@ -107,7 +135,10 @@ namespace chrono
         }
 
         template<class _Duration2>
-        constexpr time_point(const time_point<clock, _Duration2> & __t);
+        constexpr time_point(const time_point<clock, _Duration2> & __t) requires
+            is_convertible_v<_Duration2, _Duration> : __d(__t.time_since_epoch())
+        {
+        }
 
         constexpr duration time_since_epoch() const
         {
@@ -118,8 +149,18 @@ namespace chrono
         constexpr time_point operator++(int);
         constexpr time_point & operator--();
         constexpr time_point operator--(int);
-        constexpr time_point & operator+=(const duration & __d);
-        constexpr time_point & operator-=(const duration & __d);
+
+        constexpr time_point & operator+=(const duration & __rhs)
+        {
+            __d += __rhs;
+            return *this;
+        }
+
+        constexpr time_point & operator-=(const duration & __rhs)
+        {
+            __d -= __rhs;
+            return *this;
+        }
 
         static constexpr time_point min() noexcept;
         static constexpr time_point max() noexcept;
