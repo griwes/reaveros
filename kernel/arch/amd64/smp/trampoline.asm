@@ -60,13 +60,13 @@ trampoline_start:
     lea eax, [esi + _pmode_offset]
 
     push 0x8
-    push ax
+    push eax
 
     mov eax, cr0
     or al, 1
     mov cr0, eax
 
-    .byte 0xcb // retf, because for some reason the mnemonic gets encoded with a size override prefix
+    retf
 
 .code32
 

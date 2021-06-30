@@ -87,7 +87,7 @@ void boot()
 
     vm::map_physical(virt_addr_t(base_raw), virt_addr_t(top), phys_addr_t(base_raw));
 
-    auto boot_at_once = top / trampoline_size;
+    auto boot_at_once = (top - base_raw) / trampoline_size;
 
     for (std::size_t booted = 0; booted < core_count; booted += boot_at_once)
     {
