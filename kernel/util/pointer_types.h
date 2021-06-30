@@ -34,6 +34,11 @@ public:
     {
     }
 
+    template<typename U>
+    explicit phys_ptr_t(phys_ptr_t<U> other) : _repr(other._repr)
+    {
+    }
+
     template<typename OtherStorage>
     phys_ptr_t & operator=(
         const phys_ptr_t<T, OtherStorage> & other) requires std::is_convertible<OtherStorage, Storage>::value
@@ -75,6 +80,11 @@ public:
     auto representation() const
     {
         return _repr;
+    }
+
+    phys_ptr_t operator+(std::ptrdiff_t offset)
+    {
+        return phys_ptr_t{ _repr + offset * sizeof(T) };
     }
 
     template<typename U, typename OtherStorage>

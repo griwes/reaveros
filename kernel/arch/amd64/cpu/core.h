@@ -22,6 +22,11 @@
 
 #include <cstdint>
 
+namespace kernel::amd64::smp
+{
+void boot();
+}
+
 namespace kernel::amd64::cpu
 {
 class core
@@ -61,6 +66,8 @@ public:
     void initialize_idt();
     void load_idt();
 
+    friend void ::kernel::amd64::smp::boot();
+
 private:
     std::uint32_t _is_valid : 1 = false;
     std::uint32_t _nmi_valid : 1 = false;
@@ -70,6 +77,8 @@ private:
 
     std::uint32_t _nmi_vector = 0;
     std::uint16_t _nmi_flags = 0;
+
+    volatile std::uint8_t * _boot_flag = nullptr;
 
     gdt::entry _gdt[7];
     gdt::gdtr_t _gdtr;

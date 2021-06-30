@@ -18,38 +18,7 @@
 
 #include "../../../util/integer_types.h"
 
-namespace kernel::amd64::lapic
+namespace kernel::amd64::vm
 {
-void initialize(phys_addr_t lapic_base);
-std::uint32_t id();
-void eoi(std::uint8_t);
-
-enum class timer_mode
-{
-    one_shot,
-    periodic
-};
-
-void write_timer_divisor(std::uint8_t);
-void write_timer_counter(std::uint32_t);
-std::uint32_t read_timer_counter();
-void enable_timer(timer_mode);
-
-enum class ipi_type
-{
-    init,
-    sipi,
-    generic,
-    nmi
-};
-
-enum class broadcast_target
-{
-    self = 1,
-    all,
-    others
-};
-
-void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data);
-void broadcast(broadcast_target target, ipi_type type, std::uint8_t data);
+void map_physical(virt_addr_t begin, virt_addr_t end, phys_addr_t physical);
 }

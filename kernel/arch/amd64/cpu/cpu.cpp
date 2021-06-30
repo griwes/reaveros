@@ -31,6 +31,19 @@ std::size_t core_count = max_core_count;
 
 namespace kernel::amd64::cpu
 {
+namespace detail_for_smp
+{
+    core * get_core_array()
+    {
+        return cores;
+    }
+
+    std::size_t & get_core_count_ref()
+    {
+        return core_count;
+    }
+}
+
 void initialize()
 {
     log::println("[CPU] Initializing CPU...");
@@ -40,20 +53,25 @@ void initialize()
 
     lapic::initialize(madt_result.lapic_base);
 
-    auto bsp_core = current_core();
+    auto bsp_core = get_current_core();
     bsp_core->initialize_gdt();
     bsp_core->load_gdt();
     idt::initialize();
     idt::load();
 }
 
-core * current_core()
+void ap_initialize()
 {
-    auto id = lapic::id();
-    return core_by_id(id);
+    asm volatile("cli; hlt");
 }
 
-core * core_by_id(std::uint32_t id)
+core * get_current_core()
+{
+    auto id = lapic::id();
+    return get_core_by_id(id);
+}
+
+core * get_core_by_id(std::uint32_t id)
 {
     for (auto i = 0ull; i < core_count; ++i)
     {
@@ -64,5 +82,17 @@ core * core_by_id(std::uint32_t id)
     }
 
     PANIC("Requested a core for an unknown APIC ID {}!", id);
+}
+
+std::size_t get_core_count()
+{
+    return core_count;
+}
+
+phys_addr_t get_asid()
+{
+    std::uint64_t cr3;
+    asm volatile("mov %%cr3, %%rax" : "=a"(cr3));
+    return phys_addr_t(cr3);
 }
 }

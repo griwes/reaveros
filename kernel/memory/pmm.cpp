@@ -20,6 +20,8 @@
 namespace
 {
 kernel::pmm::instance global_manager;
+std::uintptr_t sub_1M_bottom = 0;
+std::uintptr_t sub_1M_top = 0;
 
 std::size_t free_4k_frames = 0;
 std::size_t free_2M_frames = 0;
@@ -153,6 +155,23 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
         log::println(
             "| {:#018x} | {:16} | {:20} |", start.value(), size, memmap_type_to_description(memmap[i].type));
 
+        // save first 1MiB
+        if (start.value() < 1024 * 1024 && !sub_1M_top)
+        {
+            sub_1M_bottom = start.value();
+
+            if (size <= 1024 * 1024)
+            {
+                sub_1M_top = size;
+                continue;
+            }
+
+            start = phys_addr_t{ 1024 * 1024 };
+            size -= 1024 * 1024;
+
+            sub_1M_top = 1024 * 1024;
+        }
+
         if (memmap[i].type == boot_protocol::memory_type::free)
         {
             auto remaining = size;
@@ -221,6 +240,16 @@ void report()
     log::println(" > Total memory: {} GiB {} MiB {} KiB", total_gib, total_mib, total_kib);
 }
 
+std::uintptr_t get_sub_1M_bottom()
+{
+    return sub_1M_bottom;
+}
+
+std::uintptr_t get_sub_1M_top()
+{
+    return sub_1M_top;
+}
+
 phys_addr_t pop_4k()
 {
     auto ret = global_manager.pop_4k();
@@ -229,5 +258,12 @@ phys_addr_t pop_4k()
     ++used_4k_frames;
 
     return ret;
+}
+
+void push_4k(phys_addr_t frame)
+{
+    global_manager.push_4k(frame);
+    --used_4k_frames;
+    ++free_4k_frames;
 }
 }

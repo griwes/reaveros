@@ -55,5 +55,10 @@ private:
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
 void report();
 
+std::uintptr_t get_sub_1M_bottom();
+std::uintptr_t get_sub_1M_top();
+
 phys_addr_t pop_4k();
+
+void push_4k(phys_addr_t);
 }

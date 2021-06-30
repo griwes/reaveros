@@ -16,6 +16,7 @@
 
 #include "arch/common/acpi/acpi.h"
 #include "arch/cpu.h"
+#include "arch/smp.h"
 #include "boot/screen.h"
 #include "memory/pmm.h"
 #include "time/time.h"
@@ -79,8 +80,8 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     kernel::arch::cpu::initialize();
     kernel::time::initialize();
 
+    kernel::arch::smp::boot();
     /*
-    kernel::smp::boot();
     kernel::scheduler::initialize();
 
     // find initrd

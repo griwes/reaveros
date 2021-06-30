@@ -31,11 +31,11 @@ namespace kernel::amd64::lapic_timer
 {
 void initialize()
 {
-    bsp_timer = cpu::current_core()->timer();
+    bsp_timer = cpu::get_current_core()->timer();
     bsp_timer->bsp_initialize();
 
     irq::register_handler(
-        irq::lapic_timer, +[](irq::context &) { kernel::time::timer::handle(cpu::current_core()->timer()); });
+        irq::lapic_timer, +[](irq::context &) { time::timer::handle(cpu::get_current_core()->timer()); });
 }
 
 void timer::bsp_initialize()
@@ -58,6 +58,8 @@ void timer::bsp_initialize()
     {
         asm volatile("hlt");
     }
+
+    asm volatile("cli");
 
     std::uint32_t ticks = -1;
     ticks -= lapic::read_timer_counter();

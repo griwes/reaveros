@@ -349,4 +349,36 @@ std::uint32_t read_timer_counter()
     return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::timer_current_count)
                           : lapic_storage.xapic._read(xapic_t::_registers_r::timer_current_count);
 }
+
+void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data)
+{
+    std::uint32_t cmd_low = 0;
+
+    switch (type)
+    {
+        case ipi_type::init:
+            cmd_low = 5 << 8;
+            break;
+
+        case ipi_type::sipi:
+            cmd_low = (6 << 8) | data;
+            break;
+
+        case ipi_type::generic:
+        case ipi_type::nmi:
+            PANIC("Unsupported IPI type selected.");
+    }
+
+    if (x2apic_enabled)
+    {
+        lapic_storage.x2apic._write(
+            x2apic_t::_registers_rw::interrupt_command,
+            (static_cast<std::uint64_t>(target_apic_id) << 32) | cmd_low);
+    }
+    else
+    {
+        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_high, target_apic_id << 24);
+        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_low, cmd_low);
+    }
+}
 }

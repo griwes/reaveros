@@ -104,7 +104,8 @@ class hpet_timer
             }
 
             // setup FSB interrupt destination
-            std::uint64_t fsb_address = (0xfee << 20) | (kernel::amd64::cpu::current_core()->apic_id() << 12);
+            std::uint64_t fsb_address =
+                (0xfee << 20) | (kernel::amd64::cpu::get_current_core()->apic_id() << 12);
             std::uint64_t fsb_data = kernel::amd64::irq::hpet_timer;
 
             _write(_timer_registers::fsb_route, (fsb_address << 32) | fsb_data);
@@ -212,12 +213,12 @@ public:
         }
 
         kernel::time::register_high_precision_timer(
-            &_comparator_for(kernel::amd64::cpu::current_core()->apic_id()));
+            &_comparator_for(kernel::amd64::cpu::get_current_core()->apic_id()));
         kernel::amd64::irq::register_handler(
             kernel::amd64::irq::hpet_timer,
             +[](kernel::amd64::irq::context &, hpet_timer * self) {
                 kernel::time::timer::handle(
-                    &self->_comparator_for(kernel::amd64::cpu::current_core()->apic_id()));
+                    &self->_comparator_for(kernel::amd64::cpu::get_current_core()->apic_id()));
             },
             this);
     }
