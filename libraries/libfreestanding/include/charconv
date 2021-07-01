@@ -20,6 +20,7 @@
 #include "cstdint"
 #include "cstring"
 #include "system_error"
+#include "version"
 
 namespace std
 {

@@ -16,7 +16,8 @@
 
 #pragma once
 
-#include <type_traits>
+#include "type_traits"
+#include "version"
 
 namespace std
 {

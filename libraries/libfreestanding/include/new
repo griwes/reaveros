@@ -17,6 +17,7 @@
 #pragma once
 
 #include "cstddef"
+#include "version"
 
 [[gnu::weak]] void * operator new(std::size_t, void * __ptr)
 {

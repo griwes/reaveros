@@ -39,10 +39,13 @@ _LIBFREESTANDING_DEFINE_ALIASES(16, short);
 _LIBFREESTANDING_DEFINE_ALIASES(32, int);
 _LIBFREESTANDING_DEFINE_ALIASES(64, long);
 
+using intptr_t = long;
 using uintptr_t = unsigned long;
+static_assert(sizeof(intptr_t) == sizeof(void *), "");
 static_assert(sizeof(uintptr_t) == sizeof(void *), "");
 
 using intmax_t = __int128;
+using uintmax_t = unsigned __int128;
 }
 
 // vim: ft=cpp

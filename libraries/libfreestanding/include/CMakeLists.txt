@@ -18,6 +18,7 @@ set(includes
     system_error
     type_traits
     utility
+    version
 
     __char_traits
 )
