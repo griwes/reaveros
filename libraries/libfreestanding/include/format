@@ -217,7 +217,7 @@ public:
         __handle_format_string(__str, __handle_ith, __handle_char);
     }
 
-    basic_string_view<_CharT> __get_str() const
+    [[gnu::always_inline]] basic_string_view<_CharT> __get_str() const
     {
         return __str;
     }
@@ -538,7 +538,7 @@ class __format_arg_store
 };
 
 template<class _Context, typename... _Args>
-__format_arg_store<_Context, _Args...> make_format_args(const _Args &... __args)
+[[gnu::always_inline]] __format_arg_store<_Context, _Args...> make_format_args(const _Args &... __args)
 {
     return __format_arg_store<_Context, _Args...>(__args...);
 }
@@ -557,7 +557,7 @@ public:
     basic_format_args() noexcept = default;
 
     template<class... _Args>
-    basic_format_args(const __format_arg_store<_Context, _Args...> & __store) noexcept
+    [[gnu::always_inline]] basic_format_args(const __format_arg_store<_Context, _Args...> & __store) noexcept
         : __size(sizeof...(_Args)), __data(__store.__args)
     {
     }
