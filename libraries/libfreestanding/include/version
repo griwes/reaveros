@@ -47,7 +47,7 @@
 #define __cpp_lib_nonmember_container_access 201411L
 #define __cpp_lib_null_iterators 201304L
 #define __cpp_lib_make_unique 201304L
-#define __cpp_lib_ranges 0L // TODO: update the header to be able to use the latest value
+#define __cpp_lib_ranges 202106L
 #define __cpp_lib_remove_cvref 201711L
 #define __cpp_lib_result_of_sfinae 201210L
 #define __cpp_lib_ssize 201902L
