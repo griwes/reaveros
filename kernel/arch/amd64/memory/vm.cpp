@@ -127,9 +127,9 @@ template<int I, int Lowest>
             {
                 PANIC(
                     "Tried to re-map page {:#018x} at level {}, existing mapping: {:#018x}!",
-                    reinterpret_cast<void *>(virt_start),
+                    virt_start,
                     I,
-                    reinterpret_cast<void *>(table->entries[start_table_index].address << 12));
+                    table->entries[start_table_index].address << 12);
             }
 
             table->entries[start_table_index] = phys;

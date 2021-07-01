@@ -23,13 +23,210 @@
 
 namespace std
 {
-// inline void __throw_format_error()
-//{
-// asm volatile("ud2");
-//}
-#define __throw_format_error()                                                                               \
-    asm volatile("ud2");                                                                                     \
-    __builtin_unreachable()
+[[gnu::always_inline]] constexpr inline void __throw_format_error()
+{
+    if (__builtin_is_constant_evaluated())
+    {
+        throw "format string error";
+    }
+    else
+    {
+        asm volatile("ud2");
+    }
+}
+
+template<typename>
+class basic_format_parse_context;
+
+template<typename _Fmt, typename _HandleIth, typename _HandleChar>
+constexpr void __handle_format_string(_Fmt __fmt, _HandleIth __handle_ith, _HandleChar __handle_char)
+{
+    basic_format_parse_context<typename decltype(__fmt)::value_type> __pc(__fmt);
+
+    auto __begin = __pc.begin();
+    auto __end = __pc.end();
+
+    while (__begin != __end)
+    {
+        if (*__begin != '{')
+        {
+            __handle_char(*__begin++);
+            continue;
+        }
+
+        ++__begin; // skip '{'
+
+        if (*__begin == '{')
+        {
+            // {{ means an escape sequence for {
+            __handle_char(*__begin++);
+            continue;
+        }
+
+        size_t __idx = 0;
+
+        if (*__begin >= '0' && *__begin <= '9')
+        {
+            while (*__begin >= '0' && *__begin <= '9')
+            {
+                __idx = __idx * 10 + (*__begin++ - '0');
+            }
+            __pc.check_arg_id(__idx);
+        }
+        else
+        {
+            __idx = __pc.next_arg_id();
+        }
+
+        if (*__begin == ':')
+        {
+            ++__begin;
+        }
+
+        __pc.advance_to(__begin);
+        __handle_ith(__pc, __idx);
+
+        __begin = __pc.begin();
+
+        if (*__begin == '}')
+        {
+            ++__begin;
+            continue;
+        }
+
+        __throw_format_error();
+    }
+}
+
+template<typename _T, typename _CharT>
+class formatter;
+
+template<typename _CharT, typename... _Args>
+struct __basic_format_string
+{
+private:
+    basic_string_view<_CharT> __str;
+
+    template<typename _T>
+    static auto __convert(const _T & __v) noexcept
+    {
+        if constexpr (same_as<_T, bool>)
+        {
+            return __v;
+        }
+
+        else if constexpr (same_as<_T, _CharT>)
+        {
+            return __v;
+        }
+
+        else if constexpr (signed_integral<_T> && sizeof(_T) <= sizeof(int))
+        {
+            return static_cast<int>(__v);
+        }
+
+        else if constexpr (unsigned_integral<_T> && sizeof(_T) <= sizeof(unsigned int))
+        {
+            return static_cast<unsigned int>(__v);
+        }
+
+        else if constexpr (signed_integral<_T> && sizeof(_T) <= sizeof(long long int))
+        {
+            return static_cast<long long int>(__v);
+        }
+
+        else if constexpr (unsigned_integral<_T> && sizeof(_T) <= sizeof(unsigned long long int))
+        {
+            return static_cast<unsigned long long int>(__v);
+        }
+
+        else
+        {
+            return __v;
+        }
+    }
+
+    static auto __convert(float __n) noexcept;
+    static auto __convert(double __n) noexcept;
+    static auto __convert(long double __n) noexcept;
+
+    static auto __convert(const _CharT * __s)
+    {
+        return __s;
+    }
+
+    template<class _Traits>
+    static auto __convert(basic_string_view<_CharT, _Traits> __s) noexcept
+    {
+        return basic_string_view<_CharT>(__s.data(), __s.size());
+    }
+
+    /*
+    template<class traits, class Allocator>
+      static auto __convert(
+        const basic_string<char_type, traits, Allocator>& s) noexcept;
+    */
+
+    static auto __convert(nullptr_t) noexcept;
+
+    template<class _T>
+    static auto __convert(_T * __p)
+    {
+        return static_cast<const void *>(__p);
+    }
+
+    template<typename _Head, typename... _Tail>
+    static constexpr void __select_formatter_and_parse(auto && __pc, auto && __idx)
+    {
+        if (__idx == 0)
+        {
+            formatter<decltype(__convert(declval<_Head>())), _CharT> __f;
+            __pc.advance_to(__f.parse(__pc));
+        }
+
+        else
+        {
+            if constexpr (sizeof...(_Tail) > 0)
+            {
+                __select_formatter_and_parse<_Tail...>(__pc, __idx - 1);
+            }
+            // else case handled below
+        }
+    };
+
+public:
+    template<typename _T>
+    requires convertible_to<_T, basic_string_view<_CharT>>
+    consteval __basic_format_string(const _T & __s) : __str(__s)
+    {
+        auto __handle_ith = [](auto && __pc, auto && __idx) constexpr
+        {
+            if (__idx >= sizeof...(_Args))
+            {
+                throw "format string attempted to use an argument beyond the argument list";
+            }
+
+            if constexpr (sizeof...(_Args) > 0)
+            {
+                __select_formatter_and_parse<_Args...>(__pc, __idx);
+            }
+        };
+
+        auto __handle_char = [](auto &&) constexpr {};
+
+        __handle_format_string(__str, __handle_ith, __handle_char);
+    }
+
+    basic_string_view<_CharT> __get_str() const
+    {
+        return __str;
+    }
+};
+
+template<typename... _Args>
+using __format_string = __basic_format_string<char, type_identity_t<_Args>...>;
+template<typename... _Args>
+using __wformat_string = __basic_format_string<wchar_t, type_identity_t<_Args>...>;
 
 template<typename _CharT>
 class basic_format_parse_context
@@ -108,10 +305,22 @@ public:
 using format_parse_context = basic_format_parse_context<char>;
 using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
+template<class _T, typename _CharT = char>
+struct formatter;
+
+template<typename _Out, typename _CharT>
+class basic_format_context;
+
+template<typename _CharT>
+class __erased_iterator_appender;
+
+using format_context = basic_format_context<__erased_iterator_appender<char>, char>;
+using wformat_context = basic_format_context<__erased_iterator_appender<char>, wchar_t>;
+
 template<class _Context, class... _Args>
 struct __format_arg_store;
 
-template<class _Context /*= format_context*/, typename... _Args>
+template<class _Context = format_context, typename... _Args>
 __format_arg_store<_Context, _Args...> make_format_args(const _Args &... __args);
 
 template<class _Context>
@@ -359,15 +568,6 @@ public:
     }
 };
 
-// using format_args = basic_format_args<format_context>;
-// using wformat_args = basic_format_args<wformat_context>;
-
-template<class _T, typename _CharT = char>
-struct formatter;
-
-template<typename _Out, typename _CharT>
-class basic_format_context;
-
 template<typename _Out, typename _CharT>
 basic_format_context<_Out, _CharT> __make_format_context(
     _Out __out,
@@ -419,11 +619,8 @@ basic_format_context<_Out, _CharT> __make_format_context(
     return ret;
 }
 
-// using format_context = basic_format_context<unspecified, char>;
-// using wformat_context = basic_format_context<unspecified, wchar_t>;
-
-template<typename _Out, typename _CharT>
-using format_args_t = basic_format_args<basic_format_context<_Out, _CharT>>;
+using format_args = basic_format_args<format_context>;
+using wformat_args = basic_format_args<wformat_context>;
 
 // string vformat(string_view __fmt, format_args __args);
 // wstring vformat(wstring_view __fmt, wformat_args __args);
@@ -431,63 +628,114 @@ using format_args_t = basic_format_args<basic_format_context<_Out, _CharT>>;
 // wstring vformat(const locale & __loc, wstring_view __fmt, wformat_args __args);
 
 // template<typename... _Args>
-// string format(string_view __fmt, const _Args &... __args);
+// string format(__format_string<_Args...> __fmt, const _Args &... __args);
 // template<typename... _Args>
-// wstring format(wstring_view __fmt, const _Args &... __args);
+// wstring format(__wformat_string<Args...> __fmt, const _Args &... __args);
 // template<typename... _Args>
-// string format(const locale & __loc, string_view __fmt, const _Args &... __args);
+// string format(const locale & __loc, __format_string<Args...> __fmt, const _Args &... __args);
 // template<typename... _Args>
-// wstring format(const locale & __loc, wstring_view __fmt, const _Args &... __args);
+// wstring format(const locale & __loc, __wformat_string<Args...> __fmt, const _Args &... __args);
+
+template<typename _CharT>
+class __erased_iterator_base
+{
+    template<typename _CharT_>
+    friend class __erased_iterator_appender;
+
+    virtual void __increment() = 0;
+    virtual void __assign(_CharT) = 0;
+};
+
+template<typename _CharT, typename _Iter>
+class __erased_iterator : public __erased_iterator_base<_CharT>
+{
+public:
+    __erased_iterator(_Iter __base) : __base(__base)
+    {
+    }
+
+    _Iter __get() const
+    {
+        return __base;
+    }
+
+    virtual void __increment() override final
+    {
+        ++__base;
+    }
+
+    virtual void __assign(_CharT __c) override final
+    {
+        *__base = __c;
+    }
+
+private:
+    _Iter __base;
+};
+
+template<typename _CharT>
+class __erased_iterator_appender
+{
+    class __proxy
+    {
+        friend class __erased_iterator_appender;
+
+        __proxy(__erased_iterator_base<_CharT> & __base) : __base(__base)
+        {
+        }
+
+    public:
+        void operator=(_CharT __c)
+        {
+            __base.__assign(__c);
+        }
+
+    private:
+        __erased_iterator_base<_CharT> & __base;
+    };
+
+public:
+    __erased_iterator_appender() = default;
+
+    __erased_iterator_appender(__erased_iterator_base<_CharT> & __base) : __base(&__base)
+    {
+    }
+
+    __erased_iterator_appender(const __erased_iterator_appender &) = default;
+    __erased_iterator_appender & operator=(const __erased_iterator_appender &) = default;
+
+    __erased_iterator_appender operator++() const
+    {
+        __base->__increment();
+        return *this;
+    }
+
+    __erased_iterator_appender & operator++(int)
+    {
+        __base->__increment();
+        return *this;
+    }
+
+    __proxy operator*() const
+    {
+        return __proxy(*__base);
+    }
+
+private:
+    __erased_iterator_base<_CharT> * __base = nullptr;
+};
 
 template<typename _Out>
-_Out vformat_to(_Out __out, string_view __fmt, format_args_t<type_identity_t<_Out>, char> __args) requires
+_Out vformat_to(_Out __out_raw, string_view __fmt, format_args __args) requires
     output_iterator<_Out, decltype(__fmt)::value_type>
 {
-    basic_format_parse_context<decltype(__fmt)::value_type> __pc(__fmt);
+    __erased_iterator<char, _Out> __erased(__out_raw);
+    __erased_iterator_appender<char> __out(__erased);
+
     auto __fc = __make_format_context(__out, __args);
 
-    auto __begin = __pc.begin();
-    auto __end = __pc.end();
-
-    while (__begin != __end)
+    auto __handle_ith = [&__fc](auto && __pc, auto && __idx)
     {
-        if (*__begin != '{')
-        {
-            *__out++ = *__begin++;
-            continue;
-        }
-
-        ++__begin; // skip '{'
-
-        if (*__begin == '{')
-        {
-            // {{ means an escape sequence for {
-            *__out++ = *__begin++;
-            continue;
-        }
-
-        size_t __idx = 0;
-
-        if (*__begin >= '0' && *__begin <= '9')
-        {
-            while (*__begin >= '0' && *__begin <= '9')
-            {
-                __idx = __idx * 10 + (*__begin++ - '0');
-            }
-            __pc.check_arg_id(__idx);
-        }
-        else
-        {
-            __idx = __pc.next_arg_id();
-        }
-
-        if (*__begin == ':')
-        {
-            ++__begin;
-        }
-
-        __pc.advance_to(__begin);
-        __fc.advance_to(__out);
         std::visit_format_arg(
             [&](auto __val)
             {
@@ -511,52 +759,42 @@ _Out vformat_to(_Out __out, string_view __fmt, format_args_t<type_identity_t<_Ou
                 }
             },
             __fc.arg(__idx));
+    };
 
-        __begin = __pc.begin();
-        __out = __fc.out();
+    auto __handle_char = [&__out](auto && __c) { *__out++ = __c; };
 
-        if (*__begin == '}')
-        {
-            ++__begin;
-            continue;
-        }
+    __handle_format_string(__fmt, __handle_ith, __handle_char);
 
-        __throw_format_error();
-    }
-
-    return __out;
+    return __erased.__get();
 }
 
 template<typename _Out>
-_Out vformat_to(_Out __out, wstring_view __fmt, format_args_t<type_identity_t<_Out>, wchar_t> __args);
+_Out vformat_to(_Out __out, wstring_view __fmt, format_args __args);
 
 /*
 template<typename _Out>
-Out vformat_to(_Out __out, const locale & __loc, string_view __fmt, format_args_t<type_identity_t<_Out>,
-char>
+Out vformat_to(_Out __out, const locale & __loc, string_view __fmt, format_args
 __args); template<typename _Out> Out vformat_to( _Out __out, const locale & __loc, wstring_view __fmt,
-    format_args_t<type_identity_t<_Out>, wchar_t> __args);
+    format_args __args);
 */
 
 template<typename _Out, typename... _Args>
-_Out format_to(_Out __out, string_view __fmt, const _Args &... __args)
+_Out format_to(_Out __out, __format_string<_Args...> __fmt, const _Args &... __args)
 {
-    using __context = basic_format_context<_Out, decltype(__fmt)::value_type>;
-    return std::vformat_to(std::move(__out), __fmt, make_format_args<__context>(__args...));
+    return std::vformat_to(std::move(__out), __fmt.__get_str(), make_format_args(__args...));
 }
 
 template<typename _Out, typename... _Args>
-_Out format_to(_Out __out, wstring_view __fmt, const _Args &... __args)
+_Out format_to(_Out __out, __wformat_string<_Args...> __fmt, const _Args &... __args)
 {
-    using __context = basic_format_context<_Out, decltype(__fmt)::value_type>;
-    return std::vformat_to(std::move(__out), __fmt, make_format_args<__context>(__args...));
+    return std::vformat_to(std::move(__out), __fmt.__get_str(), make_wformat_args(__args...));
 }
 
 /*
 template<typename _Out, typename... _Args>
-Out format_to(_Out __out, const locale & __loc, string_view __fmt, const _Args &... __args);
+Out format_to(_Out __out, const locale & __loc, __format_string<_Args...> __fmt, const _Args &... __args);
 template<typename _Out, typename... _Args>
-Out format_to(_Out __out, const locale & __loc, wstring_view __fmt, const _Args &... __args);
+Out format_to(_Out __out, const locale & __loc, __wformat_string<_Args...> __fmt, const _Args &... __args);
 */
 
 template<typename _Out>
@@ -569,13 +807,13 @@ template<typename _Out, typename... _Args>
 format_to_n_result<_Out> format_to_n(
     _Out __out,
     iter_difference_t<_Out> __n,
-    string_view __fmt,
+    __format_string<_Args...> __fmt,
     const _Args &... __args);
 template<typename _Out, typename... _Args>
 format_to_n_result<_Out> format_to_n(
     _Out __out,
     iter_difference_t<_Out> __n,
-    wstring_view __fmt,
+    __wformat_string<_Args...> __fmt,
     const _Args &... __args);
 /*
 template<typename _Out, typename... _Args>
@@ -583,26 +821,26 @@ format_to_n_result<Out> format_to_n(
     _Out __out,
     iter_difference_t<_Out> __n,
     const locale & __loc,
-    string_view __fmt,
+    __format_string<_Args...> __fmt,
     const _Args &... __args);
 template<typename _Out, typename... _Args>
 format_to_n_result<_Out> format_to_n(
     _Out __out,
     iter_difference_t<_Out> __n,
     const locale & __loc,
-    wstring_view __fmt,
+    __wformat_string<_Args...> __fmt,
     const _Args &... __args);
 */
 
 template<typename... _Args>
-size_t formatted_size(string_view __fmt, const _Args &... __args);
+size_t formatted_size(__format_string<_Args...> __fmt, const _Args &... __args);
 template<typename... _Args>
-size_t formatted_size(wstring_view __fmt, const _Args &... __args);
+size_t formatted_size(__wformat_string<_Args...> __fmt, const _Args &... __args);
 /*
 template<typename... _Args>
-size_t formatted_size(const locale & __loc, string_view __fmt, const _Args &... __args);
+size_t formatted_size(const locale & __loc, __format_string<_Args...> __fmt, const _Args &... __args);
 template<typename... _Args>
-size_t formatted_size(const locale & __loc, wstring_view __fmt, const _Args &... __args);
+size_t formatted_size(const locale & __loc, __wformat_string<_Args...> __fmt, const _Args &... __args);
 */
 
 class format_error;

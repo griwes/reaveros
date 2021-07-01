@@ -83,7 +83,7 @@ namespace kernel::log
 void * get_syslog_mailbox();
 
 template<typename... Ts>
-void println(std::string_view fmt, const Ts &... args)
+void println(std::__format_string<Ts...> fmt, const Ts &... args)
 {
     if (get_syslog_mailbox())
     {
