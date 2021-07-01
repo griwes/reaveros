@@ -23,7 +23,7 @@
 
 namespace std
 {
-[[gnu::always_inline]] constexpr inline void __throw_format_error()
+[[gnu::always_inline]] constexpr inline void __throw_format_error(const char *)
 {
     if (__builtin_is_constant_evaluated())
     {
@@ -94,7 +94,7 @@ constexpr void __handle_format_string(_Fmt __fmt, _HandleIth __handle_ith, _Hand
             continue;
         }
 
-        __throw_format_error();
+        __throw_format_error("unterminated format specifier found");
     }
 }
 
@@ -283,7 +283,8 @@ public:
         }
         else if (__indexing == __manual)
         {
-            __throw_format_error();
+            __throw_format_error(
+                "unindexed format specifier found in a format string containing indexed format specifiers");
         }
 
         return __next_arg_id++;
@@ -297,7 +298,8 @@ public:
         }
         else if (__indexing == __automatic)
         {
-            __throw_format_error();
+            __throw_format_error(
+                "indexed format specifier found in a format string containing unindexed format specifiers");
         }
     }
 };
@@ -743,7 +745,7 @@ _Out vformat_to(_Out __out_raw, string_view __fmt, format_args __args) requires
 
                 if constexpr (is_same<_T, typename basic_format_arg<decltype(__fc)>::__monostate>::value)
                 {
-                    __throw_format_error();
+                    __throw_format_error("tried to use an argument beyond the provided arguments");
                 }
 
                 else if constexpr (is_same<_T, typename basic_format_arg<decltype(__fc)>::handle>::value)
@@ -876,7 +878,7 @@ struct formatter<basic_string_view<_CharT>, _CharT>
         {
             if (__it == __end)
             {
-                __throw_format_error();
+                __throw_format_error("formatter was provided an empty format range");
             }
         };
 
@@ -999,9 +1001,9 @@ struct formatter<basic_string_view<_CharT>, _CharT>
             ++__it;
         }
 
-        if (__it != __end && *__it != '{' && __throw_on_trailing)
+        if (__it != __end && *__it != '}' && __throw_on_trailing)
         {
-            __throw_format_error();
+            __throw_format_error("found unexpected characters at the position of a format type specifier");
         }
 
         return __it;
@@ -1012,7 +1014,7 @@ struct formatter<basic_string_view<_CharT>, _CharT>
     {
         if (__parsed_for_numeric && !__is_numeric)
         {
-            __throw_format_error();
+            __throw_format_error("internal error: parsed for numeric, but is not numeric");
         }
 
         auto __it = __ctx.out();
@@ -1119,7 +1121,7 @@ struct formatter<bool, _CharT>
             return __it;
         }
 
-        __throw_format_error();
+        __throw_format_error("found unexpected characters at the position of a format type specifier");
     };
 
     template<typename _Context>
@@ -1205,7 +1207,7 @@ requires(
             return __it;
         }
 
-        __throw_format_error();
+        __throw_format_error("found unexpected characters at the position of a format type specifier");
     }
 
     template<typename _Context>
@@ -1279,7 +1281,7 @@ requires(
 
         if (__result.ec != errc{})
         {
-            __throw_format_error();
+            __throw_format_error("call to to_chars failed");
         }
 
         return __strfmt.format(
@@ -1314,7 +1316,7 @@ struct formatter<const void *, _CharT>
             return __it;
         }
 
-        __throw_format_error();
+        __throw_format_error("found unexpected characters at the position of a format type specifier");
     }
 
     template<typename _Context>
