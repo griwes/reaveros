@@ -50,12 +50,16 @@ public:
     {
     }
 
+    constexpr basic_string_view(nullptr_t) = delete;
+
     constexpr basic_string_view(const _CharT * __str, size_type __len) : __data(__str), __size(__len)
     {
     }
 
     // template<class It, class End>
     // constexpr basic_string_view(It begin, End end);
+    // template<class R>
+    // constexpr basic_string_view(R range);
 
     constexpr const_iterator begin() const noexcept
     {
@@ -237,6 +241,8 @@ private:
 
 template<typename _It, typename _End>
 basic_string_view(_It, _End) -> basic_string_view<iter_value_t<_It>>;
+// template<class R>
+// basic_string_view(R&&) -> basic_string_view<ranges::range_value_t<R>>;
 
 template<typename _CharT, typename _Traits>
 constexpr bool operator==(

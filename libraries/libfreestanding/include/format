@@ -235,7 +235,7 @@ private:
     template<class _Traits>
     explicit basic_format_arg(basic_string_view<char_type, _Traits> __s) noexcept
     {
-        __value.__strv_11 = basic_string_view<char_type>(__s.begin(), __s.size());
+        __value.__strv_11 = basic_string_view<char_type>(__s.data(), __s.size());
         __value_idx = 11;
     }
 
@@ -255,7 +255,7 @@ private:
     }
 
     template<class _Context_, typename... _Args>
-    friend __format_arg_store<_Context_, _Args...> make_format_args(const _Args &... __args);
+    friend class __format_arg_store;
 
     template<class _Visitor, class _Context_>
     friend decltype(auto) visit_format_arg(_Visitor && __vis, basic_format_arg<_Context_> __arg);
@@ -313,15 +313,25 @@ decltype(auto) visit_format_arg(_Visitor && __vis, basic_format_arg<_Context> __
 }
 
 template<class _Context, class... _Args>
-struct __format_arg_store
+class __format_arg_store
 {
+    __format_arg_store(const _Args &... __args) : __args{ basic_format_arg<_Context>(__args)... }
+    {
+    }
+
     basic_format_arg<_Context> __args[sizeof...(_Args)];
+
+    template<class _Context_, typename... _Args_>
+    friend __format_arg_store<_Context_, _Args_...> make_format_args(const _Args_ &...);
+
+    template<class _Context_>
+    friend class basic_format_args;
 };
 
 template<class _Context, typename... _Args>
 __format_arg_store<_Context, _Args...> make_format_args(const _Args &... __args)
 {
-    return { basic_format_arg<_Context>(__args)... };
+    return __format_arg_store<_Context, _Args...>(__args...);
 }
 /*
 template<typename... _Args>
