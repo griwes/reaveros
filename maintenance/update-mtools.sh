@@ -36,9 +36,9 @@ latest_ver=$(curl ${dir} 2>/dev/null \
 if [[ ${ver} != ${latest_ver} ]]
 then
     echo "mtools: upgrade available: $ver -> $latest_ver"
-fi
 
-if [[ $pr -eq 1 ]]
-then
-    "${source_dir}/create-pr" mtools VER "${latest_ver}"
+    if [[ $pr -eq 1 ]]
+    then
+        "${source_dir}/create-pr" mtools VER "${latest_ver}"
+    fi
 fi
