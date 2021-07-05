@@ -24,19 +24,19 @@
 asm("bitmap_font:\n"
     ".incbin \"" REAVEROS_KERNEL_SOURCE_ROOT "/boot/IBM_VGA_8x16.bin\"\n");
 
-namespace
-{
-boot_protocol::video_mode mode;
-std::uint32_t * framebuffer_base = nullptr;
-std::uint32_t * backbuffer_base = nullptr;
-extern "C" char bitmap_font[];
-
-std::uint16_t x = 0, y = 0;
-std::uint16_t maxx = 0, maxy = 0;
-}
-
 namespace kernel::boot_screen
 {
+namespace
+{
+    boot_protocol::video_mode mode;
+    std::uint32_t * framebuffer_base = nullptr;
+    std::uint32_t * backbuffer_base = nullptr;
+    extern "C" char bitmap_font[];
+
+    std::uint16_t x = 0, y = 0;
+    std::uint16_t maxx = 0, maxy = 0;
+}
+
 void initialize(
     boot_protocol::video_mode * loader_mode,
     std::size_t memmap_size,

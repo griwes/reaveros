@@ -19,21 +19,21 @@
 #include "../../../util/log.h"
 #include "../cpu/lapic.h"
 
-namespace
-{
-struct irq_handler
-{
-    bool valid = false;
-    kernel::amd64::irq::erased_irq_handler fptr;
-    void * erased_fptr;
-    std::uint64_t context;
-};
-
-irq_handler irq_handlers[256];
-}
-
 namespace kernel::amd64::irq
 {
+namespace
+{
+    struct irq_handler
+    {
+        bool valid = false;
+        erased_irq_handler fptr;
+        void * erased_fptr;
+        std::uint64_t context;
+    };
+
+    irq_handler irq_handlers[256];
+}
+
 void handle(context & ctx)
 {
     // TODO: lock?

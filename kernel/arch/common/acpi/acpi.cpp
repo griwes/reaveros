@@ -21,224 +21,224 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace
-{
-struct [[gnu::packed]] description_header
-{
-    char signature[4];
-    std::uint32_t length;
-    std::uint8_t revision;
-    std::uint8_t checksum;
-    char oemid[6];
-    std::uint64_t oem_table_id;
-    std::uint32_t oem_revision;
-    std::uint32_t creator_id;
-    std::uint32_t creator_revision;
-
-    bool validate(const char (&sign)[5])
-    {
-        if (std::memcmp(signature, sign, 4) != 0)
-        {
-            return false;
-        }
-
-        auto self = reinterpret_cast<std::uint8_t *>(this);
-        std::uint8_t sum = 0;
-        for (auto i = 0u; i < length; ++i)
-        {
-            sum += self[i];
-        }
-
-        return !sum;
-    }
-};
-
-struct [[gnu::packed]] rsdt : public description_header
-{
-    kernel::phys_ptr_t<description_header, std::uint32_t> tables[1];
-};
-
-struct [[gnu::packed]] xsdt : public description_header
-{
-    kernel::phys_ptr_t<description_header> tables[1];
-};
-
-struct [[gnu::packed]] rsdp
-{
-    char signature[8];
-    std::uint8_t checksum;
-    char oemid[6];
-    std::uint8_t revision;
-    kernel::phys_ptr_t<rsdt, std::uint32_t> rsdt_pointer;
-    std::uint32_t length;
-    kernel::phys_ptr_t<xsdt> xsdt_pointer;
-    std::uint8_t extended_checksum;
-    std::uint8_t reserved[3];
-
-    bool validate()
-    {
-        if (std::memcmp(signature, "RSD PTR ", 8) != 0)
-        {
-            return false;
-        }
-
-        auto self = reinterpret_cast<std::uint8_t *>(this);
-        std::uint8_t sum = 0;
-        for (auto i = 0; i < 20; ++i)
-        {
-            sum += self[i];
-        }
-
-        if (sum != 0)
-        {
-            return false;
-        }
-
-        if (revision == 0)
-        {
-            return true;
-        }
-
-        sum = 0;
-        for (auto i = 0u; i < length; ++i)
-        {
-            sum += self[i];
-        }
-
-        return !sum;
-    }
-};
-
-struct [[gnu::packed]] madt_entry_header
-{
-    std::uint8_t type;
-    std::uint8_t length;
-};
-
-struct [[gnu::packed]] madt_lapic : public madt_entry_header
-{
-    std::uint8_t acpi_id;
-    std::uint8_t apic_id;
-    std::uint32_t flags;
-};
-
-struct [[gnu::packed]] madt_ioapic : public madt_entry_header
-{
-    std::uint8_t ioapic_id;
-    std::uint8_t reserved;
-    kernel::phys_addr32_t address;
-    std::uint32_t interrupt_base;
-};
-
-struct [[gnu::packed]] madt_interrupt_source_override : public madt_entry_header
-{
-    std::uint8_t bus;
-    std::uint8_t source;
-    std::uint32_t interrupt;
-    std::uint16_t flags;
-};
-
-struct [[gnu::packed]] madt_nmi : public madt_entry_header
-{
-    std::uint16_t flags;
-    std::uint32_t interrupt;
-};
-
-struct [[gnu::packed]] madt_lapic_nmi : public madt_entry_header
-{
-    std::uint8_t acpi_id;
-    std::uint16_t flags;
-    std::uint8_t lapic_interrupt;
-};
-
-struct [[gnu::packed]] madt_lapic_base_override : public madt_entry_header
-{
-    std::uint16_t reserved;
-    kernel::phys_addr_t lapic_base;
-};
-
-struct [[gnu::packed]] madt_x2apic : public madt_entry_header
-{
-    std::uint16_t reserved;
-    std::uint32_t apic_id;
-    std::uint32_t flags;
-    std::uint32_t acpi_id;
-};
-
-struct [[gnu::packed]] madt_x2apic_nmi : public madt_entry_header
-{
-    std::uint16_t flags;
-    std::uint32_t acpi_id;
-    std::uint8_t lapic_interrupt;
-    std::uint8_t reserved[3];
-};
-
-struct [[gnu::packed]] madt : public description_header
-{
-    static const constexpr char expected_signature[] = "APIC";
-
-    kernel::phys_addr32_t lapic_base;
-    std::uint32_t flags;
-    madt_entry_header entries[1];
-};
-
-kernel::phys_ptr_t<rsdt> root_rsdt{ nullptr };
-kernel::phys_ptr_t<xsdt> root_xsdt{ nullptr };
-
-struct address_structure
-{
-    std::uint8_t address_space_id;
-    std::uint8_t register_bit_width;
-    std::uint8_t register_bit_offset;
-    std::uint8_t reserved;
-    kernel::phys_addr_t address;
-} __attribute__((packed));
-
-struct hpet : public description_header
-{
-    static const constexpr char expected_signature[] = "HPET";
-
-    std::uint8_t hardware_rev_id;
-    std::uint8_t comparator_count : 5;
-    std::uint8_t counter_size : 1;
-    std::uint8_t reserved : 1;
-    std::uint8_t legacy_replacement : 1;
-    kernel::pci_vendor_t pci_vendor_id;
-    address_structure address;
-    std::uint8_t hpet_number;
-    std::uint16_t minimum_tick;
-    std::uint8_t page_protection;
-} __attribute__((packed));
-
-template<typename Table, typename Root>
-kernel::phys_ptr_t<Table> find_table(Root root)
-{
-    for (auto i = 0ull; i < (root->length - 36) / sizeof(root->tables); i++)
-    {
-        auto table_ptr = root->tables[i];
-        if (table_ptr->validate(Table::expected_signature))
-        {
-            return kernel::phys_ptr_t<Table>{ static_cast<Table *>(table_ptr.value()) };
-        }
-    }
-
-    return {};
-}
-
-template<typename Table>
-kernel::phys_ptr_t<Table> find_table()
-{
-    if (root_xsdt.value())
-    {
-        return find_table<Table>(root_xsdt);
-    }
-
-    return find_table<Table>(root_rsdt);
-}
-}
-
 namespace kernel::acpi
 {
+namespace
+{
+    struct [[gnu::packed]] description_header
+    {
+        char signature[4];
+        std::uint32_t length;
+        std::uint8_t revision;
+        std::uint8_t checksum;
+        char oemid[6];
+        std::uint64_t oem_table_id;
+        std::uint32_t oem_revision;
+        std::uint32_t creator_id;
+        std::uint32_t creator_revision;
+
+        bool validate(const char (&sign)[5])
+        {
+            if (std::memcmp(signature, sign, 4) != 0)
+            {
+                return false;
+            }
+
+            auto self = reinterpret_cast<std::uint8_t *>(this);
+            std::uint8_t sum = 0;
+            for (auto i = 0u; i < length; ++i)
+            {
+                sum += self[i];
+            }
+
+            return !sum;
+        }
+    };
+
+    struct [[gnu::packed]] rsdt : public description_header
+    {
+        phys_ptr_t<description_header, std::uint32_t> tables[1];
+    };
+
+    struct [[gnu::packed]] xsdt : public description_header
+    {
+        phys_ptr_t<description_header> tables[1];
+    };
+
+    struct [[gnu::packed]] rsdp
+    {
+        char signature[8];
+        std::uint8_t checksum;
+        char oemid[6];
+        std::uint8_t revision;
+        phys_ptr_t<rsdt, std::uint32_t> rsdt_pointer;
+        std::uint32_t length;
+        phys_ptr_t<xsdt> xsdt_pointer;
+        std::uint8_t extended_checksum;
+        std::uint8_t reserved[3];
+
+        bool validate()
+        {
+            if (std::memcmp(signature, "RSD PTR ", 8) != 0)
+            {
+                return false;
+            }
+
+            auto self = reinterpret_cast<std::uint8_t *>(this);
+            std::uint8_t sum = 0;
+            for (auto i = 0; i < 20; ++i)
+            {
+                sum += self[i];
+            }
+
+            if (sum != 0)
+            {
+                return false;
+            }
+
+            if (revision == 0)
+            {
+                return true;
+            }
+
+            sum = 0;
+            for (auto i = 0u; i < length; ++i)
+            {
+                sum += self[i];
+            }
+
+            return !sum;
+        }
+    };
+
+    struct [[gnu::packed]] madt_entry_header
+    {
+        std::uint8_t type;
+        std::uint8_t length;
+    };
+
+    struct [[gnu::packed]] madt_lapic : public madt_entry_header
+    {
+        std::uint8_t acpi_id;
+        std::uint8_t apic_id;
+        std::uint32_t flags;
+    };
+
+    struct [[gnu::packed]] madt_ioapic : public madt_entry_header
+    {
+        std::uint8_t ioapic_id;
+        std::uint8_t reserved;
+        phys_addr32_t address;
+        std::uint32_t interrupt_base;
+    };
+
+    struct [[gnu::packed]] madt_interrupt_source_override : public madt_entry_header
+    {
+        std::uint8_t bus;
+        std::uint8_t source;
+        std::uint32_t interrupt;
+        std::uint16_t flags;
+    };
+
+    struct [[gnu::packed]] madt_nmi : public madt_entry_header
+    {
+        std::uint16_t flags;
+        std::uint32_t interrupt;
+    };
+
+    struct [[gnu::packed]] madt_lapic_nmi : public madt_entry_header
+    {
+        std::uint8_t acpi_id;
+        std::uint16_t flags;
+        std::uint8_t lapic_interrupt;
+    };
+
+    struct [[gnu::packed]] madt_lapic_base_override : public madt_entry_header
+    {
+        std::uint16_t reserved;
+        phys_addr_t lapic_base;
+    };
+
+    struct [[gnu::packed]] madt_x2apic : public madt_entry_header
+    {
+        std::uint16_t reserved;
+        std::uint32_t apic_id;
+        std::uint32_t flags;
+        std::uint32_t acpi_id;
+    };
+
+    struct [[gnu::packed]] madt_x2apic_nmi : public madt_entry_header
+    {
+        std::uint16_t flags;
+        std::uint32_t acpi_id;
+        std::uint8_t lapic_interrupt;
+        std::uint8_t reserved[3];
+    };
+
+    struct [[gnu::packed]] madt : public description_header
+    {
+        static const constexpr char expected_signature[] = "APIC";
+
+        phys_addr32_t lapic_base;
+        std::uint32_t flags;
+        madt_entry_header entries[1];
+    };
+
+    phys_ptr_t<rsdt> root_rsdt{ nullptr };
+    phys_ptr_t<xsdt> root_xsdt{ nullptr };
+
+    struct address_structure
+    {
+        std::uint8_t address_space_id;
+        std::uint8_t register_bit_width;
+        std::uint8_t register_bit_offset;
+        std::uint8_t reserved;
+        phys_addr_t address;
+    } __attribute__((packed));
+
+    struct hpet : public description_header
+    {
+        static const constexpr char expected_signature[] = "HPET";
+
+        std::uint8_t hardware_rev_id;
+        std::uint8_t comparator_count : 5;
+        std::uint8_t counter_size : 1;
+        std::uint8_t reserved : 1;
+        std::uint8_t legacy_replacement : 1;
+        pci_vendor_t pci_vendor_id;
+        address_structure address;
+        std::uint8_t hpet_number;
+        std::uint16_t minimum_tick;
+        std::uint8_t page_protection;
+    } __attribute__((packed));
+
+    template<typename Table, typename Root>
+    phys_ptr_t<Table> find_table(Root root)
+    {
+        for (auto i = 0ull; i < (root->length - 36) / sizeof(root->tables); i++)
+        {
+            auto table_ptr = root->tables[i];
+            if (table_ptr->validate(Table::expected_signature))
+            {
+                return phys_ptr_t<Table>{ static_cast<Table *>(table_ptr.value()) };
+            }
+        }
+
+        return {};
+    }
+
+    template<typename Table>
+    phys_ptr_t<Table> find_table()
+    {
+        if (root_xsdt.value())
+        {
+            return find_table<Table>(root_xsdt);
+        }
+
+        return find_table<Table>(root_rsdt);
+    }
+}
+
 void initialize(std::size_t, phys_addr_t acpi_root)
 {
     log::println("[ACPI] Initializing kernel ACPI structures...");
@@ -274,7 +274,7 @@ void initialize(std::size_t, phys_addr_t acpi_root)
     } while (false);
 }
 
-kernel::acpi::madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t max_core_count)
+acpi::madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t max_core_count)
 {
     auto madt_ptr = find_table<madt>();
     if (!madt_ptr)

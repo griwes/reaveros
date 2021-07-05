@@ -18,24 +18,24 @@
 
 #include <cstring>
 
+namespace kernel::amd64::gdt
+{
 namespace
 {
-void setup_gdte(kernel::amd64::gdt::entry & entry, bool code, bool user)
-{
-    entry.normal = 1;
+    void setup_gdte(entry & entry, bool code, bool user)
+    {
+        entry.normal = 1;
 
-    entry.code = code;
-    entry.dpl = user * 3;
-    entry.long_mode = 1;
-    entry.present = 1;
-    entry.read_write = 1;
-}
+        entry.code = code;
+        entry.dpl = user * 3;
+        entry.long_mode = 1;
+        entry.present = 1;
+        entry.read_write = 1;
+    }
 }
 
 extern "C" void load_gdtr(void * gdtr);
 
-namespace kernel::amd64::gdt
-{
 void initialize(entry (&entries)[7], gdtr_t & gdtr)
 {
     std::memset(entries, 0, sizeof(entries));

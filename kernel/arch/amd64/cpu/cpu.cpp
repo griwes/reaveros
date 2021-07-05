@@ -22,15 +22,15 @@
 #include "idt.h"
 #include "lapic.h"
 
-namespace
-{
-static const constexpr auto max_core_count = 1024;
-kernel::amd64::cpu::core cores[max_core_count];
-std::size_t core_count = max_core_count;
-}
-
 namespace kernel::amd64::cpu
 {
+namespace
+{
+    static const constexpr auto max_core_count = 1024;
+    core cores[max_core_count];
+    std::size_t core_count = max_core_count;
+}
+
 namespace detail_for_smp
 {
     core * get_core_array()

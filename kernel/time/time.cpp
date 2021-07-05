@@ -20,14 +20,14 @@
 
 #include "time.h"
 
-namespace
-{
-kernel::time::timer * hpc = nullptr;
-bool per_core_hpc_available = false;
-}
-
 namespace kernel::time
 {
+namespace
+{
+    timer * hpc = nullptr;
+    bool per_core_hpc_available = false;
+}
+
 void initialize()
 {
     log::println("[TIME] Initializing the time subsystem...");

@@ -19,14 +19,14 @@
 #include "../memory/pmm.h"
 #include "log.h"
 
-namespace
-{
-template<typename T>
-T * chained_head = nullptr;
-}
-
 namespace kernel::util
 {
+namespace
+{
+    template<typename T>
+    T * chained_head = nullptr;
+}
+
 template<typename T>
 struct chained_allocatable
 {

@@ -18,16 +18,16 @@
 
 #include <cstdint>
 
-namespace
-{
-void outb(std::uint16_t port, std::uint8_t byte)
-{
-    asm volatile("outb %1, %0;" ::"dN"(port), "a"(byte));
-}
-}
-
 namespace kernel::boot_serial
 {
+namespace
+{
+    void outb(std::uint16_t port, std::uint8_t byte)
+    {
+        asm volatile("outb %1, %0;" ::"dN"(port), "a"(byte));
+    }
+}
+
 void put_char(char c)
 {
     outb(0x3f8, c);

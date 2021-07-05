@@ -20,14 +20,14 @@
 
 #include <boot-constants.h>
 
-namespace
-{
-// TODO: atomic
-std::uint64_t vm_space_top = boot_protocol::kernel_base;
-}
-
 namespace kernel::vm
 {
+namespace
+{
+    // TODO: atomic
+    std::uint64_t vm_space_top = boot_protocol::kernel_base;
+}
+
 virt_addr_t allocate_address_range(std::size_t size)
 {
     auto real_size = size + 4095;

@@ -17,63 +17,63 @@
 #include "pmm.h"
 #include "../util/log.h"
 
-namespace
-{
-kernel::pmm::instance global_manager;
-std::uintptr_t sub_1M_bottom = 0;
-std::uintptr_t sub_1M_top = 0;
-
-std::size_t free_4k_frames = 0;
-std::size_t free_2M_frames = 0;
-std::size_t free_1G_frames = 0;
-
-std::size_t used_4k_frames = 0;
-std::size_t used_2M_frames = 0;
-std::size_t used_1G_frames = 0;
-
-static const constexpr auto size_any = 1ull << 63;
-static const constexpr auto size_4k = 4 * 1024;
-static const constexpr auto size_2M = 2 * 1024 * 1024;
-static const constexpr auto size_1G = 1 * 1024 * 1024 * 1024;
-
-constexpr std::string_view memmap_type_to_description(boot_protocol::memory_type type)
-{
-    switch (type)
-    {
-        case boot_protocol::memory_type::unusable:
-            return "unusable";
-        case boot_protocol::memory_type::free:
-            return "free";
-        case boot_protocol::memory_type::loader:
-            return "bootloader";
-        case boot_protocol::memory_type::preserve:
-            return "preserve for runtime";
-        case boot_protocol::memory_type::acpi_reclaimable:
-            return "ACPI-reclaimable";
-        case boot_protocol::memory_type::persistent:
-            return "presistent";
-
-        case boot_protocol::memory_type::kernel:
-            return "kernel";
-        case boot_protocol::memory_type::initrd:
-            return "initrd";
-        case boot_protocol::memory_type::paging:
-            return "paging structures";
-        case boot_protocol::memory_type::memory_map:
-            return "memory map";
-        case boot_protocol::memory_type::backbuffer:
-            return "video backbuffer";
-        case boot_protocol::memory_type::log_buffer:
-            return "boot log buffer";
-
-        default:
-            return "!! INVALID !!";
-    }
-}
-}
-
 namespace kernel::pmm
 {
+namespace
+{
+    instance global_manager;
+    std::uintptr_t sub_1M_bottom = 0;
+    std::uintptr_t sub_1M_top = 0;
+
+    std::size_t free_4k_frames = 0;
+    std::size_t free_2M_frames = 0;
+    std::size_t free_1G_frames = 0;
+
+    std::size_t used_4k_frames = 0;
+    std::size_t used_2M_frames = 0;
+    std::size_t used_1G_frames = 0;
+
+    static const constexpr auto size_any = 1ull << 63;
+    static const constexpr auto size_4k = 4 * 1024;
+    static const constexpr auto size_2M = 2 * 1024 * 1024;
+    static const constexpr auto size_1G = 1 * 1024 * 1024 * 1024;
+
+    constexpr std::string_view memmap_type_to_description(boot_protocol::memory_type type)
+    {
+        switch (type)
+        {
+            case boot_protocol::memory_type::unusable:
+                return "unusable";
+            case boot_protocol::memory_type::free:
+                return "free";
+            case boot_protocol::memory_type::loader:
+                return "bootloader";
+            case boot_protocol::memory_type::preserve:
+                return "preserve for runtime";
+            case boot_protocol::memory_type::acpi_reclaimable:
+                return "ACPI-reclaimable";
+            case boot_protocol::memory_type::persistent:
+                return "presistent";
+
+            case boot_protocol::memory_type::kernel:
+                return "kernel";
+            case boot_protocol::memory_type::initrd:
+                return "initrd";
+            case boot_protocol::memory_type::paging:
+                return "paging structures";
+            case boot_protocol::memory_type::memory_map:
+                return "memory map";
+            case boot_protocol::memory_type::backbuffer:
+                return "video backbuffer";
+            case boot_protocol::memory_type::log_buffer:
+                return "boot log buffer";
+
+            default:
+                return "!! INVALID !!";
+        }
+    }
+}
+
 void instance::push_4k(phys_addr_t frame)
 {
     if (frame % size_4k)

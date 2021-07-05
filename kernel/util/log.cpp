@@ -33,16 +33,13 @@ struct buffer_chunk
     buffer_chunk * previous = nullptr;
     char buffer[2 * 1024 * 1024 - sizeof(previous)]{}; // NOLINT(bugprone-sizeof-expression)
 };
-}
 
 namespace
 {
-kernel::boot_log::buffer_chunk * latest_chunk = nullptr;
-char * log_cursor = nullptr;
+    buffer_chunk * latest_chunk = nullptr;
+    char * log_cursor = nullptr;
 }
 
-namespace kernel::boot_log
-{
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap)
 {
     auto log_buffer_entry =

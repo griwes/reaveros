@@ -22,13 +22,13 @@
 #include "../cpu/irqs.h"
 #include "../cpu/lapic.h"
 
-namespace
-{
-kernel::amd64::lapic_timer::timer * bsp_timer;
-}
-
 namespace kernel::amd64::lapic_timer
 {
+namespace
+{
+    lapic_timer::timer * bsp_timer;
+}
+
 void initialize()
 {
     bsp_timer = cpu::get_current_core()->timer();
