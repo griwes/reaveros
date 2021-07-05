@@ -23,16 +23,21 @@
 
 namespace std
 {
-[[gnu::always_inline]] constexpr inline void __throw_format_error(const char *)
+[[gnu::always_inline, noreturn]] constexpr inline void __throw_format_error(const char * __msg)
 {
-    if (__builtin_is_constant_evaluated())
+    if (__msg)
     {
-        throw "format string error";
+        if (__builtin_is_constant_evaluated())
+        {
+            throw "format string error";
+        }
+        else
+        {
+            asm volatile("ud2");
+        }
     }
-    else
-    {
-        asm volatile("ud2");
-    }
+
+    __builtin_unreachable();
 }
 
 template<typename>
