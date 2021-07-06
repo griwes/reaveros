@@ -16,38 +16,7 @@
 
 #pragma once
 
-#ifdef __amd64__
-#include "amd64/cpu/core.h"
-#include "amd64/cpu/cpu.h"
-
-#define arch_namespace amd64
-
-namespace kernel::arch::cpu
+namespace kernel::scheduler
 {
-using amd64::cpu::core;
-using amd64::cpu::get_core_count;
-using amd64::cpu::initialize;
+void initialize();
 }
-#else
-#error "unknown architecture"
-#endif
-
-namespace kernel::arch::cpu
-{
-struct arch_independent_core
-{
-    core * native;
-
-    auto id()
-    {
-        return native->id();
-    }
-};
-
-inline auto get_current_core()
-{
-    return arch_independent_core{ arch_namespace::cpu::get_current_core() };
-}
-}
-
-#undef arch_namespace

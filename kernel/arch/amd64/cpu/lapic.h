@@ -21,6 +21,7 @@
 namespace kernel::amd64::lapic
 {
 void initialize(phys_addr_t lapic_base);
+void ap_initialize();
 std::uint32_t id();
 void eoi(std::uint8_t);
 

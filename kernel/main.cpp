@@ -16,11 +16,13 @@
 
 #include "arch/common/acpi/acpi.h"
 #include "arch/cpu.h"
-#include "arch/smp.h"
+#include "arch/mp.h"
 #include "boot/screen.h"
 #include "memory/pmm.h"
+#include "scheduler/scheduler.h"
 #include "time/time.h"
 #include "util/log.h"
+#include "util/mp.h"
 
 #include <boot-arguments.h>
 #include <boot-constants.h>
@@ -80,10 +82,12 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     kernel::arch::cpu::initialize();
     kernel::time::initialize();
 
-    kernel::arch::smp::boot();
-    /*
+    kernel::arch::mp::boot();
+    kernel::mp::initialize_parallel();
+    kernel::time::initialize_multicore();
     kernel::scheduler::initialize();
 
+    /*
     // find initrd
     // find the boot init file in the initrd
     // clone the VAS

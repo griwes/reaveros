@@ -19,6 +19,7 @@
 #include <boot-memmap.h>
 
 #include <format>
+#include <mutex>
 #include <string_view>
 
 // TODO: sane abstraction for this
@@ -82,9 +83,16 @@ namespace kernel::log
 {
 void * get_syslog_mailbox();
 
+namespace
+{
+    inline std::mutex log_lock;
+}
+
 template<typename... Ts>
 void println(std::__format_string<Ts...> fmt, const Ts &... args)
 {
+    std::lock_guard lock(log_lock);
+
     if (get_syslog_mailbox())
     {
         // TODO

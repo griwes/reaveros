@@ -15,6 +15,7 @@
  */
 
 #include <climits>
+#include "../arch/cpu.h"
 #include "../arch/timers.h"
 #include "../util/log.h"
 
@@ -24,8 +25,8 @@ namespace kernel::time
 {
 namespace
 {
-    timer * hpc = nullptr;
-    bool per_core_hpc_available = false;
+    timer * hpt = nullptr;
+    bool per_core_hpt_available = false;
 }
 
 void initialize()
@@ -35,29 +36,37 @@ void initialize()
     arch::timers::initialize();
 }
 
+void initialize_multicore()
+{
+    log::println("[TIME] Rebalancing timers across available cores...");
+
+    arch::timers::multicore_initialize();
+    per_core_hpt_available = true;
+}
+
 void register_high_precision_timer(timer * high_precision)
 {
-    if (hpc)
+    if (hpt)
     {
         PANIC("Tried to register a high precision timer with another already registered!");
     }
 
-    hpc = high_precision;
+    hpt = high_precision;
 }
 
-timer & get_high_precision_timer()
+timer & get_high_precision_timer(bool main)
 {
-    if (per_core_hpc_available) [[likely]]
+    if (!main && per_core_hpt_available) [[likely]]
     {
-        PANIC("implement returning a per core high precision timer");
+        return *arch::timers::get_high_precision_timer_for(arch::cpu::get_current_core().id());
     }
 
-    if (!hpc) [[unlikely]]
+    if (!hpt) [[unlikely]]
     {
-        PANIC("High precision clock requested, but not registered!");
+        PANIC("Global high precision clock requested, but not registered!");
     }
 
-    return *hpc;
+    return *hpt;
 }
 
 void timer::handle(timer * self)

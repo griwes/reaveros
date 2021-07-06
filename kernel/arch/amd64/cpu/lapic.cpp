@@ -89,7 +89,7 @@ namespace
             eoi = 0xb0
         };
 
-        xapic_t(kernel::phys_addr_t base) : _register{ base }
+        void ap_initialize()
         {
             _write(_registers_rw::destination_format, _read(_registers_rw::destination_format) & 0xF0000000);
             _write(_registers_rw::logical_destination, 0xFF000000);
@@ -107,7 +107,11 @@ namespace
             _write(_registers_rw::lvt_timer, irq::lapic_timer);
 
             _write(_registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
+        }
 
+        xapic_t(kernel::phys_addr_t base) : _register{ base }
+        {
+            ap_initialize();
             log::println(
                 " > Initialized xAPIC. BSP ID: {}, APIC version: {}, number of LVTs: {}.",
                 _read(_registers_rw::local_apic_id),
@@ -200,7 +204,7 @@ namespace
             self_ipi = 0x83f
         };
 
-        x2apic_t()
+        void ap_initialize()
         {
             _write(_registers_rw::apic_base, _read(_registers_rw::apic_base) | (1 << 10));
 
@@ -217,7 +221,11 @@ namespace
             _write(_registers_rw::lvt_timer, irq::lapic_timer);
 
             _write(_registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
+        }
 
+        x2apic_t()
+        {
+            ap_initialize();
             log::println(
                 " > Initialized x2APIC. BSP ID: {}, APIC version: {}, number of LVTs: {}.",
                 _read(_registers_r::local_apic_id),
@@ -284,10 +292,15 @@ void initialize(phys_addr_t lapic_base)
     }
 }
 
+void ap_initialize()
+{
+    x2apic_enabled ? lapic_storage.x2apic.ap_initialize() : lapic_storage.xapic.ap_initialize();
+}
+
 std::uint32_t id()
 {
     return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::local_apic_id)
-                          : lapic_storage.xapic._read(xapic_t::_registers_rw::local_apic_id);
+                          : (lapic_storage.xapic._read(xapic_t::_registers_rw::local_apic_id) >> 24);
 }
 
 void eoi(std::uint8_t number)
@@ -378,6 +391,30 @@ void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data)
     else
     {
         lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_high, target_apic_id << 24);
+        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_low, cmd_low);
+    }
+}
+
+void broadcast(broadcast_target target, ipi_type type, std::uint8_t data)
+{
+    std::uint32_t cmd_low = 0;
+
+    switch (type)
+    {
+        case ipi_type::generic:
+            cmd_low = (static_cast<std::uint64_t>(target) << 18) | data;
+            break;
+
+        default:
+            PANIC("Unsupported broadcast type selected.");
+    }
+
+    if (x2apic_enabled)
+    {
+        lapic_storage.x2apic._write(x2apic_t::_registers_rw::interrupt_command, cmd_low);
+    }
+    else
+    {
         lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_low, cmd_low);
     }
 }

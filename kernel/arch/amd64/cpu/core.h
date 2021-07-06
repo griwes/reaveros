@@ -22,7 +22,7 @@
 
 #include <cstdint>
 
-namespace kernel::amd64::smp
+namespace kernel::amd64::mp
 {
 void boot();
 }
@@ -46,6 +46,11 @@ public:
         _nmi_flags = flags;
     }
 
+    auto id()
+    {
+        return _id;
+    }
+
     auto apic_id()
     {
         return _apic_id;
@@ -66,12 +71,13 @@ public:
     void initialize_idt();
     void load_idt();
 
-    friend void ::kernel::amd64::smp::boot();
+    friend void ::kernel::amd64::mp::boot();
 
 private:
     std::uint32_t _is_valid : 1 = false;
     std::uint32_t _nmi_valid : 1 = false;
 
+    std::uint32_t _id = -1;
     std::uint32_t _apic_id = 0;
     std::uint32_t _acpi_id = 0;
 

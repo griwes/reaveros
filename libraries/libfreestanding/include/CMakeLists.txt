@@ -5,6 +5,7 @@ set(includes
     cstring
     cwchar
 
+    atomic
     charconv
     chrono
     compare
@@ -12,6 +13,7 @@ set(includes
     format
     iterator
     memory
+    mutex
     new
     ratio
     string_view

@@ -16,7 +16,16 @@
 
 #pragma once
 
+#include <cstddef>
+
+namespace kernel::time
+{
+class timer;
+}
+
 namespace kernel::amd64::hpet
 {
 void initialize();
+void rebalance();
+time::timer * comparator_for(std::size_t id);
 }

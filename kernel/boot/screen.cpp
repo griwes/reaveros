@@ -28,6 +28,8 @@ namespace kernel::boot_screen
 {
 namespace
 {
+    bool valid = false;
+
     boot_protocol::video_mode mode;
     std::uint32_t * framebuffer_base = nullptr;
     std::uint32_t * backbuffer_base = nullptr;
@@ -42,6 +44,8 @@ void initialize(
     std::size_t memmap_size,
     boot_protocol::memory_map_entry * memmap)
 {
+    valid = true;
+
     mode = *loader_mode;
     framebuffer_base = reinterpret_cast<std::uint32_t *>(
         reinterpret_cast<std::uint8_t *>(mode.framebuffer_base) + boot_protocol::physmem_base);
@@ -59,6 +63,11 @@ void initialize(
 
 void put_char(char c)
 {
+    if (!valid)
+    {
+        return;
+    }
+
     if (c == '\n')
     {
         ++y;
@@ -122,6 +131,11 @@ void put_char(char c)
 
 void clear()
 {
+    if (!valid)
+    {
+        return;
+    }
+
     std::memset(framebuffer_base, 0, mode.framebuffer_size);
     std::memset(backbuffer_base, 0, mode.framebuffer_size);
     x = 0;
@@ -130,6 +144,11 @@ void clear()
 
 void scroll()
 {
+    if (!valid)
+    {
+        return;
+    }
+
     std::memcpy(
         backbuffer_base,
         backbuffer_base + mode.ppl * 16,

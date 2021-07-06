@@ -21,7 +21,9 @@
 
 namespace kernel::arch::timers
 {
+using amd64::timers::get_high_precision_timer_for;
 using amd64::timers::initialize;
+using amd64::timers::multicore_initialize;
 }
 #else
 #error uknown architecture

@@ -27,8 +27,9 @@ namespace kernel::time
 class timer;
 
 void initialize();
+void initialize_multicore();
 void register_high_precision_timer(timer *);
-timer & get_high_precision_timer();
+timer & get_high_precision_timer(bool main = false);
 
 class event_token
 {

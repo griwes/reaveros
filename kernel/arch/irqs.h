@@ -17,11 +17,14 @@
 #pragma once
 
 #ifdef __amd64__
-#include "amd64/smp/smp.h"
+#include "amd64/cpu/irqs.h"
 
-namespace kernel::arch::smp
+namespace kernel::arch::irq
 {
-using amd64::smp::boot;
+using amd64::irq::context;
+using amd64::irq::parallel_exec_count;
+using amd64::irq::parallel_exec_start;
+using amd64::irq::register_handler;
 }
 #else
 #error "unknown architecture"

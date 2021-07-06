@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "smp.h"
+#include "mp.h"
 
 #include "../../../memory/vm.h"
 #include "../../../time/time.h"
@@ -31,7 +31,7 @@ extern "C" std::uint8_t trampoline_asid_slot[];
 extern "C" std::uint8_t trampoline_stack_slot[];
 extern "C" std::uint8_t trampoline_flag_slot[];
 
-namespace kernel::amd64::smp
+namespace kernel::amd64::mp
 {
 void boot()
 {
@@ -45,8 +45,8 @@ void boot()
     auto stack_slot_offset = trampoline_stack_slot - trampoline_start;
     auto flag_slot_offset = trampoline_flag_slot - trampoline_start;
 
-    auto & core_count = cpu::detail_for_smp::get_core_count_ref();
-    auto cores = cpu::detail_for_smp::get_core_array();
+    auto & core_count = cpu::detail_for_mp::get_core_count_ref();
+    auto cores = cpu::detail_for_mp::get_core_array();
 
     // INIT IPI
     for (std::size_t i = 0; i < core_count; ++i)
@@ -179,6 +179,8 @@ void boot()
                 }
 
                 log::println(" > CPU #{} (APIC ID: {}) booted successfully.", i, cores[i].apic_id());
+
+                cores[i]._id = i;
             }
 
             else
@@ -200,6 +202,15 @@ void boot()
                 --core_count;
                 --booted;
             }
+        }
+    }
+
+    for (std::size_t i = 0; i < core_count; ++i)
+    {
+        if (cores[i].apic_id() == cpu::get_current_core()->apic_id())
+        {
+            cores[i]._id = i;
+            break;
         }
     }
 }

@@ -16,7 +16,7 @@
 
 #pragma once
 
-namespace kernel::amd64::smp
+namespace kernel::amd64::mp
 {
 void boot();
 }

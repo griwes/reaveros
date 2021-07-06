@@ -14,40 +14,19 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "scheduler.h"
 
-#ifdef __amd64__
-#include "amd64/cpu/core.h"
-#include "amd64/cpu/cpu.h"
+#include "../arch/cpu.h"
+#include "../util/log.h"
+#include "../util/mp.h"
 
-#define arch_namespace amd64
-
-namespace kernel::arch::cpu
+namespace kernel::scheduler
 {
-using amd64::cpu::core;
-using amd64::cpu::get_core_count;
-using amd64::cpu::initialize;
-}
-#else
-#error "unknown architecture"
-#endif
-
-namespace kernel::arch::cpu
+void initialize()
 {
-struct arch_independent_core
-{
-    core * native;
-
-    auto id()
-    {
-        return native->id();
-    }
-};
-
-inline auto get_current_core()
-{
-    return arch_independent_core{ arch_namespace::cpu::get_current_core() };
+    log::println("[SCHED] Initializing scheduler...");
+    mp::parallel_execute(
+        mp::policy::all,
+        +[] { log::println(" > Hello from CPU core #{}!", arch::cpu::get_current_core().id()); });
 }
 }
-
-#undef arch_namespace

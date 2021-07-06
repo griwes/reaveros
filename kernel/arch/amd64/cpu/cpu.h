@@ -45,7 +45,7 @@ inline void wrmsr(std::uint32_t msr, std::uint64_t val)
     wrmsr(msr, val & 0xFFFFFFFF, val >> 32);
 }
 
-namespace detail_for_smp
+namespace detail_for_mp
 {
     core * get_core_array();
     std::size_t & get_core_count_ref();
@@ -54,7 +54,8 @@ namespace detail_for_smp
 void initialize();
 extern "C" void ap_initialize();
 core * get_current_core();
-core * get_core_by_id(std::uint32_t id);
+core * get_core_by_apic_id(std::uint32_t id);
+core * get_core_by_id(std::size_t id);
 std::size_t get_core_count();
 phys_addr_t get_asid();
 }

@@ -6,6 +6,7 @@ file(GLOB_RECURSE sources
     boot/*.cpp
     memory/*.cpp
     time/*.cpp
+    scheduler/*.cpp
     util/*.cpp
 )
 

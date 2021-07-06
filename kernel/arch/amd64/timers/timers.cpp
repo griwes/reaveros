@@ -25,4 +25,14 @@ void initialize()
     hpet::initialize();
     lapic_timer::initialize();
 }
+
+void multicore_initialize()
+{
+    hpet::rebalance();
+}
+
+time::timer * get_high_precision_timer_for(std::size_t id)
+{
+    return hpet::comparator_for(id);
+}
 }

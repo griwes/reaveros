@@ -31,7 +31,7 @@ namespace
     std::size_t core_count = max_core_count;
 }
 
-namespace detail_for_smp
+namespace detail_for_mp
 {
     core * get_core_array()
     {
@@ -62,16 +62,29 @@ void initialize()
 
 void ap_initialize()
 {
-    asm volatile("cli; hlt");
+    lapic::ap_initialize();
+
+    auto core = get_current_core();
+    core->initialize_gdt();
+    core->load_gdt();
+    idt::initialize();
+    idt::load();
+
+    asm volatile("sti");
+
+    while (true)
+    {
+        asm volatile("hlt");
+    }
 }
 
 core * get_current_core()
 {
     auto id = lapic::id();
-    return get_core_by_id(id);
+    return get_core_by_apic_id(id);
 }
 
-core * get_core_by_id(std::uint32_t id)
+core * get_core_by_apic_id(std::uint32_t id)
 {
     for (auto i = 0ull; i < core_count; ++i)
     {
@@ -82,6 +95,16 @@ core * get_core_by_id(std::uint32_t id)
     }
 
     PANIC("Requested a core for an unknown APIC ID {}!", id);
+}
+
+core * get_core_by_id(std::size_t id)
+{
+    if (id < core_count)
+    {
+        return &cores[id];
+    }
+
+    PANIC("Requested a core for an unknown core ID {}!", id);
 }
 
 std::size_t get_core_count()

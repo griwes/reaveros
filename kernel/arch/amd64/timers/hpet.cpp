@@ -114,6 +114,16 @@ namespace
                 return true;
             }
 
+            void move_to_core(std::size_t id)
+            {
+                std::uint64_t fsb_address = (0xfee << 20) | (cpu::get_core_by_id(id)->apic_id() << 12);
+                std::uint64_t fsb_data = irq::hpet_timer;
+
+                _write(_timer_registers::fsb_route, (fsb_address << 32) | fsb_data);
+
+                log::println(" > HPET comparator {} moved to core {}.", _timer, id);
+            }
+
         protected:
             virtual void _update_now() override final
             {
@@ -173,6 +183,12 @@ namespace
             _comparator_count = ((caps & 0b111110000000) >> 8) + 1;
             log::println(" >> HPET comparator count: {}.", _comparator_count);
 
+            auto core_count = cpu::get_core_count();
+            log::println(
+                " >> Will initialize up to {} comparators (up to comparator count, up to detected core "
+                "count).",
+                core_count < _comparator_count ? core_count : _comparator_count);
+
             _period = std::chrono::duration<std::int64_t, std::femto>(caps >> 32);
             auto frequency = static_cast<std::uint64_t>(std::femto::den) / _period.count();
 
@@ -197,7 +213,8 @@ namespace
             log::println(" >> HPET counter frequency: {}Hz.", frequency);
 
             auto object_idx = 0ull;
-            for (auto comparator = 0ull; comparator < _comparator_count; ++comparator)
+            for (auto comparator = 0ull; comparator < _comparator_count && object_idx < core_count;
+                 ++comparator)
             {
                 log::println(" >> Initializing comparator {}...", comparator);
                 if (_comparators[object_idx].initialize(comparator, this))
@@ -213,12 +230,30 @@ namespace
                 PANIC("Failed to initialize any of the HPET comparators!");
             }
 
-            time::register_high_precision_timer(&_comparator_for(cpu::get_current_core()->apic_id()));
+            time::register_high_precision_timer(&comparator_for(cpu::get_current_core()->id()));
             irq::register_handler(
                 irq::hpet_timer,
                 +[](irq::context &, hpet_timer * self)
-                { time::timer::handle(&self->_comparator_for(cpu::get_current_core()->apic_id())); },
+                { time::timer::handle(&self->comparator_for(cpu::get_current_core()->id())); },
                 this);
+        }
+
+        void rebalance()
+        {
+            auto core_count = cpu::get_core_count();
+            _comparator_count = _comparator_count < core_count ? _comparator_count : core_count;
+
+            for (std::size_t id = 0; id < _comparator_count; ++id)
+            {
+                _comparators[id].move_to_core(id);
+            }
+
+            _multicore_rebalanced = true;
+        }
+
+        hpet_comparator & comparator_for(std::size_t id)
+        {
+            return _multicore_rebalanced ? _comparators[0] : _comparators[id % _comparator_count];
         }
 
     private:
@@ -239,11 +274,6 @@ namespace
         {
             *phys_ptr_t<std::uint64_t>{ _base + static_cast<std::uint64_t>(reg) } = value;
         }
-
-        hpet_comparator & _comparator_for(std::uint64_t apic_id)
-        {
-            return _multicore_rebalanced ? _comparators[0] : _comparators[apic_id % _comparator_count];
-        }
     };
 
     hpet_timer timer;
@@ -253,5 +283,15 @@ void initialize()
 {
     auto result = acpi::parse_hpet();
     timer.initialize(result.base, result.min_tick);
+}
+
+void rebalance()
+{
+    timer.rebalance();
+}
+
+time::timer * comparator_for(std::size_t id)
+{
+    return &timer.comparator_for(id);
 }
 }

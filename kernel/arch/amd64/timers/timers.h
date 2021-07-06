@@ -16,7 +16,16 @@
 
 #pragma once
 
+#include <cstddef>
+
+namespace kernel::time
+{
+class timer;
+}
+
 namespace kernel::amd64::timers
 {
 void initialize();
+void multicore_initialize();
+time::timer * get_high_precision_timer_for(std::size_t id);
 }

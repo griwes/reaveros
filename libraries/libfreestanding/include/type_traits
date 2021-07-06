@@ -289,21 +289,31 @@ struct is_constructible : std::bool_constant<__is_constructible(_T, _Args...)>
 
 template<typename _T>
 struct is_default_constructible;
-template<typename _T>
-struct is_copy_constructible;
 
 template<typename _T>
-    struct is_move_constructible : bool_constant < requires(_T __t)
+struct is_copy_constructible : bool_constant<__is_constructible(_T, const _T &)>
 {
-    { _T(move(__t)) };
-} > {};
+};
+
+template<typename _T>
+struct is_move_constructible : bool_constant<__is_constructible(_T, _T &&)>
+{
+};
 
 template<typename _T, typename _U>
-struct is_assignable;
+struct is_assignable : bool_constant<__is_assignable(_T, _U)>
+{
+};
+
 template<typename _T>
-struct is_copy_assignable;
+struct is_copy_assignable : bool_constant<__is_assignable(_T &, const _T &)>
+{
+};
+
 template<typename _T>
-struct is_move_assignable;
+struct is_move_assignable : bool_constant<__is_assignable(_T &, _T &&)>
+{
+};
 
 template<typename _T, typename _U>
 struct is_swappable_with;
@@ -332,9 +342,15 @@ template<typename _T>
 struct is_trivially_destructible;
 
 template<typename _T, typename... _Args>
-struct is_nothrow_constructible;
+struct is_nothrow_constructible : bool_constant<__is_nothrow_constructible(_T, _Args...)>
+{
+};
+
 template<typename _T>
-struct is_nothrow_default_constructible;
+struct is_nothrow_default_constructible : is_nothrow_constructible<_T>
+{
+};
+
 template<typename _T>
 struct is_nothrow_copy_constructible;
 template<typename _T>
