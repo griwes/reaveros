@@ -76,6 +76,8 @@ const iterator::proxy & iterator::proxy::operator=(char c) const
 
 namespace kernel::log
 {
+std::mutex log_lock;
+
 void * get_syslog_mailbox()
 {
     return nullptr;

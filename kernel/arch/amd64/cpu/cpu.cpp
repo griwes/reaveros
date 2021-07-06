@@ -70,6 +70,8 @@ void ap_initialize()
     idt::initialize();
     idt::load();
 
+    lapic_timer::ap_initialize();
+
     asm volatile("sti");
 
     while (true)

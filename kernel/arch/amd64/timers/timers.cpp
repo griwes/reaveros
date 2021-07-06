@@ -15,6 +15,8 @@
  */
 
 #include "timers.h"
+
+#include "../../../util/mp.h"
 #include "hpet.h"
 #include "lapic.h"
 

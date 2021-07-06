@@ -83,10 +83,7 @@ namespace kernel::log
 {
 void * get_syslog_mailbox();
 
-namespace
-{
-    inline std::mutex log_lock;
-}
+extern std::mutex log_lock;
 
 template<typename... Ts>
 void println(std::__format_string<Ts...> fmt, const Ts &... args)

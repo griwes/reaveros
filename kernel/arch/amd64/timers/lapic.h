@@ -21,6 +21,7 @@
 namespace kernel::amd64::lapic_timer
 {
 void initialize();
+void ap_initialize();
 
 class timer : public time::timer
 {

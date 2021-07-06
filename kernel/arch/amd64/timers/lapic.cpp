@@ -38,6 +38,11 @@ void initialize()
         irq::lapic_timer, +[](irq::context &) { time::timer::handle(cpu::get_current_core()->timer()); });
 }
 
+void ap_initialize()
+{
+    cpu::get_current_core()->timer()->initialize(bsp_timer);
+}
+
 void timer::bsp_initialize()
 {
     log::println(" > Initializing LAPIC timer...");
@@ -72,6 +77,11 @@ void timer::bsp_initialize()
     log::println(" >> Tick period estimate: {}fs.", _period.count());
     auto frequency = static_cast<std::uint64_t>(std::femto::den) / _period.count();
     log::println(" >> Tick frequency estimate: {}Hz.", frequency);
+}
+
+void timer::initialize(timer * bsp)
+{
+    _period = bsp->_period;
 }
 
 void timer::_update_now()
