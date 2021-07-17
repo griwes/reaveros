@@ -4,31 +4,14 @@ function(reaveros_add_aggregate_targets _suffix)
         set(_suffix "-${_suffix}")
     endif()
 
-    foreach (toolchain IN LISTS REAVEROS_TOOLCHAINS)
-        add_custom_target(all-${toolchain}${_suffix})
-    endforeach()
-
     foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
         add_custom_target(all-${architecture}${_suffix})
-
-        foreach (toolchain IN LISTS REAVEROS_TOOLCHAINS)
-            add_custom_target(all-${toolchain}-${architecture}${_suffix})
-        endforeach()
     endforeach()
 
-    foreach (mode IN ITEMS kernel user)
+    foreach (mode IN ITEMS freestanding hosted)
         add_custom_target(all-${mode}${_suffix})
-
-        foreach (toolchain IN LISTS REAVEROS_TOOLCHAINS)
-            add_custom_target(all-${toolchain}-${mode}${_suffix})
-        endforeach()
-
         foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
             add_custom_target(all-${architecture}-${mode}${_suffix})
-
-            foreach (toolchain IN LISTS REAVEROS_TOOLCHAINS)
-                add_custom_target(all-${toolchain}-${architecture}-${mode}${_suffix})
-            endforeach()
         endforeach()
     endforeach()
 endfunction()
@@ -102,7 +85,7 @@ function(reaveros_add_ep_prune_target external_project)
     )
     ExternalProject_Add_StepTargets(${external_project} prune)
 
-    add_dependencies(all-toolchains-prune
+    add_dependencies(all-toolchain-prune
         ${external_project}-prune
     )
 endfunction()

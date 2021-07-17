@@ -13,7 +13,7 @@ docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io
 
     cd /build
     cmake .
-    make all-toolchains -j$(nproc) | tee /reaveros/docker/.build-log
+    make all-toolchain -j$(nproc) | tee /reaveros/docker/.build-log
 '
 
 # If only lines like "[xxx%] Built target ..." were printed, everything was up to date.
@@ -40,7 +40,7 @@ docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha} ghcr.io/griw
     set -xe
 
     cd /build
-    make all-toolchains-prune -j$(nproc)
+    make all-toolchain-prune -j$(nproc)
 '
 
 docker export reaveros-docker-update-${sha} \

@@ -59,4 +59,4 @@ jobs:
           - name: Run toolchain update
             env:
                 GITHUB_TOKEN: ${{ secrets.CI_TOKEN }}
-            run: ./maintenance/update-toolchains --pr
+            run: ./maintenance/update-toolchain --pr

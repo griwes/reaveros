@@ -17,7 +17,7 @@ fi
 source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
 function get() {
-    cat "${source_dir}/../toolchains/config.cmake" \
+    cat "${source_dir}/../toolchain/config.cmake" \
         | grep REAVEROS_MTOOLS_$1 \
         | awk '{ print $2 }' | sed 's/.$//'
 }

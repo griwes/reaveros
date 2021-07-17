@@ -16,7 +16,7 @@ then
     elif [[ $1 == "--help" || $1 == "-h" ]]
     then
         echo "Usage:"
-        echo "    update-toolchains [--pr|--check]"
+        echo "    update-toolchain [--pr|--check]"
         echo ""
         echo "Options:"
         echo "    --pr          open Github PRs to bump the toolchain versions."
@@ -36,14 +36,14 @@ fi
 
 source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 
-git_toolchains=(
+git_toolchain_elementss=(
     cmake
     llvm
     llvm_binutils_extra
     dosfstools
 )
 
-for toolchain in ${git_toolchains[@]}
+for toolchain in ${git_toolchain_elementss[@]}
 do
     "${source_dir}/update.git.sh" ${toolchain} ${pr}
 done

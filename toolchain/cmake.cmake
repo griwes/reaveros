@@ -6,7 +6,7 @@ ExternalProject_Add(toolchain-cmake
 
     STEP_TARGETS install
 
-    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchains/cmake
+    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/cmake
 
     ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
 
@@ -19,4 +19,4 @@ ExternalProject_Add(toolchain-cmake
 reaveros_add_ep_prune_target(toolchain-cmake)
 reaveros_add_ep_fetch_tag_target(toolchain-cmake)
 
-reaveros_register_target(toolchain-cmake-install toolchains)
+reaveros_register_target(toolchain-cmake-install toolchain)

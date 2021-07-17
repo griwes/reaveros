@@ -38,7 +38,7 @@ if git branch | grep -q "${update_branch}"
 then
     echo "Branch ${update_branch} already exists."
 else
-    config_file="${source_dir}/../toolchains/config.cmake"
+    config_file="${source_dir}/../toolchain/config.cmake"
 
     current_version=$(cat "${config_file}" \
         | grep REAVEROS_${1^^}_${2} \

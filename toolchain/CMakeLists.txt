@@ -13,22 +13,19 @@ foreach (toolchain_file_in IN LISTS toolchain_files)
     )
 
     configure_file(
-        ${REAVEROS_SOURCE_DIR}/toolchains/files/${toolchain_file_in}
-        ${REAVEROS_BINARY_DIR}/install/toolchains/${toolchain_file}
+        ${REAVEROS_SOURCE_DIR}/toolchain/files/${toolchain_file_in}
+        ${REAVEROS_BINARY_DIR}/install/toolchain/files/${toolchain_file}
         @ONLY
     )
 endforeach()
 
-add_custom_target(all-toolchains-prune)
+add_custom_target(all-toolchain-prune)
 
 include(config.cmake)
 
 include(cmake.cmake)
+include(llvm.cmake)
 
 if ("uefi" IN_LIST REAVEROS_LOADERS)
     include(fs-fat.cmake)
-endif()
-
-if ("llvm" IN_LIST REAVEROS_TOOLCHAINS)
-    include(llvm.cmake)
 endif()

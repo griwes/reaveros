@@ -6,7 +6,7 @@ ExternalProject_Add(toolchain-dosfstools
 
     STEP_TARGETS install
 
-    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchains/dosfstools
+    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/dosfstools
 
     ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
 
@@ -20,7 +20,7 @@ ExternalProject_Add(toolchain-dosfstools
 reaveros_add_ep_prune_target(toolchain-dosfstools)
 reaveros_add_ep_fetch_tag_target(toolchain-dosfstools)
 
-reaveros_register_target(toolchain-dosfstools-install toolchains)
+reaveros_register_target(toolchain-dosfstools-install toolchain)
 
 ExternalProject_Add(toolchain-mtools
     URL ${REAVEROS_MTOOLS_DIR}/${REAVEROS_MTOOLS_VER}
@@ -28,7 +28,7 @@ ExternalProject_Add(toolchain-mtools
 
     STEP_TARGETS install
 
-    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchains/mtools
+    INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/mtools
 
     ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
 
@@ -40,4 +40,4 @@ ExternalProject_Add(toolchain-mtools
 )
 reaveros_add_ep_prune_target(toolchain-mtools)
 
-reaveros_register_target(toolchain-mtools-install toolchains)
+reaveros_register_target(toolchain-mtools-install toolchain)
