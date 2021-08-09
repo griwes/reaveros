@@ -23,3 +23,15 @@ docker export reaveros-docker-build-${sha}-full \
 
 docker tag ghcr.io/griwes/reaveros-build-env/unpruned:${sha} ghcr.io/griwes/reaveros-build-env/unpruned:latest
 
+docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha} ghcr.io/griwes/reaveros-build-env/unpruned:latest /usr/bin/env bash -c '
+    set -xe
+
+    cd /build
+    make all-toolchain-prune -j$(nproc)
+'
+
+docker export reaveros-docker-update-${sha} \
+    | docker import - --change "CMD /usr/bin/env bash" ghcr.io/griwes/reaveros-build-env:${sha}
+
+docker tag ghcr.io/griwes/reaveros-build-env:${sha} ghcr.io/griwes/reaveros-build-env:latest
+
