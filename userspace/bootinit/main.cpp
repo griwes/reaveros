@@ -14,27 +14,7 @@
  * limitations under the License.
  */
 
-#include "scheduler.h"
-
-#include "../arch/cpu.h"
-#include "../util/log.h"
-
-namespace kernel::scheduler
+int main()
 {
-namespace
-{
-    instance global_scheduler;
-}
-
-void initialize()
-{
-    log::println("[SCHED] Initializing scheduler...");
-    global_scheduler.initialize(nullptr);
-    for (std::size_t i = 0; i < arch::cpu::get_core_count(); ++i)
-    {
-        arch::cpu::get_core_by_id(i).scheduler().initialize(&global_scheduler);
-    }
-
-    // parallel execute: set arch specific core state
-}
+    return 0;
 }

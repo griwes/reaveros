@@ -42,11 +42,21 @@ struct arch_independent_core
     {
         return native->id();
     }
+
+    auto & scheduler()
+    {
+        return *native->scheduler();
+    }
 };
 
 inline auto get_current_core()
 {
     return arch_independent_core{ arch_namespace::cpu::get_current_core() };
+}
+
+inline auto get_core_by_id(std::size_t id)
+{
+    return arch_independent_core{ arch_namespace::cpu::get_core_by_id(id) };
 }
 }
 

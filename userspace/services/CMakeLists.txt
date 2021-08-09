@@ -1,0 +1,1 @@
+reaveros_add_aggregate_targets(userspace-services)

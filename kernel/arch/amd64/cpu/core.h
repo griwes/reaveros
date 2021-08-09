@@ -18,6 +18,7 @@
 
 #include "gdt.h"
 
+#include "../../../scheduler/instance.h"
 #include "../timers/lapic.h"
 
 #include <cstdint>
@@ -66,6 +67,11 @@ public:
         return &_preempt_timer;
     }
 
+    scheduler::instance * scheduler()
+    {
+        return &_local_scheduler;
+    }
+
     void initialize_gdt();
     void load_gdt();
     void initialize_idt();
@@ -90,5 +96,7 @@ private:
     gdt::gdtr_t _gdtr;
 
     lapic_timer::timer _preempt_timer;
+
+    scheduler::instance _local_scheduler;
 };
 }

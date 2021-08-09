@@ -14,27 +14,11 @@
  * limitations under the License.
  */
 
-#include "scheduler.h"
+#pragma once
 
-#include "../arch/cpu.h"
-#include "../util/log.h"
+#include <boot-memmap.h>
 
-namespace kernel::scheduler
+namespace kernel::initrd
 {
-namespace
-{
-    instance global_scheduler;
-}
-
-void initialize()
-{
-    log::println("[SCHED] Initializing scheduler...");
-    global_scheduler.initialize(nullptr);
-    for (std::size_t i = 0; i < arch::cpu::get_core_count(); ++i)
-    {
-        arch::cpu::get_core_by_id(i).scheduler().initialize(&global_scheduler);
-    }
-
-    // parallel execute: set arch specific core state
-}
+void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
 }

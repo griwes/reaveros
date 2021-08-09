@@ -21,6 +21,7 @@
 #include "memory/pmm.h"
 #include "scheduler/scheduler.h"
 #include "time/time.h"
+#include "util/initrd.h"
 #include "util/log.h"
 #include "util/mp.h"
 
@@ -36,15 +37,10 @@ using ctor_t = void (*)();
 extern "C" ctor_t __start_ctors;
 extern "C" ctor_t __end_ctors;
 
-int count = 0;
-ctor_t ctor = nullptr;
-
 extern "C" void __init()
 {
     for (auto ctor = &__start_ctors; ctor != &__end_ctors; ++ctor)
     {
-        ++count;
-        ::ctor = *ctor;
         (*ctor)();
     }
 }
@@ -87,8 +83,9 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     kernel::time::initialize_multicore();
     kernel::scheduler::initialize();
 
+    kernel::initrd::initialize(args.memory_map_size, args.memory_map_entries);
+
     /*
-    // find initrd
     // find the boot init file in the initrd
     // clone the VAS
     // map the boot init file in the clone
