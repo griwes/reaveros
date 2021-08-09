@@ -30,7 +30,7 @@ function(_reaveros_add_initrd_image_target architecture)
         COMMAND xxd -r ${_working_path}/patch-size.hex ${_working_path}/image.img
 
         COMMAND echo -n "00000fff: " > ${_working_path}/patch-checksum.hex
-        COMMAND xxd -p -c 1 ${_working_path}/image.img | awk -n \'{ sum = (sum + strtonum(\"0x\" $$1)) % 256 } END { printf \"%x\", (256 - sum) % 256 }\' >> ${_working_path}/patch-checksum.hex
+        COMMAND xxd -p -c 1 ${_working_path}/image.img | awk \'{ sum = (sum + strtonum(\"0x\" $$1)) % 256 } END { printf \"%x\", (256 - sum) % 256 }\' >> ${_working_path}/patch-checksum.hex
 
         COMMAND cp ${_working_path}/image.img ${_working_path}/bak
         COMMAND xxd -r ${_working_path}/patch-checksum.hex ${_working_path}/image.img
