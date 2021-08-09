@@ -49,7 +49,7 @@ jobs:
         strategy:
             matrix:
                 image:
-                  - uefi-efipart-amd64-llvm
+                  - uefi-efipart-amd64
 
         steps:
           - name: Check out the repository
