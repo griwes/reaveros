@@ -16,6 +16,7 @@ dependencies are:
 * Git;
 * Bison;
 * Flex;
+* xxd;
 * OpenSSL;
 * C and C++ compilers;
 * Make.

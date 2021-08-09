@@ -9,7 +9,7 @@ docker pull debian:unstable
 docker run -v $(pwd):/reaveros -it --name reaveros-docker-build-${sha}-full debian:unstable /usr/bin/env bash -c '
     set -xe
     apt update
-    apt install build-essential automake cmake git python3 bison flex libssl-dev ccache -y
+    apt install build-essential automake cmake git python3 bison flex xxd libssl-dev ccache -y
     apt clean
 
     mkdir /build
