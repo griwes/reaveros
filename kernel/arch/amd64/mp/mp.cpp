@@ -106,11 +106,15 @@ void boot()
             cores[i]._boot_flag = const_cast<volatile std::uint8_t *>(
                 (base + trampoline_size * (i - booted) + flag_slot_offset).value());
 
-            auto stack = kernel::vm::allocate_address_range(8192);
-            vm::map_physical(stack + 4096, stack + 8192, pmm::pop_4k());
+            auto stack = kernel::vm::allocate_address_range(32 * 4096);
+
+            for (int j = 1; j < 32; ++j)
+            {
+                vm::map_physical(stack + j * 4096, stack + (j + 1) * 4096, pmm::pop(0));
+            }
 
             *phys_ptr_t<std::uint64_t>(base + trampoline_size * (i - booted) + stack_slot_offset) =
-                (stack + 8192).value();
+                (stack + 32 * 1024).value();
         }
 
         // SIPI
@@ -213,5 +217,7 @@ void boot()
             break;
         }
     }
+
+    vm::unmap(virt_addr_t(base_raw), virt_addr_t(top), false);
 }
 }

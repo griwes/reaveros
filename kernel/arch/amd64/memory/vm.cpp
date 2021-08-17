@@ -95,12 +95,12 @@ namespace
 
         void * operator new(std::size_t)
         {
-            return phys_ptr_t<void *>(pmm::pop_4k()).value();
+            return phys_ptr_t<void *>(pmm::pop(0)).value();
         }
 
         void operator delete(void * ptr, std::size_t)
         {
-            pmm::push_4k(phys_ptr_t(ptr).representation());
+            pmm::push(0, phys_ptr_t(ptr).representation());
         }
     };
 
@@ -154,6 +154,60 @@ namespace
         }
     }
 
+    template<int I>
+    [[gnu::always_inline]] void vm_unmap(
+        pmlt<I> * table,
+        std::uintptr_t virt_start,
+        std::uintptr_t virt_end,
+        bool free_physical)
+    {
+        auto start_table_index = (virt_start >> (I * 9 + 3)) & 511;
+
+        constexpr auto entry_size = 1ull << (I * 9 + 3);
+
+        while (virt_start < virt_end)
+        {
+            auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
+            entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
+            //                                 ^ this is a protection against overflow on highest addresses
+
+            if constexpr (I == 2)
+            {
+                if (table->entries[start_table_index].present == 0)
+                {
+                    PANIC("Tried to unmap an unmapped address {:#018x}!", virt_start);
+                }
+
+                if (free_physical)
+                {
+                    auto frame = table->entries[start_table_index].get();
+                    pmm::push(0, phys_addr_t(reinterpret_cast<std::uintptr_t>(frame)));
+                }
+
+                table->entries[start_table_index].present = false;
+            }
+
+            else
+            {
+                if (table->entries[start_table_index].present == 0)
+                {
+                    PANIC("Tried to unmap an unmapped address {:#018x}!", virt_start);
+                }
+
+                if (table->entries[start_table_index].size == 1)
+                {
+                    PANIC("tried to unmap large page, this is not implemented yet ({:#018x})", virt_start);
+                }
+
+                vm_unmap<I - 1>(
+                    table->entries[start_table_index].get(), virt_start, entry_virt_end, free_physical);
+            }
+
+            ++start_table_index;
+            virt_start = entry_virt_end;
+        }
+    }
+
     constexpr auto page_size = 4ull * 1024;
     constexpr auto large_page_size = 512 * page_size;
     constexpr auto huge_page_size = 512 * large_page_size;
@@ -180,5 +234,22 @@ void map_physical(virt_addr_t start, virt_addr_t end, phys_addr_t physical)
     auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
 
     vm_map<4, 1>(cr3, virt_start, virt_end, phys_int);
+}
+
+void unmap(virt_addr_t start, virt_addr_t end, bool free_physical)
+{
+    auto size = end.value() - start.value();
+
+    if (size == 0)
+    {
+        return;
+    }
+
+    auto virt_start = start.value() & page_mask;
+    auto virt_end = (virt_start + size + page_size - 1) & page_mask;
+
+    auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
+
+    vm_unmap<4>(cr3, virt_start, virt_end, free_physical);
 }
 }

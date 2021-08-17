@@ -21,7 +21,11 @@
 
 namespace kernel::arch::vm
 {
+using amd64::vm::page_size_count;
+using amd64::vm::page_sizes;
+
 using amd64::vm::map_physical;
+using amd64::vm::unmap;
 }
 #else
 #error "unknown architecture"

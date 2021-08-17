@@ -20,12 +20,13 @@
 
 #include <boot-constants.h>
 
+#include <atomic>
+
 namespace kernel::vm
 {
 namespace
 {
-    // TODO: atomic
-    std::uint64_t vm_space_top = boot_protocol::kernel_base;
+    std::atomic<std::uint64_t> vm_space_top = boot_protocol::kernel_base - 4096;
 }
 
 virt_addr_t allocate_address_range(std::size_t size)
@@ -33,8 +34,8 @@ virt_addr_t allocate_address_range(std::size_t size)
     auto real_size = size + 4095;
     real_size &= ~4095ull;
 
-    auto ret = vm_space_top -= real_size;
+    auto old = vm_space_top.fetch_sub(real_size);
 
-    return virt_addr_t(ret);
+    return virt_addr_t(old - real_size);
 }
 }

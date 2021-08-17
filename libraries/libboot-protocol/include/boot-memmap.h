@@ -35,7 +35,8 @@ enum class memory_type : std::uint32_t
     paging,     // may be present an arbitrary number of times
     memory_map, // must be present exactly once
     backbuffer, // must be present exactly once if video mode information is passed to the kernel
-    log_buffer  // must be present exactly once and be exactly 2MiB in size
+    log_buffer, // must be present exactly once and be exactly 2MiB in size
+    working_stack
 };
 
 struct memory_map_entry

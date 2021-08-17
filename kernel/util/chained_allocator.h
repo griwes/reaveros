@@ -40,11 +40,11 @@ struct chained_allocatable
 template<typename T>
 T * allocate_chained()
 {
-    static_assert(sizeof(T) <= 4096, "chained_allocatable must fit in a frame");
+    static_assert(sizeof(T) <= arch::vm::page_sizes[0], "chained_allocatable must fit in a frame");
 
     if (!chained_head<T>)
     {
-        auto frame_address = pmm::pop_4k();
+        auto frame_address = pmm::pop(0);
         T * current = static_cast<phys_ptr_t<T>>(frame_address).value();
         T * next = nullptr;
         T * last = current;

@@ -19,12 +19,15 @@
 #include "../../../util/log.h"
 #include "../cpu/lapic.h"
 
+#include <mutex>
+
 namespace kernel::amd64::irq
 {
 namespace
 {
     struct irq_handler
     {
+        std::mutex lock;
         bool valid = false;
         erased_irq_handler fptr;
         void * erased_fptr;
@@ -36,9 +39,9 @@ namespace
 
 void handle(context & ctx)
 {
-    // TODO: lock?
-
     auto & handler = irq_handlers[ctx.number];
+
+    std::lock_guard lg(handler.lock);
 
     if (!handler.valid)
     {
@@ -59,9 +62,9 @@ void register_erased_handler(
     void * erased_fptr,
     std::uint64_t ctx)
 {
-    // TODO: lock?
-
     auto & handler = irq_handlers[irqn];
+
+    std::lock_guard lg(handler.lock);
 
     if (handler.valid)
     {

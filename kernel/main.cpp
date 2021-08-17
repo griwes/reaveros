@@ -86,7 +86,6 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     kernel::initrd::initialize(args.memory_map_size, args.memory_map_entries);
 
     /*
-    // find the boot init file in the initrd
     // clone the VAS
     // map the boot init file in the clone
     // map the initrd in the clone

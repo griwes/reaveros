@@ -250,6 +250,75 @@ acpi_information find_acpi_root()
     halt();
 }
 
+void memory_map::account_for_stack(std::uintptr_t begin, std::uintptr_t end)
+{
+    for (std::size_t i = 0; i < size; ++i)
+    {
+        while (i + 1 < size && entries[i].type == entries[i + 1].type
+               && entries[i].attributes == entries[i + 1].attributes
+               && entries[i].physical_start + entries[i].length == entries[i + 1].physical_start)
+        {
+            entries[i].length += entries[i + 1].length;
+
+            for (std::size_t j = i + 1; j < size - 1; ++j)
+            {
+                entries[j] = entries[j + 1];
+            }
+
+            --size;
+        }
+    }
+
+    begin &= ~4095ull;
+    end += 4095;
+    end &= ~4095ull;
+
+    for (std::size_t i = 0; i < size; ++i)
+    {
+        if (entries[i].physical_start <= begin && entries[i].physical_start + entries[i].length >= end)
+        {
+            if (entries[i].type != boot_protocol::memory_type::free)
+            {
+                console::print(
+                    u"[ERR] The approximate loader stack is NOT within a free memory map entry.\n\r");
+                halt();
+            }
+
+            if (entries[i].physical_start == begin)
+            {
+                entries[i].physical_start = end;
+                entries[i].length -= end - begin;
+                return;
+            }
+
+            if (entries[i].physical_start + entries[i].length == end)
+            {
+                entries[i].length -= end - begin;
+                return;
+            }
+
+            for (std::size_t j = size + 1; j > i + 2; --j)
+            {
+                entries[j] = entries[j - 2];
+            }
+
+            entries[i + 2].type = boot_protocol::memory_type::free;
+            entries[i + 2].physical_start = end;
+            entries[i + 2].length = entries[i].length - (end - entries[i].physical_start);
+
+            entries[i + 1].type = boot_protocol::memory_type::working_stack;
+            entries[i + 1].physical_start = begin;
+            entries[i + 1].length = end - begin;
+
+            entries[i].length = begin - entries[i].physical_start;
+
+            ++size;
+
+            return;
+        }
+    }
+}
+
 memory_map get_memory_map()
 {
     std::size_t size = 0;
@@ -278,7 +347,7 @@ memory_map get_memory_map()
     console::print(u" > Memory map size prior to map buffer allocation: ", size, u".\n\r");
 
     // Amortize for the allocations we are about to make.
-    size += 5;
+    size += 10;
 
     memory_map map;
 

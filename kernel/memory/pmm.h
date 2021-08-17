@@ -16,9 +16,10 @@
 
 #pragma once
 
-#include <boot-memmap.h>
-
+#include "../arch/vm.h"
 #include "../util/pointer_types.h"
+
+#include <boot-memmap.h>
 
 namespace kernel::pmm
 {
@@ -27,11 +28,8 @@ class instance
 public:
     instance() = default;
 
-    void push_4k(phys_addr_t frame);
-    void push_2M(phys_addr_t first_frame);
-    void push_1G(phys_addr_t first_frame);
-
-    phys_addr_t pop_4k();
+    void push(std::size_t page_layer, phys_addr_t frame);
+    phys_addr_t pop(std::size_t page_layer);
 
 private:
     struct _frame_header
@@ -45,11 +43,7 @@ private:
         std::size_t num_frames = 0;
     };
 
-    void _push(phys_addr_t frame, _stack_info & list);
-
-    _stack_info _info_4k;
-    _stack_info _info_2M;
-    _stack_info _info_1G;
+    _stack_info _infos[arch::vm::page_size_count];
 };
 
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
@@ -58,7 +52,6 @@ void report();
 std::uintptr_t get_sub_1M_bottom();
 std::uintptr_t get_sub_1M_top();
 
-phys_addr_t pop_4k();
-
-void push_4k(phys_addr_t);
+phys_addr_t pop(std::size_t page_layer);
+void push(std::size_t page_layer, phys_addr_t);
 }

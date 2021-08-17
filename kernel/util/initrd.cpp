@@ -21,6 +21,13 @@
 
 namespace kernel::initrd
 {
+namespace
+{
+    phys_addr_t bootinit_address;
+    std::size_t bootinit_physical_size;
+    std::size_t nested_initrd_physical_size;
+}
+
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap)
 {
     log::println("[BOOT] Finding and starting the boot init process...");
@@ -80,6 +87,8 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
         bootinit_size_be = bootinit_size_be + 1;
     }
 
+    bootinit_address = phys_addr_t(entry->physical_start + 0x1000);
+
     log::println(" > Bootinit logical size: {} bytes.", bootinit_size_native);
 
     if (bootinit_size_native > size_native - 0x1000)
@@ -87,12 +96,12 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
         PANIC("Bootinit claimed to be larger than the entire initrd!");
     }
 
-    auto bootinit_phys_size = (bootinit_size_native + 4095) & ~4095ull;
+    bootinit_physical_size = (bootinit_size_native + 4095) & ~4095ull;
 
-    log::println(" > Bootinit physical size: {} bytes.", bootinit_phys_size);
+    log::println(" > Bootinit physical size: {} bytes.", bootinit_physical_size);
 
-    auto nested_initrd_size = entry->length - 0x1000 - bootinit_phys_size;
+    nested_initrd_physical_size = entry->length - 0x1000 - bootinit_physical_size;
 
-    log::println(" > Nested initrd physical size: {} bytes.", nested_initrd_size);
+    log::println(" > Nested initrd physical size: {} bytes.", nested_initrd_physical_size);
 }
 }

@@ -121,6 +121,8 @@ struct memory_map
     {
         return reinterpret_cast<EFI_MEMORY_DESCRIPTOR *>(efi_entries + efi_entry_size * index);
     }
+
+    void account_for_stack(std::uintptr_t begin, std::uintptr_t end);
 };
 
 memory_map get_memory_map();

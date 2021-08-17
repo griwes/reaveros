@@ -25,18 +25,8 @@ namespace
     std::uintptr_t sub_1M_bottom = 0;
     std::uintptr_t sub_1M_top = 0;
 
-    std::size_t free_4k_frames = 0;
-    std::size_t free_2M_frames = 0;
-    std::size_t free_1G_frames = 0;
-
-    std::size_t used_4k_frames = 0;
-    std::size_t used_2M_frames = 0;
-    std::size_t used_1G_frames = 0;
-
-    static const constexpr auto size_any = 1ull << 63;
-    static const constexpr auto size_4k = 4 * 1024;
-    static const constexpr auto size_2M = 2 * 1024 * 1024;
-    static const constexpr auto size_1G = 1 * 1024 * 1024 * 1024;
+    std::size_t free_frames[arch::vm::page_size_count] = {};
+    std::size_t used_frames[arch::vm::page_size_count] = {};
 
     constexpr std::string_view memmap_type_to_description(boot_protocol::memory_type type)
     {
@@ -67,6 +57,8 @@ namespace
                 return "video backbuffer";
             case boot_protocol::memory_type::log_buffer:
                 return "boot log buffer";
+            case boot_protocol::memory_type::working_stack:
+                return "working stack";
 
             default:
                 return "!! INVALID !!";
@@ -74,58 +66,30 @@ namespace
     }
 }
 
-void instance::push_4k(phys_addr_t frame)
+void instance::push(std::size_t page_layer, phys_addr_t frame)
 {
-    if (frame % size_4k)
-    {
-        PANIC("trying to push a non aligned 4k frame {:x}", frame.value());
-    }
+    // TODO: lock
 
-    _push(frame, _info_4k);
-    ++free_4k_frames;
-}
-
-void instance::push_2M(phys_addr_t first_frame)
-{
-    if (first_frame % size_2M)
-    {
-        PANIC("trying to push a non aligned 2M frame {x}", first_frame.value());
-    }
-
-    _push(first_frame, _info_2M);
-    ++free_2M_frames;
-}
-
-void instance::push_1G(phys_addr_t first_frame)
-{
-    if (first_frame % size_1G)
-    {
-        PANIC("trying to push a non aligned 1G frame {x}", first_frame.value());
-    }
-
-    _push(first_frame, _info_1G);
-    ++free_1G_frames;
-}
-
-void instance::_push(phys_addr_t frame, _stack_info & stack_info)
-{
+    auto & stack_info = _infos[page_layer];
     auto frame_header = phys_ptr_t<_frame_header>{ frame };
     frame_header->next = stack_info.stack;
     stack_info.stack = frame_header;
     ++stack_info.num_frames;
 }
 
-phys_addr_t instance::pop_4k()
+phys_addr_t instance::pop(std::size_t page_layer)
 {
     // TODO: lock
 
-    if (_info_4k.num_frames == 0)
+    auto & stack_info = _infos[page_layer];
+    if (stack_info.num_frames == 0)
     {
-        PANIC("TODO: implement popping 2M frames now maybe");
+        PANIC("TODO: implement frame splitting");
     }
 
-    auto ret = _info_4k.stack;
-    _info_4k.stack = ret->next;
+    auto ret = stack_info.stack;
+    stack_info.stack = ret->next;
+    --stack_info.num_frames;
     return ret.representation();
 }
 
@@ -176,19 +140,29 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
         {
             auto remaining = size;
 
-#define HANDLE_FRAMES(frame_size, next_size)                                                                 \
-    while (start % size_##next_size && remaining >= size_##frame_size)                                       \
-    {                                                                                                        \
-        global_manager.push_##frame_size(start);                                                             \
-        start += size_##frame_size;                                                                          \
-        remaining -= size_##frame_size;                                                                      \
-    }
+            auto push = [&](std::size_t i)
+            {
+                global_manager.push(i, start);
+                start += arch::vm::page_sizes[i];
+                remaining -= arch::vm::page_sizes[i];
+                ++free_frames[i];
+            };
 
-            HANDLE_FRAMES(4k, 2M);
-            HANDLE_FRAMES(2M, 1G);
-            HANDLE_FRAMES(1G, any);
-            HANDLE_FRAMES(2M, any);
-            HANDLE_FRAMES(4k, any);
+            for (std::size_t i = 0; i < arch::vm::page_size_count - 1; ++i)
+            {
+                while (start % arch::vm::page_sizes[i + 1] && remaining >= arch::vm::page_sizes[i])
+                {
+                    push(i);
+                }
+            }
+
+            for (std::size_t i = arch::vm::page_size_count; i > 0; --i)
+            {
+                while (remaining >= arch::vm::page_sizes[i - 1])
+                {
+                    push(i - 1);
+                }
+            }
         }
 
         else
@@ -202,7 +176,8 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
                 case boot_protocol::memory_type::memory_map:
                 case boot_protocol::memory_type::backbuffer:
                 case boot_protocol::memory_type::log_buffer:
-                    used_4k_frames += memmap[i].length / 4096;
+                case boot_protocol::memory_type::working_stack:
+                    used_frames[0] += memmap[i].length / arch::vm::page_sizes[0];
                     break;
 
                 default:;
@@ -215,8 +190,15 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
 
 void report()
 {
-    auto free = free_4k_frames * size_4k + free_2M_frames * size_2M + free_1G_frames * size_1G;
-    auto used = used_4k_frames * size_4k + used_2M_frames * size_2M + used_1G_frames * size_1G;
+    std::size_t free = 0;
+    std::size_t used = 0;
+
+    for (std::size_t i = 0; i < arch::vm::page_size_count; ++i)
+    {
+        free += free_frames[i] * arch::vm::page_sizes[i];
+        used += used_frames[i] * arch::vm::page_sizes[i];
+    }
+
     auto total = free + used;
 
     auto free_gib = free / (1024 * 1024 * 1024);
@@ -232,8 +214,16 @@ void report()
     auto total_kib = (total % (1024 * 1024)) / 1024;
 
     log::println("[PMM] Printing physical memory manager status...");
-    log::println(" > Free frames: 4k: {}, 2M: {}, 1G: {}", free_4k_frames, free_2M_frames, free_1G_frames);
-    log::println(" > Used frames: 4k: {}, 2M: {}, 1G: {}", used_4k_frames, used_2M_frames, used_1G_frames);
+    log::println(" > Free frames:");
+    for (std::size_t i = 0; i < arch::vm::page_size_count; ++i)
+    {
+        log::println(" >> {}: {}", arch::vm::page_sizes[i], free_frames[i]);
+    }
+    log::println(" > Used frames:");
+    for (std::size_t i = 0; i < arch::vm::page_size_count; ++i)
+    {
+        log::println(" >> {}: {}", arch::vm::page_sizes[i], used_frames[i]);
+    }
 
     log::println(" > Total free memory: {} GiB {} MiB {} KiB", free_gib, free_mib, free_kib);
     log::println(" > Total used memory: {} GiB {} MiB {} KiB", used_gib, used_mib, used_kib);
@@ -250,20 +240,30 @@ std::uintptr_t get_sub_1M_top()
     return sub_1M_top;
 }
 
-phys_addr_t pop_4k()
+phys_addr_t pop(std::size_t page_layer)
 {
-    auto ret = global_manager.pop_4k();
+    if (page_layer >= arch::vm::page_size_count)
+    {
+        PANIC("Tried to pop a frame beyond arch-supported frame sizes: {}!", page_layer);
+    }
 
-    --free_4k_frames;
-    ++used_4k_frames;
+    auto ret = global_manager.pop(page_layer);
+
+    --free_frames[page_layer];
+    ++used_frames[page_layer];
 
     return ret;
 }
 
-void push_4k(phys_addr_t frame)
+void push(std::size_t page_layer, phys_addr_t frame)
 {
-    global_manager.push_4k(frame);
-    --used_4k_frames;
-    ++free_4k_frames;
+    if (page_layer >= arch::vm::page_size_count)
+    {
+        PANIC("Tried to push a frame beyond arch-supported frame sizes: {}!", page_layer);
+    }
+
+    global_manager.push(page_layer, frame);
+    --used_frames[page_layer];
+    ++free_frames[page_layer];
 }
 }

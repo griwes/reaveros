@@ -141,6 +141,9 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::console::print(u"[EFI] Retrieving the memory map...\n\r");
     auto memmap = efi_loader::get_memory_map();
 
+    auto approximately_stack = reinterpret_cast<std::uintptr_t>(&image_handle);
+    memmap.account_for_stack(approximately_stack, approximately_stack + 3 * 4096);
+
     efi_loader::console::print(u"[EFI] Loader done, giving up boot services and invoking kernel.\n\r");
 
     efi_loader::exit_boot_services(memmap);
