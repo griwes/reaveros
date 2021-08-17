@@ -27,6 +27,7 @@ namespace kernel::arch::cpu
 using amd64::cpu::core;
 using amd64::cpu::get_core_count;
 using amd64::cpu::initialize;
+using amd64::cpu::switch_to_clean_state;
 }
 #else
 #error "unknown architecture"

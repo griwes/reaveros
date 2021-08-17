@@ -85,6 +85,10 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 
     kernel::initrd::initialize(args.memory_map_size, args.memory_map_entries);
 
+    kernel::arch::cpu::switch_to_clean_state();
+
+    asm volatile("" ::: "memory");
+
     /*
     // clone the VAS
     // map the boot init file in the clone

@@ -53,6 +53,7 @@ namespace detail_for_mp
 
 void initialize();
 extern "C" void ap_initialize();
+void switch_to_clean_state();
 core * get_current_core();
 core * get_core_by_apic_id(std::uint32_t id);
 core * get_core_by_id(std::size_t id);

@@ -26,4 +26,6 @@ constexpr std::size_t page_sizes[] = { 4 * 1024, 2 * 1024 * 1024, 1 * 1024 * 102
 void map_physical(virt_addr_t begin, virt_addr_t end, phys_addr_t physical);
 
 void unmap(virt_addr_t begin, virt_addr_t end, bool free_physical = true);
+
+void unmap_lower_half();
 }

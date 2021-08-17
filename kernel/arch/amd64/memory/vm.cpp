@@ -18,6 +18,7 @@
 
 #include "../../../memory/pmm.h"
 #include "../../../util/log.h"
+#include "../../../util/mp.h"
 #include "../../../util/pointer_types.h"
 #include "../cpu/cpu.h"
 
@@ -34,6 +35,11 @@ namespace
         pmlt<I - 1> * get() const
         {
             return phys_ptr_t<pmlt<I - 1>>(phys_addr_t(address << 12)).value();
+        }
+
+        phys_addr_t get_phys() const
+        {
+            return phys_addr_t(address << 12);
         }
 
         void operator=(pmlt<I - 1> * phys)
@@ -251,5 +257,45 @@ void unmap(virt_addr_t start, virt_addr_t end, bool free_physical)
     auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
 
     vm_unmap<4>(cr3, virt_start, virt_end, free_physical);
+}
+
+namespace
+{
+    template<int I>
+    [[gnu::always_inline]] void unmap_all(pmlt<I> * table, std::size_t first, std::size_t last)
+    {
+        if constexpr (I != 1)
+        {
+            while (first <= last)
+            {
+                if (table->entries[first].present == 1)
+                {
+                    unmap_all(table->entries[first].get(), 0, 511);
+                    table->entries[first].present = 0;
+                    pmm::push(0, table->entries[first].get_phys());
+                }
+
+                ++first;
+            }
+        }
+    }
+
+    std::atomic<bool> unmap_lower_half_called = false;
+}
+
+void unmap_lower_half()
+{
+    if (unmap_lower_half_called)
+    {
+        PANIC("arch::vm::unmap_lower_half called more than once!");
+    }
+
+    unmap_lower_half_called = true;
+
+    auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
+
+    unmap_all(cr3, 0, 255);
+
+    kernel::mp::parallel_execute([] { asm volatile("mov %%cr3, %%rax; mov %%rax, %%cr3" ::: "memory"); });
 }
 }

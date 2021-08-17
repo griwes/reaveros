@@ -15,6 +15,7 @@
  */
 
 #include "cpu.h"
+#include "../../../memory/vm.h"
 #include "../../../util/log.h"
 #include "../../common/acpi/acpi.h"
 #include "core.h"
@@ -67,7 +68,6 @@ void ap_initialize()
     auto core = get_current_core();
     core->initialize_gdt();
     core->load_gdt();
-    idt::initialize();
     idt::load();
 
     lapic_timer::ap_initialize();
@@ -78,6 +78,41 @@ void ap_initialize()
     {
         asm volatile("hlt");
     }
+}
+
+void switch_to_clean_state()
+{
+    log::println("[CPU] Switching to clean state...");
+
+    log::println(" > Switching to upper-half stack...");
+    auto stack = kernel::vm::allocate_address_range(32 * 4096);
+
+    log::println(" > Top of the stack: {:#018x}.", (stack + 32 * 4096).value());
+
+    for (int i = 1; i < 32; ++i)
+    {
+        vm::map_physical(stack + i * 4096, stack + (i + 1) * 4096, pmm::pop(0));
+    }
+
+    std::uint64_t rbp;
+    asm volatile("mov %%rbp, %0" : "=r"(rbp)::"memory");
+
+    // first thing to pop from old stack is prior rbp
+    // the second (+8 bytes) is the return address
+    auto ret = *reinterpret_cast<std::uint64_t *>(rbp + 8);
+
+    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 256 - 2 * 8) =
+        (stack + 32 * 4096 - 256).value();                                         // fake pushed rbp
+    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 256 - 8) = ret; // real return address
+
+    asm volatile("mov %%rax, %%rsp; mov %%rax, %%rbp" ::"a"(stack.value() + 32 * 4096 - 256 - 2 * 8)
+                 : "memory");
+
+    log::println(" > New stack installed.");
+
+    vm::unmap_lower_half();
+
+    asm volatile("mov %%rbp, %%rsp; pop %%rbp; ret" ::: "memory");
 }
 
 core * get_current_core()
