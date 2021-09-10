@@ -16,13 +16,66 @@
 
 #include "irqs.h"
 
+#include "../../../scheduler/thread.h"
 #include "../../../util/log.h"
-#include "../cpu/lapic.h"
+#include "core.h"
+#include "cpu.h"
+#include "lapic.h"
 
 #include <mutex>
 
 namespace kernel::amd64::irq
 {
+void context::save_to(thread::context * thctx) const
+{
+    thctx->rax = rax;
+    thctx->rbx = rbx;
+    thctx->rcx = rcx;
+    thctx->rdx = rdx;
+    thctx->rsi = rsi;
+    thctx->rdi = rdi;
+    thctx->rbp = rbp;
+    thctx->rsp = rsp;
+    thctx->r8 = r8;
+    thctx->r9 = r9;
+    thctx->r10 = r10;
+    thctx->r11 = r11;
+    thctx->r12 = r12;
+    thctx->r13 = r13;
+    thctx->r14 = r14;
+    thctx->r15 = r15;
+
+    thctx->rip = rip;
+    thctx->rflags = rflags;
+    thctx->cs = cs;
+    thctx->ss = ss;
+}
+
+void context::load_from(const thread::context * thctx)
+{
+    rax = thctx->rax;
+    rbx = thctx->rbx;
+    rcx = thctx->rcx;
+    rdx = thctx->rdx;
+    rsi = thctx->rsi;
+    rdi = thctx->rdi;
+    rbp = thctx->rbp;
+    rsp = thctx->rsp;
+    r8 = thctx->r8;
+    r9 = thctx->r9;
+    r10 = thctx->r10;
+    r11 = thctx->r11;
+    r12 = thctx->r12;
+    r13 = thctx->r13;
+    r14 = thctx->r14;
+    r15 = thctx->r15;
+
+    rip = thctx->rip;
+    rflags = thctx->rflags;
+    cs = thctx->cs;
+    ss = thctx->ss;
+}
+
 namespace
 {
     struct irq_handler
@@ -48,7 +101,15 @@ void handle(context & ctx)
         PANIC("Unexpected IRQ: {:x}, {}", ctx.number, ctx.error);
     }
 
+    auto previous_thread = cpu::get_core_local_storage()->current_thread;
     handler.fptr(ctx, handler.erased_fptr, handler.context);
+    auto new_thread = cpu::get_core_local_storage()->current_thread;
+
+    if (new_thread != previous_thread)
+    {
+        ctx.save_to(previous_thread->get_context());
+        ctx.load_from(new_thread->get_context());
+    }
 
     if (ctx.number >= 32)
     {

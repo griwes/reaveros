@@ -21,4 +21,20 @@
 namespace kernel::vm
 {
 virt_addr_t allocate_address_range(std::size_t size);
+
+enum class flags : std::uintptr_t
+{
+    none = 0,
+    user = 1 << 0
+};
+
+inline bool operator&(flags lhs, flags rhs)
+{
+    return static_cast<std::uintptr_t>(lhs) & static_cast<std::uintptr_t>(rhs);
+}
+
+inline flags operator|(flags lhs, flags rhs)
+{
+    return static_cast<flags>(static_cast<std::uintptr_t>(lhs) | static_cast<std::uintptr_t>(rhs));
+}
 }

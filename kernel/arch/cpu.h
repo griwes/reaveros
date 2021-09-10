@@ -17,48 +17,31 @@
 #pragma once
 
 #ifdef __amd64__
+
 #include "amd64/cpu/core.h"
 #include "amd64/cpu/cpu.h"
 
 #define arch_namespace amd64
 
-namespace kernel::arch::cpu
-{
-using amd64::cpu::core;
-using amd64::cpu::get_core_count;
-using amd64::cpu::initialize;
-using amd64::cpu::switch_to_clean_state;
-}
 #else
+
 #error "unknown architecture"
+
 #endif
 
 namespace kernel::arch::cpu
 {
-struct arch_independent_core
-{
-    core * native;
+using arch_namespace::cpu::core;
+using arch_namespace::cpu::get_core_count;
+using arch_namespace::cpu::idle;
+using arch_namespace::cpu::initialize;
+using arch_namespace::cpu::interrupts_disabled;
+using arch_namespace::cpu::switch_to_clean_state;
 
-    auto id()
-    {
-        return native->id();
-    }
+using arch_namespace::cpu::get_core_local_storage;
 
-    auto & scheduler()
-    {
-        return *native->scheduler();
-    }
-};
-
-inline auto get_current_core()
-{
-    return arch_independent_core{ arch_namespace::cpu::get_current_core() };
-}
-
-inline auto get_core_by_id(std::size_t id)
-{
-    return arch_independent_core{ arch_namespace::cpu::get_core_by_id(id) };
-}
+using arch_namespace::cpu::get_core_by_id;
+using arch_namespace::cpu::get_current_core;
 }
 
 #undef arch_namespace

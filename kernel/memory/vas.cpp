@@ -14,25 +14,35 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "vas.h"
 
-#ifdef __amd64__
-
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::vm
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
+std::unique_ptr<vas> create_vas()
+{
+    auto ret = std::make_unique<vas>();
+
+    ret->_asid = arch::vm::clone_upper_half();
+
+    return ret;
 }
 
-#undef arch_namespace
+std::unique_ptr<vas> adopt_existing_asid(phys_addr_t asid)
+{
+    auto ret = std::make_unique<vas>();
+
+    ret->_asid = asid;
+
+    return ret;
+}
+
+vas::~vas()
+{
+    PANIC("this requires an amount of work tbh");
+}
+
+phys_addr_t vas::get_asid() const
+{
+    return _asid;
+}
+}

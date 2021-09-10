@@ -52,11 +52,13 @@ namespace detail_for_mp
 }
 
 void initialize();
+[[noreturn]] void idle();
 extern "C" void ap_initialize();
 void switch_to_clean_state();
 core * get_current_core();
+
 core * get_core_by_apic_id(std::uint32_t id);
 core * get_core_by_id(std::size_t id);
 std::size_t get_core_count();
-phys_addr_t get_asid();
+bool interrupts_disabled();
 }

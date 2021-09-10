@@ -17,15 +17,23 @@
 #pragma once
 
 #ifdef __amd64__
+
 #include "amd64/cpu/irqs.h"
+
+#define arch_namespace amd64
+
+#else
+
+#error "unknown architecture"
+
+#endif
 
 namespace kernel::arch::irq
 {
-using amd64::irq::context;
-using amd64::irq::parallel_exec_count;
-using amd64::irq::parallel_exec_start;
-using amd64::irq::register_handler;
+using arch_namespace::irq::context;
+using arch_namespace::irq::parallel_exec_count;
+using arch_namespace::irq::parallel_exec_start;
+using arch_namespace::irq::register_handler;
 }
-#else
-#error "unknown architecture"
-#endif
+
+#undef arch_namespace

@@ -14,25 +14,21 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "process.h"
+#include "thread.h"
 
-#ifdef __amd64__
-
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::scheduler
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
+process::process(std::unique_ptr<vm::vas> address_space) : _address_space(std::move(address_space))
+{
 }
 
-#undef arch_namespace
+util::intrusive_ptr<thread> process::create_thread()
+{
+    auto ret = util::make_intrusive<thread>(util::intrusive_ptr<process>(this));
+
+    ret->timestamp = time::get_high_precision_timer().now();
+
+    return ret;
+}
+}

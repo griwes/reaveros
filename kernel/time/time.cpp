@@ -58,7 +58,7 @@ timer & get_high_precision_timer(bool main)
 {
     if (!main && per_core_hpt_available) [[likely]]
     {
-        return *arch::timers::get_high_precision_timer_for(arch::cpu::get_current_core().id());
+        return *arch::timers::get_high_precision_timer_for(arch::cpu::get_current_core()->id());
     }
 
     if (!hpt) [[unlikely]]
@@ -67,6 +67,12 @@ timer & get_high_precision_timer(bool main)
     }
 
     return *hpt;
+}
+
+std::chrono::time_point<timer> timer::now()
+{
+    _update_now();
+    return _now;
 }
 
 void timer::handle(timer * self)

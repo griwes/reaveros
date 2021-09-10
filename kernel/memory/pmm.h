@@ -21,6 +21,8 @@
 
 #include <boot-memmap.h>
 
+#include <mutex>
+
 namespace kernel::pmm
 {
 class instance
@@ -39,6 +41,7 @@ private:
 
     struct _stack_info
     {
+        std::mutex lock;
         phys_ptr_t<_frame_header> stack{ nullptr };
         std::size_t num_frames = 0;
     };

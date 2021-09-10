@@ -87,6 +87,7 @@ public:
     }
 
     void cancel(std::size_t id);
+    std::chrono::time_point<timer> now();
 
     static void handle(timer * self);
 

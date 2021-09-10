@@ -17,6 +17,7 @@
 #include "mp.h"
 
 #include "../../../memory/vm.h"
+#include "../../../scheduler/thread.h"
 #include "../../../time/time.h"
 #include "../cpu/cpu.h"
 #include "../cpu/lapic.h"
@@ -101,7 +102,7 @@ void boot()
             std::memcpy((base + trampoline_size * (i - booted)).value(), trampoline_start, trampoline_size);
 
             *phys_ptr_t<std::uint64_t>(base + trampoline_size * (i - booted) + asid_slot_offset) =
-                cpu::get_asid().value();
+                vm::get_asid().value();
 
             cores[i]._boot_flag = const_cast<volatile std::uint8_t *>(
                 (base + trampoline_size * (i - booted) + flag_slot_offset).value());

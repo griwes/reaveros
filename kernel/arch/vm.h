@@ -17,16 +17,29 @@
 #pragma once
 
 #ifdef __amd64__
+
 #include "amd64/memory/vm.h"
+
+#define arch_namespace amd64
+
+#else
+
+#error "unknown architecture"
+
+#endif
 
 namespace kernel::arch::vm
 {
-using amd64::vm::page_size_count;
-using amd64::vm::page_sizes;
+using arch_namespace::vm::page_size_count;
+using arch_namespace::vm::page_sizes;
 
-using amd64::vm::map_physical;
-using amd64::vm::unmap;
+using arch_namespace::vm::get_asid;
+using arch_namespace::vm::set_asid;
+
+using arch_namespace::vm::map_physical;
+using arch_namespace::vm::unmap;
+
+using arch_namespace::vm::clone_upper_half;
 }
-#else
-#error "unknown architecture"
-#endif
+
+#undef arch_namespace

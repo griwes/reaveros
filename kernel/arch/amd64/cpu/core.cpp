@@ -16,8 +16,21 @@
 
 #include "core.h"
 
+#include "../../../scheduler/thread.h"
+
 namespace kernel::amd64::cpu
 {
+core_local_storage::core_local_storage() = default;
+
+core_local_storage::~core_local_storage() = default;
+
+core_local_storage * get_core_local_storage()
+{
+    core_local_storage * ret;
+    asm volatile("mov %%gs:0, %0" : "=r"(ret));
+    return ret;
+}
+
 void core::initialize_gdt()
 {
     gdt::initialize(_gdt, _gdtr);

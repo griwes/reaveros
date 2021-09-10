@@ -30,7 +30,7 @@ namespace
     class xapic_t
     {
     public:
-        enum class _registers_rw
+        enum class registers_rw
         {
             local_apic_id = 0x20,
             task_priority = 0x80,
@@ -50,7 +50,7 @@ namespace
             timer_divide_configuration = 0x3e0
         };
 
-        enum class _registers_r
+        enum class registers_r
         {
             local_apic_version = 0x30,
             arbitration_priority_register = 0x90,
@@ -84,29 +84,29 @@ namespace
             timer_current_count = 0x390
         };
 
-        enum class _registers_w
+        enum class registers_w
         {
             eoi = 0xb0
         };
 
         void ap_initialize()
         {
-            _write(_registers_rw::destination_format, _read(_registers_rw::destination_format) & 0xF0000000);
-            _write(_registers_rw::logical_destination, 0xFF000000);
+            write(registers_rw::destination_format, read(registers_rw::destination_format) & 0xF0000000);
+            write(registers_rw::logical_destination, 0xFF000000);
 
-            if (((_read(_registers_r::local_apic_version) >> 16) & 0xFF) == 6)
+            if (((read(registers_r::local_apic_version) >> 16) & 0xFF) == 6)
             {
-                _write(_registers_rw::lvt_cmci, 0x10000);
+                write(registers_rw::lvt_cmci, 0x10000);
             }
 
-            _write(_registers_rw::lvt_error, 0x10000);
-            _write(_registers_rw::lvt_lint0, 0x10000);
-            _write(_registers_rw::lvt_lint1, 0x10000);
-            _write(_registers_rw::lvt_pmc, 0x10000);
-            _write(_registers_rw::lvt_thermal_sensor, 0x10000);
-            _write(_registers_rw::lvt_timer, irq::lapic_timer);
+            write(registers_rw::lvt_error, 0x10000);
+            write(registers_rw::lvt_lint0, 0x10000);
+            write(registers_rw::lvt_lint1, 0x10000);
+            write(registers_rw::lvt_pmc, 0x10000);
+            write(registers_rw::lvt_thermal_sensor, 0x10000);
+            write(registers_rw::lvt_timer, irq::lapic_timer);
 
-            _write(_registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
+            write(registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
         }
 
         xapic_t(kernel::phys_addr_t base) : _register{ base }
@@ -114,31 +114,31 @@ namespace
             ap_initialize();
             log::println(
                 " > Initialized xAPIC. BSP ID: {}, APIC version: {}, number of LVTs: {}.",
-                _read(_registers_rw::local_apic_id),
-                _read(_registers_r::local_apic_version) & 0xFF,
-                ((_read(_registers_r::local_apic_version) >> 16) & 0xFF) + 1);
+                read(registers_rw::local_apic_id),
+                read(registers_r::local_apic_version) & 0xFF,
+                ((read(registers_r::local_apic_version) >> 16) & 0xFF) + 1);
         }
 
     private:
         phys_addr_t _register;
 
     public:
-        std::uint32_t _read(_registers_r reg) const
+        std::uint32_t read(registers_r reg) const
         {
             return *phys_ptr_t<std::uint32_t>{ _register + static_cast<std::uintptr_t>(reg) };
         }
 
-        std::uint32_t _read(_registers_rw reg) const
+        std::uint32_t read(registers_rw reg) const
         {
             return *phys_ptr_t<std::uint32_t>{ _register + static_cast<std::uintptr_t>(reg) };
         }
 
-        void _write(_registers_rw reg, std::uint32_t value) const
+        void write(registers_rw reg, std::uint32_t value) const
         {
             *phys_ptr_t<std::uint32_t>{ _register + static_cast<std::uintptr_t>(reg) } = value;
         }
 
-        void _write(_registers_w reg, std::uint32_t value) const
+        void write(registers_w reg, std::uint32_t value) const
         {
             *phys_ptr_t<std::uint32_t>{ _register + static_cast<std::uintptr_t>(reg) } = value;
         }
@@ -147,7 +147,7 @@ namespace
     class x2apic_t
     {
     public:
-        enum class _registers_rw
+        enum class registers_rw
         {
             apic_base = 0x01b,
             task_priority = 0x808,
@@ -165,7 +165,7 @@ namespace
             timer_divide_configuration = 0x83e
         };
 
-        enum class _registers_r
+        enum class registers_r
         {
             local_apic_id = 0x802,
             local_apic_version = 0x803,
@@ -198,7 +198,7 @@ namespace
             timer_current_count = 0x839
         };
 
-        enum class _registers_w
+        enum class registers_w
         {
             eoi = 0x80b,
             self_ipi = 0x83f
@@ -206,21 +206,21 @@ namespace
 
         void ap_initialize()
         {
-            _write(_registers_rw::apic_base, _read(_registers_rw::apic_base) | (1 << 10));
+            write(registers_rw::apic_base, read(registers_rw::apic_base) | (1 << 10));
 
-            if (((_read(_registers_r::local_apic_version) >> 16) & 0xFF) == 6)
+            if (((read(registers_r::local_apic_version) >> 16) & 0xFF) == 6)
             {
-                _write(_registers_rw::lvt_cmci, 0x10000);
+                write(registers_rw::lvt_cmci, 0x10000);
             }
 
-            _write(_registers_rw::lvt_error, 0x10000);
-            _write(_registers_rw::lvt_lint0, 0x10000);
-            _write(_registers_rw::lvt_lint1, 0x10000);
-            _write(_registers_rw::lvt_pmc, 0x10000);
-            _write(_registers_rw::lvt_thermal_sensor, 0x10000);
-            _write(_registers_rw::lvt_timer, irq::lapic_timer);
+            write(registers_rw::lvt_error, 0x10000);
+            write(registers_rw::lvt_lint0, 0x10000);
+            write(registers_rw::lvt_lint1, 0x10000);
+            write(registers_rw::lvt_pmc, 0x10000);
+            write(registers_rw::lvt_thermal_sensor, 0x10000);
+            write(registers_rw::lvt_timer, irq::lapic_timer);
 
-            _write(_registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
+            write(registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
         }
 
         x2apic_t()
@@ -228,27 +228,27 @@ namespace
             ap_initialize();
             log::println(
                 " > Initialized x2APIC. BSP ID: {}, APIC version: {}, number of LVTs: {}.",
-                _read(_registers_r::local_apic_id),
-                _read(_registers_r::local_apic_version) & 0xFF,
-                ((_read(_registers_r::local_apic_version) >> 16) & 0xFF) + 1);
+                read(registers_r::local_apic_id),
+                read(registers_r::local_apic_version) & 0xFF,
+                ((read(registers_r::local_apic_version) >> 16) & 0xFF) + 1);
         }
 
-        std::uint64_t _read(_registers_r reg) const
+        std::uint64_t read(registers_r reg) const
         {
             return cpu::rdmsr(static_cast<std::uint32_t>(reg));
         }
 
-        std::uint64_t _read(_registers_rw reg) const
+        std::uint64_t read(registers_rw reg) const
         {
             return cpu::rdmsr(static_cast<std::uint32_t>(reg));
         }
 
-        void _write(_registers_rw reg, std::uint64_t value) const
+        void write(registers_rw reg, std::uint64_t value) const
         {
             cpu::wrmsr(static_cast<std::uint32_t>(reg), value);
         }
 
-        void _write(_registers_w reg, std::uint64_t value) const
+        void write(registers_w reg, std::uint64_t value) const
         {
             cpu::wrmsr(static_cast<std::uint32_t>(reg), value);
         }
@@ -299,16 +299,16 @@ void ap_initialize()
 
 std::uint32_t id()
 {
-    return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::local_apic_id)
-                          : (lapic_storage.xapic._read(xapic_t::_registers_rw::local_apic_id) >> 24);
+    return x2apic_enabled ? lapic_storage.x2apic.read(x2apic_t::registers_r::local_apic_id)
+                          : (lapic_storage.xapic.read(xapic_t::registers_rw::local_apic_id) >> 24);
 }
 
 void eoi(std::uint8_t number)
 {
     if (number != irq::lapic_spurious)
     {
-        x2apic_enabled ? lapic_storage.x2apic._write(x2apic_t::_registers_w::eoi, 0)
-                       : lapic_storage.xapic._write(xapic_t::_registers_w::eoi, 0);
+        x2apic_enabled ? lapic_storage.x2apic.write(x2apic_t::registers_w::eoi, 0)
+                       : lapic_storage.xapic.write(xapic_t::registers_w::eoi, 0);
     }
 }
 
@@ -347,20 +347,20 @@ void write_timer_divisor(std::uint8_t val)
     }
 
     x2apic_enabled
-        ? lapic_storage.x2apic._write(x2apic_t::_registers_rw::timer_divide_configuration, bit_pattern)
-        : lapic_storage.xapic._write(xapic_t::_registers_rw::timer_divide_configuration, bit_pattern);
+        ? lapic_storage.x2apic.write(x2apic_t::registers_rw::timer_divide_configuration, bit_pattern)
+        : lapic_storage.xapic.write(xapic_t::registers_rw::timer_divide_configuration, bit_pattern);
 }
 
 void write_timer_counter(std::uint32_t val)
 {
-    x2apic_enabled ? lapic_storage.x2apic._write(x2apic_t::_registers_rw::timer_initial_count, val)
-                   : lapic_storage.xapic._write(xapic_t::_registers_rw::timer_initial_count, val);
+    x2apic_enabled ? lapic_storage.x2apic.write(x2apic_t::registers_rw::timer_initial_count, val)
+                   : lapic_storage.xapic.write(xapic_t::registers_rw::timer_initial_count, val);
 }
 
 std::uint32_t read_timer_counter()
 {
-    return x2apic_enabled ? lapic_storage.x2apic._read(x2apic_t::_registers_r::timer_current_count)
-                          : lapic_storage.xapic._read(xapic_t::_registers_r::timer_current_count);
+    return x2apic_enabled ? lapic_storage.x2apic.read(x2apic_t::registers_r::timer_current_count)
+                          : lapic_storage.xapic.read(xapic_t::registers_r::timer_current_count);
 }
 
 void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data)
@@ -378,20 +378,23 @@ void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data)
             break;
 
         case ipi_type::generic:
+            cmd_low = (1 << 14) | data;
+            break;
+
         case ipi_type::nmi:
             PANIC("Unsupported IPI type selected.");
     }
 
     if (x2apic_enabled)
     {
-        lapic_storage.x2apic._write(
-            x2apic_t::_registers_rw::interrupt_command,
+        lapic_storage.x2apic.write(
+            x2apic_t::registers_rw::interrupt_command,
             (static_cast<std::uint64_t>(target_apic_id) << 32) | cmd_low);
     }
     else
     {
-        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_high, target_apic_id << 24);
-        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_low, cmd_low);
+        lapic_storage.xapic.write(xapic_t::registers_rw::interrupt_command_high, target_apic_id << 24);
+        lapic_storage.xapic.write(xapic_t::registers_rw::interrupt_command_low, cmd_low);
     }
 }
 
@@ -402,7 +405,7 @@ void broadcast(broadcast_target target, ipi_type type, std::uint8_t data)
     switch (type)
     {
         case ipi_type::generic:
-            cmd_low = (static_cast<std::uint64_t>(target) << 18) | data;
+            cmd_low = (static_cast<std::uint64_t>(target) << 18) | (1 << 14) | data;
             break;
 
         default:
@@ -411,11 +414,11 @@ void broadcast(broadcast_target target, ipi_type type, std::uint8_t data)
 
     if (x2apic_enabled)
     {
-        lapic_storage.x2apic._write(x2apic_t::_registers_rw::interrupt_command, cmd_low);
+        lapic_storage.x2apic.write(x2apic_t::registers_rw::interrupt_command, cmd_low);
     }
     else
     {
-        lapic_storage.xapic._write(xapic_t::_registers_rw::interrupt_command_low, cmd_low);
+        lapic_storage.xapic.write(xapic_t::registers_rw::interrupt_command_low, cmd_low);
     }
 }
 }

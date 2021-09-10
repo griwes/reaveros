@@ -68,9 +68,9 @@ namespace
 
 void instance::push(std::size_t page_layer, phys_addr_t frame)
 {
-    // TODO: lock
-
     auto & stack_info = _infos[page_layer];
+    std::lock_guard lock(stack_info.lock);
+
     auto frame_header = phys_ptr_t<_frame_header>{ frame };
     frame_header->next = stack_info.stack;
     stack_info.stack = frame_header;
@@ -79,12 +79,22 @@ void instance::push(std::size_t page_layer, phys_addr_t frame)
 
 phys_addr_t instance::pop(std::size_t page_layer)
 {
-    // TODO: lock
-
     auto & stack_info = _infos[page_layer];
+    std::lock_guard lock(stack_info.lock);
+
     if (stack_info.num_frames == 0)
     {
-        PANIC("TODO: implement frame splitting");
+        if (page_layer == arch::vm::page_size_count - 1)
+        {
+            PANIC("...and now implement cross-pmm-instance rebalancing");
+        }
+
+        auto higher_layer_frame = pop(page_layer + 1);
+        for (std::size_t i = 0; i < arch::vm::page_sizes[page_layer + 1] / arch::vm::page_sizes[page_layer];
+             ++i)
+        {
+            pmm::push(page_layer, higher_layer_frame + i * arch::vm::page_sizes[page_layer]);
+        }
     }
 
     auto ret = stack_info.stack;

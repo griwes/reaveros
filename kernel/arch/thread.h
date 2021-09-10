@@ -18,21 +18,19 @@
 
 #ifdef __amd64__
 
-#include "amd64/timers/timers.h"
+#include "amd64/cpu/thread.h"
 
 #define arch_namespace amd64
 
 #else
 
-#error uknown architecture
+#error "unknown architecture"
 
 #endif
 
-namespace kernel::arch::timers
+namespace kernel::arch::thread
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
+using arch_namespace::thread::context;
 }
 
 #undef arch_namespace

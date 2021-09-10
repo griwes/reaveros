@@ -16,23 +16,26 @@
 
 #pragma once
 
-#ifdef __amd64__
+#include "../memory/vas.h"
+#include "../util/intrusive_ptr.h"
 
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::scheduler
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
-}
+class thread;
 
-#undef arch_namespace
+class process : public util::intrusive_ptrable<process>
+{
+public:
+    process(std::unique_ptr<vm::vas> address_space);
+
+    util::intrusive_ptr<thread> create_thread();
+
+    vm::vas * get_vas()
+    {
+        return _address_space.get();
+    }
+
+private:
+    std::unique_ptr<vm::vas> _address_space;
+};
+}

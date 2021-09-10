@@ -31,16 +31,16 @@ namespace
 
 void initialize()
 {
-    bsp_timer = cpu::get_current_core()->timer();
+    bsp_timer = cpu::get_current_core()->get_timer();
     bsp_timer->bsp_initialize();
 
     irq::register_handler(
-        irq::lapic_timer, +[](irq::context &) { time::timer::handle(cpu::get_current_core()->timer()); });
+        irq::lapic_timer, +[](irq::context &) { time::timer::handle(cpu::get_current_core()->get_timer()); });
 }
 
 void ap_initialize()
 {
-    cpu::get_current_core()->timer()->initialize(bsp_timer);
+    cpu::get_current_core()->get_timer()->initialize(bsp_timer);
 }
 
 void timer::bsp_initialize()

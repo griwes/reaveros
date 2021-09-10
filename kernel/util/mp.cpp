@@ -31,6 +31,7 @@ namespace
     struct parallel_slot
     {
         std::mutex lock;
+        bool wait = true;
         void (*fptr)(void *, std::uint64_t);
         void * erased_fptr;
         std::uint64_t context;
@@ -53,8 +54,23 @@ void initialize_parallel()
             +[](arch::irq::context &, std::size_t id)
             {
                 auto & slot = slots[id];
-                slot.fptr(slot.erased_fptr, slot.context);
-                --slot.unfinished_cores;
+
+                auto fptr = slot.fptr;
+                auto erased_fptr = slot.erased_fptr;
+                auto context = slot.context;
+                auto wait = slot.wait;
+
+                if (!wait)
+                {
+                    --slot.unfinished_cores;
+                }
+
+                fptr(erased_fptr, context);
+
+                if (wait)
+                {
+                    --slot.unfinished_cores;
+                }
             },
             i);
     }
@@ -75,12 +91,10 @@ void erased_parallel_execute(
     slot.erased_fptr = erased_fptr;
     slot.context = context;
 
-    bool wait = true;
-
     switch (pol)
     {
         case policy::all_no_wait:
-            wait = false;
+            slot.wait = false;
             [[fallthrough]];
 
         case policy::all:
@@ -91,7 +105,7 @@ void erased_parallel_execute(
             break;
 
         case policy::others_no_wait:
-            wait = false;
+            slot.wait = false;
             [[fallthrough]];
 
         case policy::others:
@@ -100,7 +114,7 @@ void erased_parallel_execute(
             break;
 
         case policy::specific_no_wait:
-            wait = false;
+            slot.wait = false;
             [[fallthrough]];
 
         case policy::specific:
@@ -109,17 +123,16 @@ void erased_parallel_execute(
             break;
     }
 
-    if (wait)
+    while (slot.unfinished_cores.load(std::memory_order_relaxed) != 0)
     {
-        while (slot.unfinished_cores.load(std::memory_order_relaxed))
-        {
-            // TODO: abstract
-            asm volatile("pause");
-        }
+        // TODO: abstract
+        asm volatile("pause");
     }
 
     slot.fptr = nullptr;
+    slot.erased_fptr = nullptr;
     slot.context = 0;
+    slot.wait = true;
 }
 
 void parallel_execute(policy pol, void (*fptr)(), std::uintptr_t target)

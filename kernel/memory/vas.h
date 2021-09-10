@@ -16,23 +16,28 @@
 
 #pragma once
 
-#ifdef __amd64__
+#include "../util/chained_allocator.h"
 
-#include "amd64/timers/timers.h"
+#include <memory>
 
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::vm
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
-}
+class vas;
 
-#undef arch_namespace
+std::unique_ptr<vas> create_vas();
+std::unique_ptr<vas> adopt_existing_asid(phys_addr_t asid);
+
+class vas : public util::chained_allocatable<vas>
+{
+public:
+    friend std::unique_ptr<vas> create_vas();
+    friend std::unique_ptr<vas> adopt_existing_asid(phys_addr_t);
+
+    ~vas();
+
+    phys_addr_t get_asid() const;
+
+private:
+    phys_addr_t _asid;
+};
+}

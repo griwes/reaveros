@@ -95,6 +95,14 @@ void __cxx_atomic_store(memory_order __order, volatile __atomic_base_lock_free<_
 }
 
 template<typename _T>
+_T __cxx_atomic_exchange(memory_order __order, volatile __atomic_base_lock_free<_T> * __a, _T __value)
+{
+    _T __ret;
+    __atomic_exchange(&__a->__val, &__value, &__ret, static_cast<int>(__order));
+    return __ret;
+}
+
+template<typename _T>
 bool __cxx_atomic_cmpxchg_weak(
     memory_order __success,
     memory_order __failure,
@@ -199,8 +207,15 @@ public:
     __atomic_base & operator=(const __atomic_base &) = delete;
     __atomic_base & operator=(const __atomic_base &) volatile = delete;
 
-    _T exchange(_T, memory_order = memory_order::seq_cst) volatile noexcept;
-    _T exchange(_T, memory_order = memory_order::seq_cst) noexcept;
+    _T exchange(_T __value, memory_order __order = memory_order::seq_cst) volatile noexcept
+    {
+        return __cxx_atomic_exchange(__order, &__impl, __value);
+    }
+
+    _T exchange(_T __value, memory_order __order = memory_order::seq_cst) noexcept
+    {
+        return __cxx_atomic_exchange(__order, &__impl, __value);
+    }
 
     bool compare_exchange_weak(
         _T & __expected,

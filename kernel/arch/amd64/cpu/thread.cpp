@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "thread.h"
 
-#ifdef __amd64__
-
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::amd64::thread
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
+void context::set_userspace()
+{
+    cs = 0x1b;
+    ss = 0x23;
 }
 
-#undef arch_namespace
+void context::set_instruction_pointer(virt_addr_t address)
+{
+    rip = address.value();
+}
+
+void context::set_stack_pointer(virt_addr_t address)
+{
+    rsp = address.value();
+}
+}

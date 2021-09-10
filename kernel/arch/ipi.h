@@ -29,6 +29,7 @@ enum class broadcast_target
 }
 
 #ifdef __amd64__
+
 #include "amd64/cpu/cpu.h"
 #include "amd64/cpu/lapic.h"
 
@@ -65,5 +66,7 @@ inline void broadcast(broadcast_target target, std::uint8_t irq)
 inline void broadcast_nmi(broadcast_target target);
 }
 #else
+
 #error "unknown architecture"
+
 #endif

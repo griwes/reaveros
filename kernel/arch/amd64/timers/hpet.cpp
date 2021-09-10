@@ -22,6 +22,7 @@
 #include "../../common/acpi/acpi.h"
 #include "../cpu/cpu.h"
 #include "../cpu/irqs.h"
+#include "../cpu/lapic.h"
 
 namespace kernel::amd64::hpet
 {
@@ -106,7 +107,7 @@ namespace
                 }
 
                 // setup FSB interrupt destination
-                std::uint64_t fsb_address = (0xfee << 20) | (cpu::get_current_core()->apic_id() << 12);
+                std::uint64_t fsb_address = (0xfee << 20) | (lapic::id() << 12);
                 std::uint64_t fsb_data = irq::hpet_timer;
 
                 _write(_timer_registers::fsb_route, (fsb_address << 32) | fsb_data);
@@ -116,7 +117,7 @@ namespace
 
             void move_to_core(std::size_t id)
             {
-                std::uint64_t fsb_address = (0xfee << 20) | (cpu::get_core_by_id(id)->apic_id() << 12);
+                std::uint64_t fsb_address = (0xfee << 20) | (lapic::id() << 12);
                 std::uint64_t fsb_data = irq::hpet_timer;
 
                 _write(_timer_registers::fsb_route, (fsb_address << 32) | fsb_data);

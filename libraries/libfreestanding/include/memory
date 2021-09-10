@@ -149,7 +149,11 @@ public:
         return __ptr;
     }
 
-    pointer get() const noexcept;
+    pointer get() const noexcept
+    {
+        return __ptr;
+    }
+
     deleter_type & get_deleter() noexcept;
     const deleter_type & get_deleter() const noexcept;
     explicit operator bool() const noexcept;

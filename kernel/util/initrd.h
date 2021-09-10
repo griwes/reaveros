@@ -16,9 +16,18 @@
 
 #pragma once
 
+#include "../memory/vas.h"
+
 #include <boot-memmap.h>
+
+#include <memory>
 
 namespace kernel::initrd
 {
 void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
+std::unique_ptr<vm::vas> create_bootinit_vas();
+
+constexpr virt_addr_t bootinit_ip_address(0x10000);
+constexpr virt_addr_t bootinit_initrd_address(0x100000);
+constexpr virt_addr_t bootinit_top_of_stack(0x80000000);
 }

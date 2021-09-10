@@ -16,7 +16,17 @@
 
 #pragma once
 
+#include "../memory/vas.h"
+#include "../util/intrusive_ptr.h"
+#include "process.h"
+
 namespace kernel::scheduler
 {
 void initialize();
+bool is_initialized();
+void schedule(util::intrusive_ptr<thread> thread);
+void post_schedule(util::intrusive_ptr<thread> thread);
+
+util::intrusive_ptr<process> get_kernel_process();
+util::intrusive_ptr<process> create_process(std::unique_ptr<vm::vas> address_space);
 }

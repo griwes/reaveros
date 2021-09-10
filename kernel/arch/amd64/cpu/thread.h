@@ -16,23 +16,21 @@
 
 #pragma once
 
-#ifdef __amd64__
+#include "../../../util/chained_allocator.h"
 
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::amd64::thread
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
-}
+struct context
+{
+    std::uint64_t rax = 0, rbx = 0, rcx = 0, rdx = 0;
+    std::uint64_t rsi = 0, rdi = 0, rsp = 0, rbp = 0;
+    std::uint64_t r8 = 0, r9 = 0, r10 = 0, r11 = 0;
+    std::uint64_t r12 = 0, r13 = 0, r14 = 0, r15 = 0;
+    std::uint64_t cs = 0x8, ss = 0x10;
+    std::uint64_t rip = 0, rflags = 1 << 9;
 
-#undef arch_namespace
+    void set_userspace();
+    void set_instruction_pointer(virt_addr_t address);
+    void set_stack_pointer(virt_addr_t address);
+};
+}

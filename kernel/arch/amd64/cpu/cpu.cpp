@@ -16,6 +16,8 @@
 
 #include "cpu.h"
 #include "../../../memory/vm.h"
+#include "../../../scheduler/scheduler.h"
+#include "../../../scheduler/thread.h"
 #include "../../../util/log.h"
 #include "../../common/acpi/acpi.h"
 #include "core.h"
@@ -54,30 +56,42 @@ void initialize()
 
     lapic::initialize(madt_result.lapic_base);
 
-    auto bsp_core = get_current_core();
+    auto bsp_core = get_core_by_apic_id(lapic::id());
     bsp_core->initialize_gdt();
     bsp_core->load_gdt();
+
     idt::initialize();
     idt::load();
+
+    wrmsr(0xc0000101, reinterpret_cast<std::uint64_t>(bsp_core->get_core_local_storage_ptr()));
+    wrmsr(0xc0000102, reinterpret_cast<std::uint64_t>(bsp_core->get_core_local_storage_ptr()));
 }
 
-void ap_initialize()
+void idle()
 {
-    lapic::ap_initialize();
-
-    auto core = get_current_core();
-    core->initialize_gdt();
-    core->load_gdt();
-    idt::load();
-
-    lapic_timer::ap_initialize();
-
     asm volatile("sti");
 
     while (true)
     {
         asm volatile("hlt");
     }
+}
+
+void ap_initialize()
+{
+    lapic::ap_initialize();
+
+    auto core = get_core_by_apic_id(lapic::id());
+    core->initialize_gdt();
+    core->load_gdt();
+    idt::load();
+
+    wrmsr(0xc0000101, reinterpret_cast<std::uint64_t>(core->get_core_local_storage_ptr()));
+    wrmsr(0xc0000102, reinterpret_cast<std::uint64_t>(core->get_core_local_storage_ptr()));
+
+    lapic_timer::ap_initialize();
+
+    idle();
 }
 
 void switch_to_clean_state()
@@ -101,12 +115,11 @@ void switch_to_clean_state()
     // the second (+8 bytes) is the return address
     auto ret = *reinterpret_cast<std::uint64_t *>(rbp + 8);
 
-    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 256 - 2 * 8) =
-        (stack + 32 * 4096 - 256).value();                                         // fake pushed rbp
-    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 256 - 8) = ret; // real return address
+    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 2 * 8) =
+        (stack + 32 * 4096).value();                                         // fake pushed rbp
+    *reinterpret_cast<std::uint64_t *>(stack.value() + 32 * 4096 - 8) = ret; // real return address
 
-    asm volatile("mov %%rax, %%rsp; mov %%rax, %%rbp" ::"a"(stack.value() + 32 * 4096 - 256 - 2 * 8)
-                 : "memory");
+    asm volatile("mov %%rax, %%rbp; mov %%rax, %%rsp" ::"a"(stack.value() + 32 * 4096 - 2 * 8) : "memory");
 
     log::println(" > New stack installed.");
 
@@ -117,8 +130,7 @@ void switch_to_clean_state()
 
 core * get_current_core()
 {
-    auto id = lapic::id();
-    return get_core_by_apic_id(id);
+    return get_core_local_storage()->current_core;
 }
 
 core * get_core_by_apic_id(std::uint32_t id)
@@ -149,10 +161,10 @@ std::size_t get_core_count()
     return core_count;
 }
 
-phys_addr_t get_asid()
+bool interrupts_disabled()
 {
-    std::uint64_t cr3;
-    asm volatile("mov %%cr3, %%rax" : "=a"(cr3));
-    return phys_addr_t(cr3);
+    std::uintptr_t flags;
+    asm volatile("pushfq; pop %%rax" : "=a"(flags));
+    return !(flags & (1 << 9));
 }
 }

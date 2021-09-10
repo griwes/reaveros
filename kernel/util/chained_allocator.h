@@ -25,6 +25,9 @@ namespace
 {
     template<typename T>
     T * chained_head = nullptr;
+
+    template<typename T>
+    std::mutex chained_lock;
 }
 
 template<typename T>
@@ -41,6 +44,8 @@ template<typename T>
 T * allocate_chained()
 {
     static_assert(sizeof(T) <= arch::vm::page_sizes[0], "chained_allocatable must fit in a frame");
+
+    std::lock_guard guard(chained_lock<T>);
 
     if (!chained_head<T>)
     {
@@ -60,7 +65,6 @@ T * allocate_chained()
             }
         }
 
-        // TODO: lock
         last->next = chained_head<T>;
         if (chained_head<T>)
         {
@@ -77,7 +81,8 @@ T * allocate_chained()
 template<typename T>
 void deallocate_chained(T * ptr)
 {
-    // TODO: lock
+    std::lock_guard guard(chained_lock<T>);
+
     ptr->prev = nullptr;
     ptr->next = chained_head<T>;
     if (chained_head<T>)
@@ -90,14 +95,12 @@ void deallocate_chained(T * ptr)
 template<typename T>
 void * chained_allocatable<T>::operator new(std::size_t size)
 {
+    if (size != sizeof(T))
     {
-        if (size != sizeof(T))
-        {
-            PANIC("Tried to allocate more than one chained object.");
-        }
-
-        return allocate_chained<T>();
+        PANIC("Tried to allocate more than one chained object.");
     }
+
+    return allocate_chained<T>();
 }
 
 template<typename T>

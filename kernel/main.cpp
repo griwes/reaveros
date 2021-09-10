@@ -20,6 +20,7 @@
 #include "boot/screen.h"
 #include "memory/pmm.h"
 #include "scheduler/scheduler.h"
+#include "scheduler/thread.h"
 #include "time/time.h"
 #include "util/initrd.h"
 #include "util/log.h"
@@ -87,17 +88,25 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 
     kernel::arch::cpu::switch_to_clean_state();
 
-    asm volatile("" ::: "memory");
-
-    /*
-    // clone the VAS
-    // map the boot init file in the clone
-    // map the initrd in the clone
-    // jump to userspace at the boot init address
-    */
-
-    while (true)
+    // IIFE to force the compiler to create a stack frame after a stack switch above
+    // (otherwise it'd codegen assuming the stack frame of kernel_main is still valid,
+    // even when this is not accessing any local variables)
+    []() __attribute__((noinline))
     {
-        asm volatile("hlt");
+        kernel::log::println("[BOOT] Creating the bootinit process...");
+
+        auto bootinit_vas = kernel::initrd::create_bootinit_vas();
+        auto bootinit_process = kernel::scheduler::create_process(std::move(bootinit_vas));
+        auto bootinit_thread = bootinit_process->create_thread();
+        bootinit_process.release(kernel::util::drop_count);
+
+        bootinit_thread->get_context()->set_userspace();
+        bootinit_thread->get_context()->set_instruction_pointer(kernel::initrd::bootinit_ip_address);
+        bootinit_thread->get_context()->set_stack_pointer(kernel::initrd::bootinit_top_of_stack);
+
+        kernel::scheduler::post_schedule(std::move(bootinit_thread));
+
+        kernel::arch::cpu::idle();
     }
+    ();
 }

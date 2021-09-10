@@ -16,18 +16,42 @@
 
 #pragma once
 
+#include "../util/intrusive_ptr.h"
+#include "../util/linked_heap.h"
+
 namespace kernel::scheduler
 {
+class thread;
+
 class instance
 {
 public:
-    instance() = default;
+    instance();
+    ~instance();
 
     void initialize(instance * parent);
+    void schedule(util::intrusive_ptr<thread> thread);
+
+    util::intrusive_ptr<thread> get_idle_thread();
+    util::intrusive_ptr<thread> get_current_thread();
 
 private:
+    struct _thread_timestamp_compare
+    {
+        bool operator()(const thread & lhs, const thread & rhs) const;
+    };
+
     instance * _parent = nullptr;
     instance * _children = nullptr;
     instance * _next_child = nullptr;
+
+    util::intrusive_ptr<thread> _idle_thread;
+    util::intrusive_ptr<thread> _current_thread;
+
+    util::linked_heap<
+        thread,
+        _thread_timestamp_compare,
+        util::linked_heap_intrusive_ptr_preserve_count_traits<thread>>
+        _threads;
 };
 }

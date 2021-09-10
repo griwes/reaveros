@@ -16,6 +16,8 @@
 
 #include "initrd.h"
 
+#include "../memory/vm.h"
+#include "integer_types.h"
 #include "log.h"
 #include "pointer_types.h"
 
@@ -103,5 +105,40 @@ void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memma
     nested_initrd_physical_size = entry->length - 0x1000 - bootinit_physical_size;
 
     log::println(" > Nested initrd physical size: {} bytes.", nested_initrd_physical_size);
+}
+
+std::unique_ptr<vm::vas> create_bootinit_vas()
+{
+    log::println(" > Creating bootinit address space...");
+
+    auto ret = vm::create_vas();
+
+    log::println(" > Bootinit ASID: {:#018x}.", ret->get_asid().value());
+
+    arch::vm::map_physical(
+        ret.get(),
+        bootinit_ip_address,
+        bootinit_ip_address + bootinit_physical_size,
+        bootinit_address,
+        vm::flags::user);
+
+    arch::vm::map_physical(
+        ret.get(),
+        bootinit_initrd_address,
+        bootinit_initrd_address + nested_initrd_physical_size,
+        bootinit_address + bootinit_physical_size,
+        vm::flags::user);
+
+    for (auto i = 31; i > 0; --i)
+    {
+        arch::vm::map_physical(
+            ret.get(),
+            bootinit_top_of_stack - i * arch::vm::page_sizes[0],
+            bootinit_top_of_stack - (i - 1) * arch::vm::page_sizes[0],
+            pmm::pop(0),
+            vm::flags::user);
+    }
+
+    return ret;
 }
 }

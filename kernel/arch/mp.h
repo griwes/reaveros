@@ -17,12 +17,20 @@
 #pragma once
 
 #ifdef __amd64__
+
 #include "amd64/mp/mp.h"
+
+#define arch_namespace amd64
+
+#else
+
+#error "unknown architecture"
+
+#endif
 
 namespace kernel::arch::mp
 {
-using amd64::mp::boot;
+using arch_namespace::mp::boot;
 }
-#else
-#error "unknown architecture"
-#endif
+
+#undef arch_namespace

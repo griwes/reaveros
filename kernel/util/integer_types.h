@@ -33,25 +33,25 @@ class tagged_integer_type
 public:
     tagged_integer_type() = default;
 
-    explicit tagged_integer_type(std::uintptr_t repr) : _repr(repr)
+    constexpr explicit tagged_integer_type(std::uintptr_t repr) : _repr(repr)
     {
     }
 
     template<typename OtherT>
-    explicit tagged_integer_type(
+    constexpr explicit tagged_integer_type(
         const tagged_integer_type<OtherT, Tag> & other) requires std::is_convertible<T, OtherT>::value
         : _repr(other._repr)
     {
     }
 
-    T value() const
+    constexpr T value() const
     {
         return _repr;
     }
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    tagged_integer_type operator op(Other oth) const requires std::integral<Other>                           \
+    constexpr tagged_integer_type operator op(Other oth) const requires std::integral<Other>                 \
     {                                                                                                        \
         return tagged_integer_type{ _repr op oth };                                                          \
     }
@@ -63,7 +63,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    Other operator op(Other oth) const requires std::integral<Other>                                         \
+    constexpr Other operator op(Other oth) const requires std::integral<Other>                               \
     {                                                                                                        \
         return _repr op oth;                                                                                 \
     }
@@ -74,7 +74,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    tagged_integer_type & operator op(Other oth) requires std::integral<Other>                               \
+    constexpr tagged_integer_type & operator op(Other oth) requires std::integral<Other>                     \
     {                                                                                                        \
         _repr op oth;                                                                                        \
         return *this;                                                                                        \
@@ -87,7 +87,7 @@ public:
 
 #define DEFINE_OPERATOR(op)                                                                                  \
     template<typename Other>                                                                                 \
-    auto operator op(Other oth) const requires std::integral<Other>                                          \
+    constexpr auto operator op(Other oth) const requires std::integral<Other>                                \
     {                                                                                                        \
         return _repr op oth;                                                                                 \
     }

@@ -17,6 +17,7 @@
 #include "vm.h"
 
 #include "../../../memory/pmm.h"
+#include "../../../memory/vas.h"
 #include "../../../util/log.h"
 #include "../../../util/mp.h"
 #include "../../../util/pointer_types.h"
@@ -24,6 +25,18 @@
 
 namespace kernel::amd64::vm
 {
+void set_asid(phys_addr_t asid)
+{
+    asm volatile("mov %0, %%cr3" ::"r"(asid.value()) : "memory");
+}
+
+phys_addr_t get_asid()
+{
+    std::uint64_t cr3;
+    asm volatile("mov %%cr3, %0" : "=r"(cr3));
+    return phys_addr_t(cr3);
+}
+
 namespace
 {
     template<int I>
@@ -117,7 +130,8 @@ namespace
         pmlt<I> * table,
         std::uintptr_t virt_start,
         std::uintptr_t virt_end,
-        std::uintptr_t phys)
+        std::uintptr_t phys,
+        kernel::vm::flags flags)
     {
         auto start_table_index = (virt_start >> (I * 9 + 3)) & 511;
 
@@ -141,6 +155,7 @@ namespace
                 }
 
                 table->entries[start_table_index] = phys;
+                table->entries[start_table_index].user = flags & kernel::vm::flags::user;
             }
 
             else
@@ -150,8 +165,10 @@ namespace
                     table->entries[start_table_index] = new pmlt<I - 1>{};
                 }
 
+                table->entries[start_table_index].user |= flags & kernel::vm::flags::user;
+
                 vm_map<I - 1, Lowest>(
-                    table->entries[start_table_index].get(), virt_start, entry_virt_end, phys);
+                    table->entries[start_table_index].get(), virt_start, entry_virt_end, phys, flags);
             }
 
             ++start_table_index;
@@ -223,7 +240,17 @@ namespace
     constexpr auto huge_page_mask = ~(huge_page_size - 1);
 }
 
-void map_physical(virt_addr_t start, virt_addr_t end, phys_addr_t physical)
+void map_physical(virt_addr_t start, virt_addr_t end, phys_addr_t physical, kernel::vm::flags flags)
+{
+    map_physical(nullptr, start, end, physical, flags);
+}
+
+void map_physical(
+    kernel::vm::vas * address_space,
+    virt_addr_t start,
+    virt_addr_t end,
+    phys_addr_t physical,
+    kernel::vm::flags flags)
 {
     auto size = end.value() - start.value();
 
@@ -237,12 +264,17 @@ void map_physical(virt_addr_t start, virt_addr_t end, phys_addr_t physical)
 
     auto phys_int = physical.value() & page_mask;
 
-    auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
+    auto cr3 = phys_ptr_t<pml4_t>(address_space ? address_space->get_asid() : get_asid()).value();
 
-    vm_map<4, 1>(cr3, virt_start, virt_end, phys_int);
+    vm_map<4, 1>(cr3, virt_start, virt_end, phys_int, flags);
 }
 
 void unmap(virt_addr_t start, virt_addr_t end, bool free_physical)
+{
+    unmap(nullptr, start, end, free_physical);
+}
+
+void unmap(kernel::vm::vas * address_space, virt_addr_t start, virt_addr_t end, bool free_physical)
 {
     auto size = end.value() - start.value();
 
@@ -254,7 +286,7 @@ void unmap(virt_addr_t start, virt_addr_t end, bool free_physical)
     auto virt_start = start.value() & page_mask;
     auto virt_end = (virt_start + size + page_size - 1) & page_mask;
 
-    auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
+    auto cr3 = phys_ptr_t<pml4_t>(address_space ? address_space->get_asid() : get_asid()).value();
 
     vm_unmap<4>(cr3, virt_start, virt_end, free_physical);
 }
@@ -270,7 +302,10 @@ namespace
             {
                 if (table->entries[first].present == 1)
                 {
-                    unmap_all(table->entries[first].get(), 0, 511);
+                    if (!table->entries[first].size)
+                    {
+                        unmap_all(table->entries[first].get(), 0, 511);
+                    }
                     table->entries[first].present = 0;
                     pmm::push(0, table->entries[first].get_phys());
                 }
@@ -283,16 +318,27 @@ namespace
     std::atomic<bool> unmap_lower_half_called = false;
 }
 
+phys_addr_t clone_upper_half()
+{
+    auto ret = new pml4_t;
+    auto cr3 = phys_ptr_t<pml4_t>(get_asid());
+
+    for (int i = 256; i < 512; ++i)
+    {
+        ret->entries[i] = cr3->entries[i];
+    }
+
+    return phys_ptr_t<pml4_t>(ret).representation();
+}
+
 void unmap_lower_half()
 {
-    if (unmap_lower_half_called)
+    if (unmap_lower_half_called.exchange(true))
     {
         PANIC("arch::vm::unmap_lower_half called more than once!");
     }
 
-    unmap_lower_half_called = true;
-
-    auto cr3 = phys_ptr_t<pml4_t>(cpu::get_asid()).value();
+    auto cr3 = phys_ptr_t<pml4_t>(get_asid()).value();
 
     unmap_all(cr3, 0, 255);
 

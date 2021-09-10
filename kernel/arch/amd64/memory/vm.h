@@ -16,16 +16,37 @@
 
 #pragma once
 
+#include "../../../memory/vm.h"
 #include "../../../util/integer_types.h"
+
+namespace kernel::vm
+{
+class vas;
+}
 
 namespace kernel::amd64::vm
 {
 constexpr std::size_t page_size_count = 3;
 constexpr std::size_t page_sizes[] = { 4 * 1024, 2 * 1024 * 1024, 1 * 1024 * 1024 * 1024 };
 
-void map_physical(virt_addr_t begin, virt_addr_t end, phys_addr_t physical);
+void set_asid(phys_addr_t asid);
+phys_addr_t get_asid();
+
+void map_physical(
+    virt_addr_t begin,
+    virt_addr_t end,
+    phys_addr_t physical,
+    kernel::vm::flags flags = kernel::vm::flags::none);
+void map_physical(
+    kernel::vm::vas * address_space,
+    virt_addr_t begin,
+    virt_addr_t end,
+    phys_addr_t physical,
+    kernel::vm::flags flags = kernel::vm::flags::none);
 
 void unmap(virt_addr_t begin, virt_addr_t end, bool free_physical = true);
+void unmap(kernel::vm::vas * address_space, virt_addr_t begin, virt_addr_t end, bool free_physical = true);
 
+phys_addr_t clone_upper_half();
 void unmap_lower_half();
 }

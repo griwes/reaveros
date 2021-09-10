@@ -14,25 +14,12 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "thread.h"
+#include "process.h"
 
-#ifdef __amd64__
-
-#include "amd64/timers/timers.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error uknown architecture
-
-#endif
-
-namespace kernel::arch::timers
+namespace kernel::scheduler
 {
-using arch_namespace::timers::get_high_precision_timer_for;
-using arch_namespace::timers::initialize;
-using arch_namespace::timers::multicore_initialize;
+thread::thread(util::intrusive_ptr<process> container) : _container(std::move(container))
+{
 }
-
-#undef arch_namespace
+}

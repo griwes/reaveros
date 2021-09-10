@@ -18,23 +18,71 @@
 
 #include "../arch/cpu.h"
 #include "../util/log.h"
+#include "../util/mp.h"
+#include "thread.h"
 
 namespace kernel::scheduler
 {
 namespace
 {
     instance global_scheduler;
+    util::intrusive_ptr<process> kernel_process;
+    std::atomic<bool> initialized = false;
 }
 
 void initialize()
 {
     log::println("[SCHED] Initializing scheduler...");
+
+    auto kernel_vas = vm::adopt_existing_asid(arch::vm::get_asid());
+    kernel_process = util::make_intrusive<process>(std::move(kernel_vas));
+
     global_scheduler.initialize(nullptr);
     for (std::size_t i = 0; i < arch::cpu::get_core_count(); ++i)
     {
-        arch::cpu::get_core_by_id(i).scheduler().initialize(&global_scheduler);
+        auto core = arch::cpu::get_core_by_id(i);
+        core->get_scheduler()->initialize(&global_scheduler);
+        core->get_core_local_storage()->current_thread = core->get_scheduler()->get_idle_thread();
     }
 
-    // parallel execute: set arch specific core state
+    initialized.store(true, std::memory_order_relaxed);
+}
+
+bool is_initialized()
+{
+    return initialized.load(std::memory_order_relaxed);
+}
+
+void schedule(util::intrusive_ptr<thread> thread)
+{
+    arch::cpu::get_current_core()->get_scheduler()->schedule(std::move(thread));
+}
+
+void post_schedule(util::intrusive_ptr<thread> thread)
+{
+    if (arch::cpu::interrupts_disabled())
+    {
+        PANIC("scheduler::post_schedule called with interrupts disabled (it's meant to only be called "
+              "outside of interrupt handlers)!");
+    }
+
+    kernel::mp::parallel_execute(
+        kernel::mp::policy::specific,
+        +[](kernel::util::intrusive_ptr<kernel::scheduler::thread> * thread)
+        { kernel::scheduler::schedule(std::move(*thread)); },
+        &thread,
+        kernel::arch::cpu::get_current_core()->id());
+}
+
+util::intrusive_ptr<process> get_kernel_process()
+{
+    return kernel_process;
+}
+
+util::intrusive_ptr<process> create_process(std::unique_ptr<vm::vas> address_space)
+{
+    auto ret = util::make_intrusive<process>(std::move(address_space));
+
+    return ret;
 }
 }

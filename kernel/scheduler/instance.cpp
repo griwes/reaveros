@@ -16,8 +16,16 @@
 
 #include "instance.h"
 
+#include "../arch/cpu.h"
+#include "scheduler.h"
+#include "thread.h"
+
 namespace kernel::scheduler
 {
+instance::instance() = default;
+
+instance::~instance() = default;
+
 void instance::initialize(instance * parent)
 {
     _parent = parent;
@@ -27,5 +35,48 @@ void instance::initialize(instance * parent)
         _next_child = parent->_next_child;
         _parent->_children = this;
     }
+
+    _idle_thread = util::make_intrusive<thread>(get_kernel_process());
+    _current_thread = _idle_thread;
+}
+
+void instance::schedule(util::intrusive_ptr<thread> thread)
+{
+    if (_current_thread == thread)
+    {
+        return;
+    }
+
+    if (_current_thread != _idle_thread)
+    {
+        _current_thread->timestamp = time::get_high_precision_timer().now();
+        _threads.push(std::move(_current_thread));
+    }
+
+    _threads.push(std::move(thread));
+    _current_thread = _threads.pop();
+
+    auto cls = arch::cpu::get_core_local_storage();
+    auto old_thread = std::exchange(cls->current_thread, _current_thread);
+
+    if (old_thread->get_container()->get_vas() != _current_thread->get_container()->get_vas())
+    {
+        arch::vm::set_asid(_current_thread->get_container()->get_vas()->get_asid());
+    }
+}
+
+util::intrusive_ptr<thread> instance::get_idle_thread()
+{
+    return _idle_thread;
+}
+
+util::intrusive_ptr<thread> instance::get_current_thread()
+{
+    return _current_thread;
+}
+
+bool instance::_thread_timestamp_compare::operator()(const thread & lhs, const thread & rhs) const
+{
+    return lhs.timestamp < rhs.timestamp;
 }
 }

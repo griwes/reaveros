@@ -30,9 +30,28 @@ void boot();
 
 namespace kernel::amd64::cpu
 {
+class core;
+
+struct core_local_storage
+{
+    core_local_storage();
+    ~core_local_storage();
+
+    core * current_core = nullptr;
+    util::intrusive_ptr<scheduler::thread> current_thread;
+};
+
+core_local_storage * get_core_local_storage();
+
 class core
 {
 public:
+    core()
+    {
+        _cls_ptr = &_cls;
+        _cls.current_core = this;
+    }
+
     void initialize_ids(std::uint32_t apic_id, std::uint32_t acpi_id)
     {
         _is_valid = true;
@@ -62,14 +81,24 @@ public:
         return _acpi_id;
     }
 
-    lapic_timer::timer * timer()
+    lapic_timer::timer * get_timer()
     {
         return &_preempt_timer;
     }
 
-    scheduler::instance * scheduler()
+    scheduler::instance * get_scheduler()
     {
         return &_local_scheduler;
+    }
+
+    core_local_storage * get_core_local_storage()
+    {
+        return &_cls;
+    }
+
+    core_local_storage ** get_core_local_storage_ptr()
+    {
+        return &_cls_ptr;
     }
 
     void initialize_gdt();
@@ -98,5 +127,8 @@ private:
     lapic_timer::timer _preempt_timer;
 
     scheduler::instance _local_scheduler;
+
+    core_local_storage _cls;
+    core_local_storage * _cls_ptr;
 };
 }

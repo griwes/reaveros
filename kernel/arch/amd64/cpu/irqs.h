@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "thread.h"
+
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -38,6 +40,9 @@ struct [[gnu::packed]] context
     std::uint64_t rbp, rdi, rsi, rdx, rcx, rbx, rax;
     std::uint64_t number, error;
     std::uint64_t rip, cs, rflags, rsp, ss;
+
+    void save_to(thread::context *) const;
+    void load_from(const thread::context *);
 };
 
 void handle(context & ctx);

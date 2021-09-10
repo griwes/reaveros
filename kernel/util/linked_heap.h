@@ -26,10 +26,26 @@ namespace kernel::util
 template<typename T>
 struct linked_heapable : chained_allocatable<T>
 {
-    T * parent = nullptr;
+    T * heap_parent = nullptr;
 };
 
-template<typename T, typename Comparator>
+template<typename T>
+struct linked_heap_unique_ptr_traits
+{
+    using pointer = std::unique_ptr<T>;
+
+    static auto create(T * pointer)
+    {
+        return std::unique_ptr<T>(pointer);
+    }
+
+    static auto unwrap(std::unique_ptr<T> pointer)
+    {
+        return pointer.release();
+    }
+};
+
+template<typename T, typename Comparator, typename PointerTraits = linked_heap_unique_ptr_traits<T>>
 class linked_heap
 {
 public:
@@ -41,19 +57,19 @@ public:
         }
     }
 
-    void push(std::unique_ptr<T> element_uptr)
+    void push(typename PointerTraits::pointer element_uptr)
     {
         if (!_top)
         {
-            _top = element_uptr.release();
+            _top = PointerTraits::unwrap(std::move(element_uptr));
             ++_size;
             return;
         }
 
         auto parent = _parent_of_leftmost_empty();
-        auto element = element_uptr.release();
+        auto element = PointerTraits::unwrap(std::move(element_uptr));
 
-        element->parent = parent;
+        element->heap_parent = parent;
         element->prev = nullptr;
         element->next = nullptr;
 
@@ -70,13 +86,13 @@ public:
         {
             _swap(parent, element);
 
-            parent = element->parent;
+            parent = element->heap_parent;
         }
 
         ++_size;
     }
 
-    std::unique_ptr<T> pop()
+    typename PointerTraits::pointer pop()
     {
         switch (_size)
         {
@@ -85,17 +101,17 @@ public:
 
             case 1:
                 --_size;
-                return std::unique_ptr<T>{ std::exchange(_top, nullptr) };
+                return PointerTraits::create(std::exchange(_top, nullptr));
 
             case 2:
             {
                 auto top = _top;
 
                 _top = _top->prev;
-                _top->parent = nullptr;
+                _top->heap_parent = nullptr;
 
                 --_size;
-                return std::unique_ptr<T>{ top };
+                return PointerTraits::create(top);
             }
 
             case 3:
@@ -105,20 +121,20 @@ public:
                 if (_comp(*top->prev, *top->next))
                 {
                     _top = top->prev;
-                    top->next->parent = _top;
+                    top->next->heap_parent = _top;
                     _top->prev = top->next;
                 }
                 else
                 {
                     _top = top->next;
-                    top->prev->parent = _top;
+                    top->prev->heap_parent = _top;
                     _top->prev = top->prev;
                 }
 
-                _top->parent = nullptr;
+                _top->heap_parent = nullptr;
 
                 --_size;
-                return std::unique_ptr<T>{ top };
+                return PointerTraits::create(top);
             }
         }
 
@@ -129,18 +145,18 @@ public:
         element->prev = top->prev;
         element->next = top->next;
 
-        if (element == element->parent->prev)
+        if (element == element->heap_parent->prev)
         {
-            element->parent->prev = nullptr;
+            element->heap_parent->prev = nullptr;
         }
         else
         {
-            element->parent->next = nullptr;
+            element->heap_parent->next = nullptr;
         }
-        element->parent = nullptr;
+        element->heap_parent = nullptr;
 
-        top->prev->parent = element;
-        top->next->parent = element;
+        top->prev->heap_parent = element;
+        top->next->heap_parent = element;
 
         while (true)
         {
@@ -159,7 +175,7 @@ public:
             if (best == element)
             {
                 --_size;
-                return std::unique_ptr<T>{ top };
+                return PointerTraits::create(top);
             }
 
             _swap(element, best);
@@ -180,22 +196,22 @@ private:
     {
         auto pprev = parent->prev;
         auto pnext = parent->next;
-        auto pparent = parent->parent;
+        auto pparent = parent->heap_parent;
 
         parent->prev = child->prev;
         parent->next = child->next;
 
         if (parent->prev)
         {
-            parent->prev->parent = parent;
+            parent->prev->heap_parent = parent;
         }
         if (parent->next)
         {
-            parent->next->parent = parent;
+            parent->next->heap_parent = parent;
         }
 
-        child->parent = parent->parent;
-        parent->parent = child;
+        child->heap_parent = parent->heap_parent;
+        parent->heap_parent = child;
 
         if (pprev == child)
         {
@@ -203,7 +219,7 @@ private:
             child->next = pnext;
             if (child->next)
             {
-                child->next->parent = child;
+                child->next->heap_parent = child;
             }
         }
         else
@@ -211,7 +227,7 @@ private:
             child->prev = pprev;
             if (child->prev)
             {
-                child->prev->parent = child;
+                child->prev->heap_parent = child;
             }
             child->next = parent;
         }
@@ -228,7 +244,7 @@ private:
             }
         }
 
-        if (!child->parent)
+        if (!child->heap_parent)
         {
             _top = child;
         }
