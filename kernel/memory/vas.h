@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "vmo.h"
+
 #include "../util/chained_allocator.h"
 
 #include <memory>
@@ -24,18 +26,28 @@ namespace kernel::vm
 {
 class vas;
 
-std::unique_ptr<vas> create_vas();
+std::unique_ptr<vas> create_vas(bool random_map_vdso = false);
 std::unique_ptr<vas> adopt_existing_asid(phys_addr_t asid);
 
 class vas : public util::chained_allocatable<vas>
 {
+    struct _key_t
+    {
+    };
+
 public:
-    friend std::unique_ptr<vas> create_vas();
+    friend std::unique_ptr<vas> create_vas(bool);
     friend std::unique_ptr<vas> adopt_existing_asid(phys_addr_t);
+
+    vas(_key_t)
+    {
+    }
 
     ~vas();
 
     phys_addr_t get_asid() const;
+
+    void map_vmo(util::intrusive_ptr<vmo> vmo, virt_addr_t address, flags flags = flags::none);
 
 private:
     phys_addr_t _asid;

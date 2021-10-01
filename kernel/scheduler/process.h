@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 #pragma once
 
 #include "../memory/vas.h"
+#include "../util/avl_tree.h"
+#include "../util/handle.h"
 #include "../util/intrusive_ptr.h"
 
 namespace kernel::scheduler
@@ -28,6 +30,8 @@ class process : public util::intrusive_ptrable<process>
 public:
     process(std::unique_ptr<vm::vas> address_space);
 
+    handle_token_t register_for_token(util::intrusive_ptr<handle>);
+
     util::intrusive_ptr<thread> create_thread();
 
     vm::vas * get_vas()
@@ -36,6 +40,32 @@ public:
     }
 
 private:
+    struct _handle_store : util::treeable<_handle_store>
+    {
+        handle_token_t token;
+        util::intrusive_ptr<handle> handle;
+    };
+
+    struct _handle_store_compare
+    {
+        bool operator()(const _handle_store & lhs, const _handle_store & rhs) const
+        {
+            return lhs.token.value() < rhs.token.value();
+        }
+
+        bool operator()(const _handle_store & lhs, handle_token_t token) const
+        {
+            return lhs.token.value() < token;
+        }
+
+        bool operator()(handle_token_t token, const _handle_store & rhs) const
+        {
+            return token.value() < rhs.token.value();
+        }
+    };
+
+    std::mutex _lock;
     std::unique_ptr<vm::vas> _address_space;
+    util::avl_tree<_handle_store, _handle_store_compare> _handles;
 };
 }

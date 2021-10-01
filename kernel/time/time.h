@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #pragma once
 
 #include "../util/chained_allocator.h"
-#include "../util/linked_heap.h"
+#include "../util/tree_heap.h"
 
 #include <chrono>
 #include <type_traits>
@@ -117,7 +117,7 @@ protected:
     std::chrono::time_point<timer> _now;
 
 private:
-    struct _timer_descriptor : util::linked_heapable<_timer_descriptor>
+    struct _timer_descriptor : util::treeable<_timer_descriptor>
     {
         _timer_descriptor() = default;
 
@@ -137,7 +137,7 @@ private:
         bool operator()(const _timer_descriptor & lhs, const _timer_descriptor & rhs) const;
     };
 
-    util::linked_heap<_timer_descriptor, _timer_descriptor_comparator> _heap;
+    util::tree_heap<_timer_descriptor, _timer_descriptor_comparator> _heap;
     std::size_t _next_id = 0;
 };
 }

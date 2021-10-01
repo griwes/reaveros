@@ -17,6 +17,8 @@
 #include "vm.h"
 
 #include "../arch/vm.h"
+#include "../util/intrusive_ptr.h"
+#include "vmo.h"
 
 #include <boot-constants.h>
 
@@ -27,6 +29,7 @@ namespace kernel::vm
 namespace
 {
     std::atomic<std::uint64_t> vm_space_top = boot_protocol::kernel_base - 4096;
+    util::intrusive_ptr<vmo> vdso_vmo;
 }
 
 virt_addr_t allocate_address_range(std::size_t size)
@@ -37,5 +40,15 @@ virt_addr_t allocate_address_range(std::size_t size)
     auto old = vm_space_top.fetch_sub(real_size);
 
     return virt_addr_t(old - real_size);
+}
+
+void set_vdso_vmo(util::intrusive_ptr<vmo> vdso)
+{
+    if (vdso_vmo.get())
+    {
+        PANIC("set_vdso_vmo called more than once!");
+    }
+
+    vdso_vmo = vdso;
 }
 }

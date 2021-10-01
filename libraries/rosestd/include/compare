@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -292,7 +292,6 @@ inline constexpr strong_ordering strong_ordering::equal(__ord::__equal);
 inline constexpr strong_ordering strong_ordering::equivalent(__ord::__equivalent);
 inline constexpr strong_ordering strong_ordering::greater(__ord::__greater);
 
-/*
 constexpr bool is_eq(partial_ordering __cmp) noexcept
 {
     return __cmp == 0;
@@ -322,7 +321,6 @@ constexpr bool is_gteq(partial_ordering __cmp) noexcept
 {
     return __cmp >= 0;
 }
-*/
 
 template<typename... _Ts>
 struct common_comparison_category
@@ -378,14 +376,24 @@ concept three_way_comparable_with =
         } -> __compares_as<_Cat>;
 };
 
-/*
-template<class _T, class _U = _T>
+template<typename _T, typename _U>
 struct compare_three_way_result;
 
-template<class _T, class _U = _T>
-using compare_three_way_result_t = typename compare_three_way_result<_T,
-_U>::type;
+template<typename _T, typename _U>
+requires requires(const remove_reference_t<_T> __t, const remove_reference_t<_U> __u)
+{
+    __t <=> __u;
+}
+struct compare_three_way_result<_T, _U>
+{
+    using type =
+        decltype(declval<const remove_reference_t<_T>>() <=> declval<const remove_reference_t<_U>>());
+};
 
+template<typename _T, typename _U = _T>
+using compare_three_way_result_t = typename compare_three_way_result<_T, _U>::type;
+
+/*
 struct compare_three_way;
 
 inline namespace unspecified

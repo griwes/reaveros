@@ -32,5 +32,14 @@ struct context
     void set_userspace();
     void set_instruction_pointer(virt_addr_t address);
     void set_stack_pointer(virt_addr_t address);
+    void set_argument(std::size_t idx, std::size_t value);
+
+    template<typename Int, typename Tag>
+    requires(std::is_unsigned_v<Int> && sizeof(Int) <= sizeof(std::uint64_t)) void set_argument(
+        std::size_t idx,
+        tagged_integer_type<Int, Tag> value)
+    {
+        set_argument(idx, value.value());
+    }
 };
 }

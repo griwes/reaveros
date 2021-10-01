@@ -13,3 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#pragma once
+
+#include "chained_allocator.h"
+
+namespace kernel::util
+{
+template<typename T>
+struct treeable : chained_allocatable<T>
+{
+    T * tree_parent = nullptr;
+};
+
+template<typename T>
+struct unique_ptr_traits
+{
+    using pointer = std::unique_ptr<T>;
+
+    static auto create(T * pointer)
+    {
+        return std::unique_ptr<T>(pointer);
+    }
+
+    static auto unwrap(std::unique_ptr<T> pointer)
+    {
+        return pointer.release();
+    }
+};
+}

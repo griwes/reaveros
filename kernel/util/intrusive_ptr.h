@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ private:
 };
 
 template<typename T>
-struct linked_heap_intrusive_ptr_preserve_count_traits
+struct intrusive_ptr_preserve_count_traits
 {
     using pointer = intrusive_ptr<T>;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,14 @@
  * limitations under the License.
  */
 
-int main()
+#pragma once
+
+#include "helpers.h"
+
+namespace kernel::util
 {
-    for (;;)
-        ;
-}
+template<typename T, typename PointerTraits = unique_ptr_traits<T>>
+struct fifo
+{
+};
+};

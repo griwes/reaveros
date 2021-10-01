@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,18 @@
 
 #pragma once
 
-#include "chained_allocator.h"
+#include "helpers.h"
 
 #include <climits>
 #include <memory>
 
 namespace kernel::util
 {
-template<typename T>
-struct linked_heapable : chained_allocatable<T>
-{
-    T * heap_parent = nullptr;
-};
-
-template<typename T>
-struct linked_heap_unique_ptr_traits
-{
-    using pointer = std::unique_ptr<T>;
-
-    static auto create(T * pointer)
-    {
-        return std::unique_ptr<T>(pointer);
-    }
-
-    static auto unwrap(std::unique_ptr<T> pointer)
-    {
-        return pointer.release();
-    }
-};
-
-template<typename T, typename Comparator, typename PointerTraits = linked_heap_unique_ptr_traits<T>>
-class linked_heap
+template<typename T, typename Comparator, typename PointerTraits = unique_ptr_traits<T>>
+class tree_heap
 {
 public:
-    ~linked_heap()
+    ~tree_heap()
     {
         while (peek())
         {
@@ -57,19 +35,19 @@ public:
         }
     }
 
-    void push(typename PointerTraits::pointer element_uptr)
+    void push(typename PointerTraits::pointer element_ptr)
     {
         if (!_top)
         {
-            _top = PointerTraits::unwrap(std::move(element_uptr));
+            _top = PointerTraits::unwrap(std::move(element_ptr));
             ++_size;
             return;
         }
 
         auto parent = _parent_of_leftmost_empty();
-        auto element = PointerTraits::unwrap(std::move(element_uptr));
+        auto element = PointerTraits::unwrap(std::move(element_ptr));
 
-        element->heap_parent = parent;
+        element->tree_parent = parent;
         element->prev = nullptr;
         element->next = nullptr;
 
@@ -86,7 +64,7 @@ public:
         {
             _swap(parent, element);
 
-            parent = element->heap_parent;
+            parent = element->tree_parent;
         }
 
         ++_size;
@@ -108,7 +86,7 @@ public:
                 auto top = _top;
 
                 _top = _top->prev;
-                _top->heap_parent = nullptr;
+                _top->tree_parent = nullptr;
 
                 --_size;
                 return PointerTraits::create(top);
@@ -121,17 +99,17 @@ public:
                 if (_comp(*top->prev, *top->next))
                 {
                     _top = top->prev;
-                    top->next->heap_parent = _top;
+                    top->next->tree_parent = _top;
                     _top->prev = top->next;
                 }
                 else
                 {
                     _top = top->next;
-                    top->prev->heap_parent = _top;
+                    top->prev->tree_parent = _top;
                     _top->prev = top->prev;
                 }
 
-                _top->heap_parent = nullptr;
+                _top->tree_parent = nullptr;
 
                 --_size;
                 return PointerTraits::create(top);
@@ -145,18 +123,18 @@ public:
         element->prev = top->prev;
         element->next = top->next;
 
-        if (element == element->heap_parent->prev)
+        if (element == element->tree_parent->prev)
         {
-            element->heap_parent->prev = nullptr;
+            element->tree_parent->prev = nullptr;
         }
         else
         {
-            element->heap_parent->next = nullptr;
+            element->tree_parent->next = nullptr;
         }
-        element->heap_parent = nullptr;
+        element->tree_parent = nullptr;
 
-        top->prev->heap_parent = element;
-        top->next->heap_parent = element;
+        top->prev->tree_parent = element;
+        top->next->tree_parent = element;
 
         while (true)
         {
@@ -196,22 +174,22 @@ private:
     {
         auto pprev = parent->prev;
         auto pnext = parent->next;
-        auto pparent = parent->heap_parent;
+        auto pparent = parent->tree_parent;
 
         parent->prev = child->prev;
         parent->next = child->next;
 
         if (parent->prev)
         {
-            parent->prev->heap_parent = parent;
+            parent->prev->tree_parent = parent;
         }
         if (parent->next)
         {
-            parent->next->heap_parent = parent;
+            parent->next->tree_parent = parent;
         }
 
-        child->heap_parent = parent->heap_parent;
-        parent->heap_parent = child;
+        child->tree_parent = parent->tree_parent;
+        parent->tree_parent = child;
 
         if (pprev == child)
         {
@@ -219,7 +197,7 @@ private:
             child->next = pnext;
             if (child->next)
             {
-                child->next->heap_parent = child;
+                child->next->tree_parent = child;
             }
         }
         else
@@ -227,7 +205,7 @@ private:
             child->prev = pprev;
             if (child->prev)
             {
-                child->prev->heap_parent = child;
+                child->prev->tree_parent = child;
             }
             child->next = parent;
         }
@@ -244,7 +222,7 @@ private:
             }
         }
 
-        if (!child->heap_parent)
+        if (!child->tree_parent)
         {
             _top = child;
         }

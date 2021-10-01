@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,7 +110,10 @@ struct is_object : bool_constant<__is_object(_T)>
 };
 
 template<typename _T>
-struct is_scalar;
+struct is_scalar : bool_constant<__is_scalar(_T)>
+{
+};
+
 template<typename _T>
 struct is_compound;
 template<typename _T>
@@ -339,8 +342,11 @@ template<typename _T>
 struct is_trivially_copy_assignable;
 template<typename _T>
 struct is_trivially_move_assignable;
+
 template<typename _T>
-struct is_trivially_destructible;
+struct is_trivially_destructible : bool_constant<__is_trivially_destructible(_T)>
+{
+};
 
 template<typename _T, typename... _Args>
 struct is_nothrow_constructible : bool_constant<__is_nothrow_constructible(_T, _Args...)>
@@ -388,7 +394,9 @@ template<typename _T, unsigned _I = 0>
 struct extent;
 
 template<typename _Base, typename _Derived>
-struct is_base_of;
+struct is_base_of : bool_constant<__is_base_of(_Base, _Derived)>
+{
+};
 
 template<typename _From, typename _To>
 struct is_convertible : bool_constant<__is_convertible(_From, _To)>
@@ -475,19 +483,33 @@ using remove_all_extents_t = typename remove_all_extents<_T>::type;
 
 template<typename _T>
 struct remove_pointer;
-template<typename _T>
-struct add_pointer;
-
-template<typename _T>
-using remove_pointer_t = typename remove_pointer<_T>::type;
-template<typename _T>
-using add_pointer_t = typename add_pointer<_T>::type;
 
 template<typename _T>
 struct type_identity
 {
     using type = _T;
 };
+
+template<typename _T>
+struct add_pointer
+{
+    using type = _T;
+};
+
+template<typename _T>
+requires requires
+{
+    typename type_identity<_T &>::type;
+}
+struct add_pointer<_T>
+{
+    using type = typename remove_reference<_T>::type *;
+};
+
+template<typename _T>
+using remove_pointer_t = typename remove_pointer<_T>::type;
+template<typename _T>
+using add_pointer_t = typename add_pointer<_T>::type;
 
 template<size_t _Len, size_t _Align = 16> // see [meta.trans.other]
 struct aligned_storage;
@@ -608,13 +630,16 @@ requires is_lvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value stru
     using __y = remove_reference_t<_T2>;
 
     template<typename _X, typename _Y>
-    struct __selector;
+    struct __selector
+    {
+    };
 
     template<typename _X, typename _Y>
     using __type1 = __cond_res<__copycv<_X, _Y> &, __copycv<_Y, _X> &>;
-    static const constexpr auto __use_type1 = requires
+    static const constexpr auto __use_type1 =
+        is_lvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value && requires
     {
-        typename enable_if<is_lvalue_reference<__type1<__x, __y>>::value>::type;
+        typename enable_if<is_reference<__type1<__x, __y>>::value>::type;
     };
 
     template<typename _X, typename _Y>
@@ -646,7 +671,8 @@ requires is_lvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value stru
     static const constexpr auto __use_type3 =
         !__use_type2 && is_rvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value && requires
     {
-        typename __type3<__x, __y>;
+        typename __common_ref_impl<const _T1 &, _T2 &>::type;
+        // typename __type3<__x, __y>;
         typename enable_if<is_convertible<_T1, __type3<__x, __y>>::value>::type;
     };
 
@@ -667,12 +693,11 @@ requires is_lvalue_reference<_T1>::value && is_lvalue_reference<_T2>::value stru
     {
         using type = __type4<_X, _Y>;
     };
-
-    using type = typename __selector<__x, __y>::type;
 };
 
 template<typename _T1, typename _T2>
-using __common_ref = typename __common_ref_impl<_T1, _T2>::type;
+using __common_ref = typename __common_ref_impl<_T1, _T2>::
+    template __selector<remove_reference_t<_T1>, remove_reference_t<_T2>>::type;
 
 template<typename... _Ts>
 struct common_type
@@ -846,10 +871,21 @@ template<typename _T>
 struct underlying_type;
 template<typename _Fn, typename... _ArgTypes>
 struct invoke_result;
+
 template<typename _T>
-struct unwrap_reference;
+struct unwrap_reference
+{
+    using type = _T;
+};
+
 template<typename _T>
-struct unwrap_ref_decay;
+class reference_wrapper;
+
+template<typename _T>
+struct unwrap_reference<reference_wrapper<_T>>
+{
+    using type = _T &;
+};
 
 template<typename _T>
 using type_identity_t = typename type_identity<_T>::type;
@@ -871,13 +907,32 @@ template<typename _Fn, typename... _ArgTypes>
 using invoke_result_t = typename invoke_result<_Fn, _ArgTypes...>::type;
 template<typename _T>
 using unwrap_reference_t = typename unwrap_reference<_T>::type;
+
+template<typename _T>
+struct unwrap_ref_decay
+{
+    using type = unwrap_reference_t<decay_t<_T>>;
+};
+
 template<typename _T>
 using unwrap_ref_decay_t = typename unwrap_ref_decay<_T>::type;
+
 template<typename...>
 using void_t = void;
 
 template<typename... _B>
 struct conjunction;
+
+template<typename _Head, typename... _Tail>
+struct conjunction<_Head, _Tail...> : conditional_t<_Head::value, conjunction<_Tail...>, _Head>
+{
+};
+
+template<typename _Last>
+struct conjunction<_Last> : _Last
+{
+};
+
 template<typename... _B>
 struct disjunction;
 template<typename _B>

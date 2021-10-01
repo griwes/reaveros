@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,8 +106,93 @@ using make_index_sequence = make_integer_sequence<size_t, _N>;
 template<typename... _T>
 using index_sequence_for = make_index_sequence<sizeof...(_T)>;
 
+template<typename _T>
+concept __is_implicitly_default_constructible = requires
+{
+    add_lvalue_reference_t<add_const_t<_T>>{};
+};
+
+template<typename _Pair>
+concept __is_pair_conversion_explicit =
+    !is_convertible_v<
+        decltype(get<0>(__ROSESTD::declval<_Pair>())),
+        typename remove_cvref_t<_Pair>::
+            first_type> || !is_convertible_v<decltype(get<1>(__ROSESTD::declval<_Pair>())), typename remove_cvref_t<_Pair>::second_type>;
+
+template<typename _T>
+void get();
+
 template<typename _T1, typename _T2>
-struct pair;
+struct pair
+{
+    using first_type = _T1;
+    using second_type = _T2;
+
+    _T1 first;
+    _T2 second;
+
+    pair(const pair &) = default;
+    pair(pair &&) = default;
+
+    constexpr explicit(
+        !__is_implicitly_default_constructible<_T1> || !__is_implicitly_default_constructible<_T2>)
+        pair() requires(is_default_constructible_v<_T1> && is_default_constructible_v<_T2>)
+        : first{}, second{}
+    {
+    }
+
+    constexpr explicit(!is_convertible_v<const _T1 &, _T1> || !is_convertible_v<const _T2 &, _T2>)
+        pair(const _T1 & __x, const _T2 & __y) requires(
+            is_copy_constructible_v<_T1> && is_copy_constructible_v<_T2>)
+        : first(__x), second(__y)
+    {
+    }
+
+    template<typename _U1 = _T1, typename _U2 = _T2>
+    constexpr explicit(!is_convertible_v<_U1, _T1> || !is_convertible_v<_U2, _T2>)
+        pair(_U1 && __x, _U2 && __y) requires(is_constructible_v<_T1, _U1> && is_constructible_v<_T2, _U2>)
+        : first(__ROSESTD::forward<_U1>(__x)), second(__ROSESTD::forward<_U2>(__y))
+    {
+    }
+
+#define _PAIR_DEFINE_CONVERSION(...)                                                                            \
+    template<typename _U1, typename _U2>                                                                        \
+    constexpr explicit(__is_pair_conversion_explicit<__VA_ARGS__>) pair(__VA_ARGS__ __p) requires(              \
+        is_constructible_v<                                                                                     \
+            _T1,                                                                                                \
+            decltype(static_cast<decltype(__p)>(__p)                                                            \
+                         .first)> && is_constructible_v<_T2, decltype(static_cast<decltype(__p)>(__p).second)>) \
+        : first(static_cast<decltype(__p)>(__p).first), second(static_cast<decltype(__p)>(__p).second)          \
+    {                                                                                                           \
+    }
+
+    _PAIR_DEFINE_CONVERSION(pair<_U1, _U2> &)
+    _PAIR_DEFINE_CONVERSION(const pair<_U1, _U2> &)
+    _PAIR_DEFINE_CONVERSION(pair<_U1, _U2> &&)
+    _PAIR_DEFINE_CONVERSION(const pair<_U1, _U2> &&)
+
+    /*template<typename... Args1, typename... Args2>
+    constexpr pair(piecewise_construct_t, tuple<Args1...> first_args, tuple<Args2...> second_args);*/
+
+    constexpr pair & operator=(const pair & __p);
+    constexpr const pair & operator=(const pair & __p) const;
+    template<typename _U1, typename _U2>
+    constexpr pair & operator=(const pair<_U1, _U2> & __p);
+    template<typename _U1, typename _U2>
+    constexpr const pair & operator=(const pair<_U1, _U2> & __p) const;
+    // constexpr pair& operator=(pair&& p) noexcept(see below);
+    constexpr const pair & operator=(pair && __p) const;
+    template<typename _U1, typename _U2>
+    constexpr pair & operator=(pair<_U1, _U2> && __p);
+    template<typename _U1, typename _U2>
+    constexpr const pair & operator=(pair<_U1, _U2> && __p) const;
+
+    // constexpr void swap(pair& p) noexcept(see below);
+    // constexpr void swap(const pair& p) const noexcept(see below);
+};
+
+template<typename _T1, typename _T2>
+pair(_T1, _T2) -> pair<_T1, _T2>;
 
 template<typename _T1, typename _T2>
 constexpr bool operator==(const pair<_T1, _T2> &, const pair<_T1, _T2> &);
@@ -118,27 +203,34 @@ constexpr bool operator==(const pair<_T1, _T2> &, const pair<_T1, _T2> &);
 template<typename _T1, typename _T2>
 constexpr void swap(pair<_T1, _T2> & __x, pair<_T1, _T2> & __y) noexcept(noexcept(__x.swap(__y)));
 
-// template<typename _T1, typename _T2>
-// constexpr see below make_pair(T1 &&, T2 &&);
+template<typename _T1, typename _T2>
+constexpr pair<unwrap_ref_decay_t<_T1>, unwrap_ref_decay_t<_T2>> make_pair(_T1 && __x, _T2 && __y)
+{
+    return pair<unwrap_ref_decay_t<_T1>, unwrap_ref_decay_t<_T2>>(
+        __ROSESTD::forward<_T1>(__x), __ROSESTD::forward<_T2>(__y));
+}
 
 template<typename _T>
 struct tuple_size;
 template<size_t _I, typename _T>
 struct tuple_element;
 
+template<size_t _I, typename _T>
+using tuple_element_t = typename tuple_element<_I, _T>::type;
+
 template<typename _T1, typename _T2>
 struct tuple_size<pair<_T1, _T2>>;
 template<size_t _I, typename _T1, typename _T2>
 struct tuple_element<_I, pair<_T1, _T2>>;
 
-// template<size_t I, typename _T1, typename _T2>
-// constexpr tuple_element_t<I, pair<T1, T2>> & get(pair<T1, T2> &) noexcept;
-// template<size_t I, typename _T1, typename _T2>
-// constexpr tuple_element_t<I, pair<T1, T2>> && get(pair<T1, T2> &&) noexcept;
-// template<size_t I, typename _T1, typename _T2>
-// constexpr const tuple_element_t<I, pair<T1, T2>> & get(const pair<T1, T2> &) noexcept;
-// template<size_t I, typename _T1, typename _T2>
-// constexpr const tuple_element_t<I, pair<T1, T2>> && get(const pair<T1, T2> &&) noexcept;
+template<size_t _I, typename _T1, typename _T2>
+constexpr tuple_element_t<_I, pair<_T1, _T2>> & get(pair<_T1, _T2> &) noexcept;
+template<size_t _I, typename _T1, typename _T2>
+constexpr tuple_element_t<_I, pair<_T1, _T2>> && get(pair<_T1, _T2> &&) noexcept;
+template<size_t _I, typename _T1, typename _T2>
+constexpr const tuple_element_t<_I, pair<_T1, _T2>> & get(const pair<_T1, _T2> &) noexcept;
+template<size_t _I, typename _T1, typename _T2>
+constexpr const tuple_element_t<_I, pair<_T1, _T2>> && get(const pair<_T1, _T2> &&) noexcept;
 template<typename _T1, typename _T2>
 constexpr _T1 & get(pair<_T1, _T2> & __p) noexcept;
 template<typename _T1, typename _T2>

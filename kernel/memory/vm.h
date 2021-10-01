@@ -18,9 +18,18 @@
 
 #include "../util/pointer_types.h"
 
+namespace kernel::util
+{
+template<typename T>
+class intrusive_ptr;
+}
+
 namespace kernel::vm
 {
+class vmo;
+
 virt_addr_t allocate_address_range(std::size_t size);
+void set_vdso_vmo(util::intrusive_ptr<vmo> vdso);
 
 enum class flags : std::uintptr_t
 {

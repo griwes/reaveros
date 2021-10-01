@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #pragma once
 
 #include "../util/intrusive_ptr.h"
-#include "../util/linked_heap.h"
+#include "../util/tree_heap.h"
 
 namespace kernel::scheduler
 {
@@ -48,10 +48,7 @@ private:
     util::intrusive_ptr<thread> _idle_thread;
     util::intrusive_ptr<thread> _current_thread;
 
-    util::linked_heap<
-        thread,
-        _thread_timestamp_compare,
-        util::linked_heap_intrusive_ptr_preserve_count_traits<thread>>
+    util::tree_heap<thread, _thread_timestamp_compare, util::intrusive_ptr_preserve_count_traits<thread>>
         _threads;
 };
 }
