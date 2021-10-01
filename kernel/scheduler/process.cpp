@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,39 @@ namespace kernel::scheduler
 {
 process::process(std::unique_ptr<vm::vas> address_space) : _address_space(std::move(address_space))
 {
+}
+
+handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
+{
+    auto new_element = std::make_unique<_handle_store>();
+    new_element->handle = std::move(hnd);
+
+    handle_token_t token;
+
+    std::lock_guard _(_lock);
+
+    while (true)
+    {
+        auto self_uint = reinterpret_cast<std::uintptr_t>(this);
+        auto handle_uint = reinterpret_cast<std::uintptr_t>(new_element->handle.get());
+        auto timestamp = time::get_high_precision_timer().now().time_since_epoch().count();
+
+        token = handle_token_t(self_uint ^ handle_uint ^ timestamp);
+
+        if (_handles.find(token) == _handles.end())
+        {
+            break;
+        }
+    }
+
+    new_element->token = token;
+    auto result = _handles.insert(std::move(new_element));
+    if (!result.second)
+    {
+        PANIC("failed to insert a handle into handles tree!");
+    }
+
+    return token;
 }
 
 util::intrusive_ptr<thread> process::create_thread()

@@ -47,6 +47,9 @@ void map_physical(
 void unmap(virt_addr_t begin, virt_addr_t end, bool free_physical = true);
 void unmap(kernel::vm::vas * address_space, virt_addr_t begin, virt_addr_t end, bool free_physical = true);
 
+phys_addr_t virt_to_phys(virt_addr_t address);
+phys_addr_t virt_to_phys(kernel::vm::vas * address_space, virt_addr_t address);
+
 phys_addr_t clone_upper_half();
 void unmap_lower_half();
 }

@@ -86,6 +86,11 @@ namespace
     template<>
     struct pmle<1>
     {
+        phys_addr_t get_phys() const
+        {
+            return phys_addr_t(address << 12);
+        }
+
         void operator=(std::uintptr_t phys)
         {
             present = 1;
@@ -151,7 +156,7 @@ namespace
                         "Tried to re-map page {:#018x} at level {}, existing mapping: {:#018x}!",
                         virt_start,
                         I,
-                        table->entries[start_table_index].address << 12);
+                        table->entries[start_table_index].get_phys().value());
                 }
 
                 table->entries[start_table_index] = phys;
@@ -194,7 +199,7 @@ namespace
             entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
             //                                 ^ this is a protection against overflow on highest addresses
 
-            if constexpr (I == 2)
+            if constexpr (I == 1)
             {
                 if (table->entries[start_table_index].present == 0)
                 {
@@ -203,8 +208,8 @@ namespace
 
                 if (free_physical)
                 {
-                    auto frame = table->entries[start_table_index].get();
-                    pmm::push(0, phys_addr_t(reinterpret_cast<std::uintptr_t>(frame)));
+                    auto frame = table->entries[start_table_index].get_phys();
+                    pmm::push(0, frame);
                 }
 
                 table->entries[start_table_index].present = false;
@@ -228,6 +233,32 @@ namespace
 
             ++start_table_index;
             virt_start = entry_virt_end;
+        }
+    }
+
+    template<int I>
+    [[gnu::always_inline]] phys_addr_t vm_virt_to_phys(pmlt<I> * table, std::uintptr_t virt)
+    {
+        auto table_index = (virt >> (I * 9 + 3)) & 511;
+
+        if (table->entries[table_index].present == 0)
+        {
+            PANIC("Tried to probe an unmapped address ({:#018x})!", virt);
+        }
+
+        if constexpr (I == 1)
+        {
+            return table->entries[table_index].get_phys();
+        }
+
+        else
+        {
+            if (table->entries[table_index].size == 1)
+            {
+                return table->entries[table_index].get_phys();
+            }
+
+            return vm_virt_to_phys<I - 1>(table->entries[table_index].get(), virt);
         }
     }
 
@@ -289,6 +320,18 @@ void unmap(kernel::vm::vas * address_space, virt_addr_t start, virt_addr_t end, 
     auto cr3 = phys_ptr_t<pml4_t>(address_space ? address_space->get_asid() : get_asid()).value();
 
     vm_unmap<4>(cr3, virt_start, virt_end, free_physical);
+}
+
+phys_addr_t virt_to_phys(virt_addr_t address)
+{
+    return virt_to_phys(nullptr, address);
+}
+
+phys_addr_t virt_to_phys(kernel::vm::vas * address_space, virt_addr_t address)
+{
+    auto cr3 = phys_ptr_t<pml4_t>(address_space ? address_space->get_asid() : get_asid()).value();
+
+    return vm_virt_to_phys<4>(cr3, address.value());
 }
 
 namespace

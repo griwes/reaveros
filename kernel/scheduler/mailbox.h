@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,30 @@
 
 #pragma once
 
-#ifdef __amd64__
+#include "../util/fifo.h"
+#include "../util/handle.h"
+#include "../util/intrusive_ptr.h"
 
-#include "amd64/memory/vm.h"
-
-#define arch_namespace amd64
-
-#else
-
-#error "unknown architecture"
-
-#endif
-
-namespace kernel::arch::vm
+namespace kernel::scheduler
 {
-using arch_namespace::vm::page_size_count;
-using arch_namespace::vm::page_sizes;
-
-using arch_namespace::vm::get_asid;
-using arch_namespace::vm::set_asid;
-
-using arch_namespace::vm::map_physical;
-using arch_namespace::vm::unmap;
-
-using arch_namespace::vm::virt_to_phys;
-
-using arch_namespace::vm::clone_upper_half;
+class process;
 }
 
-#undef arch_namespace
+namespace kernel::ipc
+{
+struct mailbox_message : util::chained_allocatable<mailbox_message>
+{
+};
+
+class mailbox : public util::intrusive_ptrable<mailbox>
+{
+public:
+    void send(util::intrusive_ptr<handle> handle);
+
+private:
+    [[maybe_unused]] util::fifo<mailbox_message> _message_queue;
+    // util::fifo<scheduler::thread> _waiting_threads;
+};
+
+util::intrusive_ptr<mailbox> create_mailbox();
+}

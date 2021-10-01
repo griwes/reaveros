@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "../vdso/include/rose/syscall/early.h"
+#include "../vdso/include/rose/syscall/typedefs.h"
 
-#include "../memory/vas.h"
-
-#include <boot-memmap.h>
-
-#include <memory>
-
-namespace kernel::initrd
+[[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(rose::syscall::token_t mailbox)
 {
-void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
-std::unique_ptr<vm::vas> create_bootinit_vas();
+    rose::syscall::early_log("hello world from userspace!");
 
-constexpr virt_addr_t bootinit_ip_address(0x10000);
-constexpr virt_addr_t bootinit_initrd_address(0x100000);
-constexpr virt_addr_t bootinit_top_of_stack(0x80000000);
+    for (;;)
+        ;
+
+    (void)mailbox;
 }

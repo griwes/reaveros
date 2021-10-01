@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -463,42 +463,95 @@ struct __iter_value<_T>
 template<typename _T>
 using iter_value_t = typename __iter_value<_T>::type;
 
-// [iterator.traits], iterator traits
-/*template<class I>
-struct iterator_traits;
-template<class T>
-requires is_object_v<T> struct iterator_traits<T *>;
-*/
-
-/*
 namespace ranges
 {
-    // [iterator.cust], customization point objects
-    inline namespace unspecified
+inline namespace __iter_move_swap_ns
+{
+    namespace __iter_move_adl_poison
     {
-        // [iterator.cust.move], ranges​::​iter_­move
-        inline constexpr unspecified iter_move = unspecified;
+        void iter_move();
 
-        // [iterator.cust.swap], ranges​::​iter_­swap
-        inline constexpr unspecified iter_swap = unspecified;
+        template<typename _E>
+        concept __is_iter_move_valid = requires(_E && __e)
+        {
+            iter_move(__ROSESTD::forward<_E>(__e));
+        };
+
+        template<typename _E>
+        constexpr decltype(auto) __iter_move(_E && __e)
+        {
+            return iter_move(__ROSESTD::forward<_E>(__e));
+        }
     }
+
+    struct __iter_move_cpo
+    {
+        template<typename _E>
+        requires(__is_class(remove_cvref_t<_E>) || __is_enum(remove_cvref_t<_E>))
+            && __iter_move_adl_poison::__is_iter_move_valid<_E> constexpr decltype(auto) operator()(
+                _E && __e) const noexcept(noexcept(__iter_move_adl_poison::__iter_move(__e)))
+        {
+            return __iter_move_adl_poison::__iter_move(__ROSESTD::forward<_E>(__e));
+        }
+
+        template<typename _E>
+        requires(
+            !((__is_class(remove_cvref_t<_E>) || __is_enum(remove_cvref_t<_E>))
+              && __iter_move_adl_poison::__is_iter_move_valid<_E>)&&requires(_E && __e)
+            { *__ROSESTD::forward<_E>(__e); }) constexpr decltype(auto)
+        operator()(_E && __e) const noexcept(noexcept(*__ROSESTD::forward<_E>(__e)))
+        {
+            if constexpr (is_lvalue_reference_v<_E>)
+            {
+                return __ROSESTD::move(*__ROSESTD::forward<_E>(__e));
+            }
+            else
+            {
+                return *__ROSESTD::forward<_E>(__e);
+            };
+        }
+    };
+
+    inline constexpr __iter_move_cpo iter_move;
+
+    /*
+    inline constexpr struct __iter_swap
+    {
+    } iter_swap;
+    */
+}
 }
 
-template<dereferenceable T>
-requires requires(T & t)
+template<__dereferenceable _T>
+requires requires(_T & __t)
 {
     {
-        ranges::iter_move(t)
-    }
-    ->can - reference;
+        ranges::iter_move(__t)
+        } -> __can_reference;
 }
-using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T &>()));
+using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<_T &>()));
 
-// [iterator.concepts], iterator concepts
-// [iterator.concept.readable], concept indirectly_­readable
-template<class In>
-concept indirectly_readable = see below;
+template<typename _In>
+concept __indirectly_readable_impl = requires(const _In __in)
+{
+    typename iter_value_t<_In>;
+    typename iter_reference_t<_In>;
+    typename iter_rvalue_reference_t<_In>;
+    {
+        *__in
+        } -> same_as<iter_reference_t<_In>>;
+    {
+        ranges::iter_move(__in)
+        } -> same_as<iter_rvalue_reference_t<_In>>;
+}
+&&common_reference_with<iter_reference_t<_In> &&, iter_value_t<_In> &> &&
+    common_reference_with<iter_reference_t<_In> &&, iter_rvalue_reference_t<_In> &&> &&
+        common_reference_with<iter_rvalue_reference_t<_In> &&, const iter_value_t<_In> &>;
 
+template<typename _In>
+concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In>>;
+
+/*
 template<indirectly_­readable T>
 using iter_common_reference_t = common_reference_t<iter_reference_t<T>, iter_value_t<T> &>;
 */
@@ -531,11 +584,13 @@ concept weakly_incrementable = default_initializable<_I> && movable<_I> && requi
     __i++;
 };
 
-/*
-// [iterator.concept.inc], concept incrementable
-template<class I>
-concept incrementable = see below;
-*/
+template<typename _I>
+concept incrementable = regular<_I> && weakly_incrementable<_I> && requires(_I __i)
+{
+    {
+        __i++
+        } -> same_as<_I>;
+};
 
 template<typename _I>
 concept input_or_output_iterator = weakly_incrementable<_I> && requires(_I __i)
@@ -545,24 +600,92 @@ concept input_or_output_iterator = weakly_incrementable<_I> && requires(_I __i)
         } -> __can_reference;
 };
 
-/*
-// [iterator.concept.sentinel], concept sentinel_­for
-template<class S, class I>
-concept sentinel_for = see below;
+template<typename _S, typename _I>
+concept sentinel_for =
+    semiregular<_S> && input_or_output_iterator<_I> && __weakly_equality_comparable_with<_S, _I>;
 
-// [iterator.concept.sizedsentinel], concept sized_­sentinel_­for
 template<class S, class I>
 inline constexpr bool disable_sized_sentinel_for = false;
 
-template<class S, class I>
-concept sized_sentinel_for = see below;
+template<typename _S, typename _I>
+concept sized_sentinel_for = sentinel_for<_S, _I> && !disable_sized_sentinel_for<
+                                 remove_cv_t<_S>,
+                                 remove_cv_t<_I>> && requires(const _I & __i, const _S & __s)
+{
+    {
+        __s - __i
+        } -> same_as<iter_difference_t<_I>>;
+    {
+        __i - __s
+        } -> same_as<iter_difference_t<_I>>;
+};
 
-// [iterator.concept.input], concept input_­iterator
-template<class I>
-concept input_iterator = see below;
-*/
+template<typename _I>
+struct __iter_traits_impl
+{
+    using type = iterator_traits<_I>;
+};
 
-// [iterator.concept.output], concept output_­iterator
+template<typename _I>
+requires __primary_template<iterator_traits<_I>>
+struct __iter_traits_impl<_I>
+{
+    using type = _I;
+};
+
+template<typename _I>
+using __iter_traits = typename __iter_traits_impl<_I>::type;
+
+template<typename _I>
+struct __iter_concept_impl
+{
+};
+
+template<typename _I>
+concept __iter_concept_1_1 = requires
+{
+    typename __iter_traits<_I>::iterator_concept;
+};
+
+template<typename _I>
+requires __iter_concept_1_1<_I>
+struct __iter_concept_impl<_I>
+{
+    using type = typename __iter_traits<_I>::iterator_concept;
+};
+
+template<typename _I>
+concept __iter_concept_1_2 = !__iter_concept_1_1<_I> && requires
+{
+    typename __iter_traits<_I>::iterator_category;
+};
+
+template<typename _I>
+requires __iter_concept_1_2<_I>
+struct __iter_concept_impl<_I>
+{
+    using type = typename __iter_traits<_I>::iterator_category;
+};
+
+template<typename _I>
+concept __iter_concept_1_3 = !__iter_concept_1_2<_I> && __primary_template<iterator_traits<_I>>;
+
+template<typename _I>
+requires __iter_concept_1_3<_I>
+struct __iter_concept_impl<_I>
+{
+    using type = random_access_iterator_tag;
+};
+
+template<typename _I>
+using __iter_concept = typename __iter_concept_impl<_I>::type;
+
+template<typename _I>
+concept input_iterator = input_or_output_iterator<_I> && indirectly_readable<_I> && requires
+{
+    typename __iter_concept<_I>;
+} && derived_from<__iter_concept<_I>, input_iterator_tag>;
+
 template<typename _I, typename _T>
 concept output_iterator =
     input_or_output_iterator<_I> && indirectly_writable<_I, _T> && requires(_I __i, _T && __t)
@@ -570,19 +693,49 @@ concept output_iterator =
     *__i++ = __ROSESTD::forward<_T>(__t);
 };
 
+template<typename _I>
+concept forward_iterator =
+    input_iterator<_I> && derived_from<__iter_concept<_I>, forward_iterator_tag> && incrementable<
+        _I> && sentinel_for<_I, _I>;
+
+template<typename _I>
+concept bidirectional_iterator =
+    forward_iterator<_I> && derived_from<__iter_concept<_I>, bidirectional_iterator_tag> && requires(_I __i)
+{
+    {
+        --__i
+        } -> same_as<_I &>;
+    {
+        __i--
+        } -> same_as<_I>;
+};
+
+template<typename _I>
+concept random_access_iterator =
+    bidirectional_iterator<_I> && derived_from<__iter_concept<_I>, random_access_iterator_tag> && totally_ordered<
+        _I> && sized_sentinel_for<_I, _I> && requires(_I __i, const _I __j, const iter_difference_t<_I> __n)
+{
+    {
+        __i += __n
+        } -> same_as<_I &>;
+    {
+        __j + __n
+        } -> same_as<_I>;
+    {
+        __n + __j
+        } -> same_as<_I>;
+    {
+        __i -= __n
+        } -> same_as<_I &>;
+    {
+        __j - __n
+        } -> same_as<_I>;
+    {
+        __j[__n]
+        } -> same_as<iter_reference_t<_I>>;
+};
+
 /*
-// [iterator.concept.forward], concept forward_­iterator
-template<class I>
-concept forward_iterator = see below;
-
-// [iterator.concept.bidir], concept bidirectional_­iterator
-template<class I>
-concept bidirectional_iterator = see below;
-
-// [iterator.concept.random.access], concept random_­access_­iterator
-template<class I>
-concept random_access_iterator = see below;
-
 // [iterator.concept.contiguous], concept contiguous_­iterator
 template<class I>
 concept contiguous_iterator = see below;
@@ -655,14 +808,59 @@ template<class I, class R = ranges::less, class P = identity>
 concept sortable = see below;
 
 // [iterator.operations], iterator operations
-template<class InputIterator, class Distance>
-constexpr void advance(InputIterator & i, Distance n);
+*/
+
+template<class _InputIterator, class _Distance>
+constexpr void advance(_InputIterator & __i, _Distance __n)
+{
+    if (__n < 0)
+    {
+        __n = -__n;
+        if constexpr (random_access_iterator<_InputIterator>)
+        {
+            __i = __i - __n;
+        }
+        else
+        {
+            while (__n--)
+            {
+                --__i;
+            }
+        }
+    }
+    else
+    {
+        if constexpr (random_access_iterator<_InputIterator>)
+        {
+            __i = __i + __n;
+        }
+        else
+        {
+            while (__n--)
+            {
+                ++__i;
+            }
+        }
+    }
+}
+
+/*
 template<class InputIterator>
 constexpr typename iterator_traits<InputIterator>::difference_type distance(
     InputIterator first,
     InputIterator last);
-template<class InputIterator>
-constexpr InputIterator next(InputIterator x, typename iterator_traits<InputIterator>::difference_type n = 1);
+*/
+
+template<typename _InputIterator>
+constexpr _InputIterator next(
+    _InputIterator __x,
+    typename iterator_traits<_InputIterator>::difference_type __n = 1)
+{
+    __ROSESTD::advance(__x, __n);
+    return __x;
+}
+
+/*
 template<class BidirectionalIterator>
 constexpr BidirectionalIterator prev(
     BidirectionalIterator x,

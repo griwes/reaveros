@@ -15,6 +15,7 @@ set(includes
     memory
     mutex
     new
+    optional
     ratio
     string_view
     system_error

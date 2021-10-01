@@ -35,6 +35,14 @@ SECTIONS
         *(COMMON)
         *(.bss)
         *(.gnu.linkonce.b*)
+
+        . = ALIGN(0x1000);
+        KEEP(*(.bootinit))
+
+        . = ALIGN(0x1000);
+        KEEP(*(.vdso))
+
+        . = ALIGN(0x1000);
     }
 
     /DISCARD/ :

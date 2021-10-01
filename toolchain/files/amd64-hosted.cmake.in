@@ -10,6 +10,7 @@ set(CMAKE_EXE_LINKER_FLAGS "--sysroot=${CMAKE_SYSROOT} -L=/usr/lib")
 
 set(CMAKE_LINKER ${tools}/ld.lld)
 set(CMAKE_OBJCOPY ${tools}/llvm-objcopy)
+set(CMAKE_READELF ${tools}/llvm-readelf)
 
 set(CMAKE_ASM_COMPILER ${tools}/clang)
 set(CMAKE_ASM_FLAGS "-masm=intel")

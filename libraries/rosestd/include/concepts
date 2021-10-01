@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,9 @@ concept __same_as_impl = is_same_v<_T, _U>;
 template<typename _T, typename _U>
 concept same_as = __same_as_impl<_T, _U> && __same_as_impl<_U, _T>;
 
-// template<class Derived, class Base>
-// concept derived_from = see below;
+template<typename _Derived, typename _Base>
+concept derived_from =
+    is_base_of_v<_Base, _Derived> && is_convertible_v<const volatile _Derived *, const volatile _Base *>;
 
 template<typename _From, typename _To>
 concept convertible_to = is_convertible_v<_From, _To> && requires(add_rvalue_reference_t<_From> (&__f)())
@@ -84,7 +85,7 @@ namespace ranges
 {
     inline namespace __swap_ns
     {
-        namespace __adl_poison
+        namespace __swap_adl_poison
         {
             template<typename _T>
             void swap(_T &, _T &) = delete;
@@ -96,7 +97,7 @@ namespace ranges
             };
 
             template<typename _T1, typename _T2>
-            void __swap(_T1 & __t1, _T2 & __t2)
+            constexpr void __swap(_T1 & __t1, _T2 & __t2) noexcept(noexcept(swap(__t1, __t2)))
             {
                 swap(__t1, __t2);
             }
@@ -105,15 +106,16 @@ namespace ranges
         struct __swap_cpo
         {
             template<typename _T1, typename _T2>
-            constexpr void operator()(_T1 & __t1, _T2 & __t2) const requires
-                __adl_poison::__is_swap_valid<_T1, _T2>
+            requires __swap_adl_poison::__is_swap_valid<_T1, _T2>
+            constexpr void operator()(_T1 & __t1, _T2 & __t2) const
+                noexcept(noexcept(__swap_adl_poison::__swap(__t1, __t2)))
             {
-                __adl_poison::__swap(__t1, __t2);
+                __swap_adl_poison::__swap(__t1, __t2);
             }
 
             template<typename _T1, typename _T2>
             constexpr void operator()(_T1 & __t1, _T2 & __t2) const requires(
-                !__adl_poison::__is_swap_valid<
+                !__swap_adl_poison::__is_swap_valid<
                     _T1,
                     _T2> && is_array_v<_T1> && is_array_v<_T2> && extent_v<_T1> == extent_v<_T2> && requires(_T1 & __t1, _T2 & __t2) {
                     operator()(*__t1, *__t2);
@@ -240,10 +242,11 @@ concept copyable = copy_constructible<_T> && movable<_T> && assignable_from<_T &
     _T &,
     const _T &> && assignable_from<_T &, const _T>;
 
-// template<class T>
-// concept semiregular = see below;
-// template<class T>
-// concept regular = see below;
+template<typename _T>
+concept semiregular = copyable<_T> && default_initializable<_T>;
+
+template<typename _T>
+concept regular = semiregular<_T> && equality_comparable<_T>;
 
 // template<class F, class... Args>
 // concept invocable = see below;

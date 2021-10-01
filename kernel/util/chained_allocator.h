@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,30 +51,19 @@ T * allocate_chained()
     {
 #ifndef REAVEROS_TESTING
         auto frame_address = pmm::pop(0);
-        T * current = static_cast<phys_ptr_t<T>>(frame_address).value();
+        T * first = static_cast<phys_ptr_t<T>>(frame_address).value();
 #else
-        T * current = reinterpret_cast<T *>(malloc(arch::vm::page_sizes[0]));
+        T * first = reinterpret_cast<T *>(malloc(arch::vm::page_sizes[0]));
 #endif
-        T * next = nullptr;
-        T * last = current;
-
-        for (std::size_t i = 0; (i + 1) * sizeof(T) <= 4096; ++i)
+        first->prev = nullptr;
+        for (std::size_t i = 1; (i + 1) * sizeof(T) <= 4096; ++i)
         {
-            if (current == last)
-            {
-                current->next = next;
-                current->prev = nullptr;
-                next = current;
-                ++current;
-            }
+            first[i - 1].next = first + i;
+            first[i].prev = first + i - 1;
+            first[i].next = nullptr;
         }
 
-        last->next = chained_head<T>;
-        if (chained_head<T>)
-        {
-            chained_head<T>->prev = last;
-        }
-        chained_head<T> = next;
+        chained_head<T> = first;
     }
 
     auto ret = chained_head<T>;

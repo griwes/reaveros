@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 project(reaveros-kernel ASM CXX)
 
 if (NOT REAVEROS_ENABLE_UNIT_TESTS)
+    add_subdirectory(vdso)
+    add_subdirectory(bootinit)
+
     file(GLOB_RECURSE sources
         CONFIGURE_DEPENDS
         boot/*.cpp
@@ -25,6 +28,8 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
     )
 
     target_link_libraries(kernel-elf
+        bootinit-incbin
+        vdso-incbin
         ${CMAKE_SYSROOT}/usr/lib/librosestd.a
     )
 

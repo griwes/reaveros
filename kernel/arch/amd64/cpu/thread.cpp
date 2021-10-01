@@ -33,4 +33,17 @@ void context::set_stack_pointer(virt_addr_t address)
 {
     rsp = address.value();
 }
+
+void context::set_argument(std::size_t idx, std::uintptr_t value)
+{
+    switch (idx)
+    {
+        case 0:
+            rdi = value;
+            break;
+
+        default:
+            PANIC("Unsupported thread context argument index: #{} = {}!", idx, value);
+    }
+}
 }

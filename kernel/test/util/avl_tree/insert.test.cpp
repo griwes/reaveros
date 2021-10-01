@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "../../../util/linked_heap.h"
+#include "../../../util/avl_tree.h"
 
 #include <algorithm>
 #include <cassert>
 #include <vector>
 
-struct foo : kernel::util::linked_heapable<foo>
+struct foo : kernel::util::treeable<foo>
 {
     int id;
 };
@@ -35,24 +35,29 @@ struct comp
 
 int main()
 {
-    std::vector insert = { 7, 3, 4, 1, 2, 9, 9, 8, 1 };
-    auto pop = insert;
-    std::sort(pop.begin(), pop.end());
+    std::vector insert = { 17, 14, 19, 12, 11, 7, 2, 8, 9, 27, 29, 21, 22, 25, 24, 31, 32, 30 };
+    auto iter = insert;
+    std::sort(iter.begin(), iter.end());
 
-    kernel::util::linked_heap<foo, comp> heap;
+    kernel::util::avl_tree<foo, comp> tree;
 
     for (auto && i : insert)
     {
         auto f = std::make_unique<foo>();
         f->id = i;
-        heap.push(std::move(f));
+        auto result = tree.insert(std::move(f));
+        assert(result.second);
+        assert(result.first->id == i);
+
+        auto check = tree.check_invariants();
+        assert(check.correct);
     }
 
-    for (auto && i : pop)
+    auto begin = tree.begin();
+    for (auto && i : iter)
     {
-        auto v = heap.pop();
-        assert(v->id == i);
+        assert(begin != tree.end());
+        assert(begin->id == i);
+        ++begin;
     }
-
-    assert(!heap.peek());
 }
