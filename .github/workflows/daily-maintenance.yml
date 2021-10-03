@@ -27,7 +27,7 @@ jobs:
 
           - name: Login to ghcr.io
             run: |
-                docker login https://ghcr.io -u '${{ github.actor }}' -p '${{ secrets.CI_TOKEN }}'
+                docker login https://ghcr.io -u 'reaver-project-ci' -p '${{ secrets.CI_TOKEN }}'
 
           - name: Push containers
             run: |
