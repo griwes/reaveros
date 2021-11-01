@@ -27,7 +27,7 @@ ExternalProject_Add(toolchain-llvm
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DLLVM_TARGETS_TO_BUILD=X86
         -DLLVM_ENABLE_PROJECTS=clang|lld
-        -DLLVM_ENABLE_RUNTIMES=compiler-rt
+        -DLLVM_ENABLE_RUNTIMES=compiler-rt|libcxx|libcxxabi
         -DCOMPILER_RT_BUILD_BUILTINS=ON
         -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
         -DCOMPILER_RT_BUILD_MEMPROF=OFF

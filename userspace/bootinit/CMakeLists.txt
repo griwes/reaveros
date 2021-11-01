@@ -28,3 +28,7 @@ add_custom_target(bootinit-flat ALL DEPENDS ${CMAKE_BINARY_DIR}/bootinit)
 install(FILES ${CMAKE_BINARY_DIR}/bootinit
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
+
+if (REAVEROS_ENABLE_UNIT_TESTS)
+    add_custom_target(build-tests)
+endif()

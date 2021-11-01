@@ -1,0 +1,71 @@
+/*
+ * Copyright © 2021 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#ifndef __ROSESTD_TESTING
+
+#define __cpp_lib_array_constexpr 201811L
+#define __cpp_lib_as_const 201510L
+#define __cpp_lib_bool_constant 201505L
+#define __cpp_lib_bounded_array_traits 201902L
+#define __cpp_lib_byte 201603L
+#define __cpp_lib_char8_t 201907L
+#define __cpp_lib_chrono 201907L
+#define __cpp_lib_chrono_udls 201304L
+#define __cpp_lib_concepts 202002L
+#define __cpp_lib_constexpr_iterator 201811L
+#define __cpp_lib_constexpr_string_view 201811L
+#define __cpp_lib_constexpr_utility 201811L
+#define __cpp_lib_exchange_function 201304L
+#define __cpp_lib_format 202106L
+#define __cpp_lib_has_unique_object_representations 201606L
+#define __cpp_lib_integer_comparison_functions 202002L
+#define __cpp_lib_integer_sequence 201304L
+#define __cpp_lib_integral_constant_callable 201304L
+#define __cpp_lib_is_aggregate 201703L
+#define __cpp_lib_is_constant_evaluated 201811L
+#define __cpp_lib_is_final 201402L
+#define __cpp_lib_is_invocable 201703L
+#define __cpp_lib_is_layout_compatible 201907L
+#define __cpp_lib_is_nothrow_convertible 201806L
+#define __cpp_lib_is_null_pointer 201309L
+#define __cpp_lib_is_pointer_interconvertible 201907L
+#define __cpp_lib_is_scoped_enum 202011L
+#define __cpp_lib_is_swappable 201603L
+#define __cpp_lib_logical_traits 201510L
+#define __cpp_lib_make_reverse_iterator 201402L
+#define __cpp_lib_nonmember_container_access 201411L
+#define __cpp_lib_null_iterators 201304L
+#define __cpp_lib_make_unique 201304L
+#define __cpp_lib_ranges 202106L
+#define __cpp_lib_remove_cvref 201711L
+#define __cpp_lib_result_of_sfinae 201210L
+#define __cpp_lib_ssize 201902L
+#define __cpp_lib_starts_ends_with 201711L
+#define __cpp_lib_three_way_comparison 201907L
+#define __cpp_lib_to_chars 201611L
+#define __cpp_lib_to_underlying 202102L
+#define __cpp_lib_transformation_trait_aliases 201304L
+#define __cpp_lib_tuples_by_type 201304L
+#define __cpp_lib_type_identity 201806L
+#define __cpp_lib_type_trait_variable_templates 201510L
+#define __cpp_lib_unwrap_ref 201811L
+#define __cpp_lib_void_t 201411L
+
+#endif
+
+// vim: ft=cpp

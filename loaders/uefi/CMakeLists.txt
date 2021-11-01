@@ -31,7 +31,7 @@ add_executable(loader-uefi-elf
 )
 
 target_link_libraries(loader-uefi-elf
-    ${CMAKE_SYSROOT}/usr/lib/libfreestanding.a
+    ${CMAKE_SYSROOT}/usr/lib/librosestd.a
 )
 
 set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/loader.lds)
@@ -56,3 +56,7 @@ add_custom_target(loader-uefi-pe ALL DEPENDS ${CMAKE_BINARY_DIR}/loader-uefi)
 install(FILES ${CMAKE_BINARY_DIR}/loader-uefi
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
+
+if (REAVEROS_ENABLE_UNIT_TESTS)
+    add_custom_target(build-tests)
+endif()

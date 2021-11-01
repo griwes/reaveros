@@ -1,0 +1,287 @@
+/*
+ * Copyright © 2021 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "__config"
+#include "type_traits"
+#include "utility"
+#include "version"
+
+__ROSESTD_OPEN
+
+template<typename _T>
+constexpr _T * addressof(_T & __r) noexcept
+{
+    return __builtin_addressof(__r);
+}
+
+template<typename _T>
+const _T * addressof(const _T &&) = delete;
+
+template<typename _T>
+struct default_delete
+{
+    constexpr default_delete() noexcept = default;
+
+    template<typename _U>
+    default_delete(const default_delete<_U> &) noexcept requires __implicitly_convertible<_U *, _T *>
+    {
+    }
+
+    void operator()(_T * __ptr) const
+    {
+        static_assert(sizeof(_T) != -1, "the argument to default_delete must be a complete type");
+        delete __ptr;
+    }
+};
+
+template<typename _T>
+struct default_delete<_T[]>
+{
+    constexpr default_delete() noexcept = default;
+
+    template<typename _U>
+    default_delete(const default_delete<_U[]> &) noexcept requires
+        __implicitly_convertible<_U (*)[], _T (*)[]>
+    {
+    }
+
+    template<typename _U>
+    void operator()(_U * __ptr) const requires __implicitly_convertible<_U (*)[], _T (*)[]>
+    {
+        static_assert(sizeof(_U) != -1, "the argument to default_delete must be a complete type");
+        delete[] __ptr;
+    }
+};
+
+template<typename _T, typename _D>
+struct __deleter_pointer
+{
+    using type = _T *;
+};
+
+template<typename _T, typename _D>
+requires requires
+{
+    typename remove_reference_t<_D>::pointer;
+}
+struct __deleter_pointer<_T, _D>
+{
+    using type = typename remove_reference_t<_D>::pointer;
+};
+
+template<typename _T, typename _D = default_delete<_T>>
+class unique_ptr
+{
+public:
+    using pointer = typename __deleter_pointer<_T, _D>::type;
+    using element_type = _T;
+    using deleter_type = _D;
+
+    constexpr unique_ptr() noexcept = default;
+
+    explicit unique_ptr(pointer __p) noexcept : __ptr(__p)
+    {
+    }
+
+    unique_ptr(pointer __p, const type_identity_t<_D> & __d) noexcept requires
+        is_constructible_v<_D, decltype(__d)> : __ptr(__p),
+                                                __deleter(__ROSESTD::forward<decltype(__d)>(__d))
+    {
+    }
+
+    unique_ptr(pointer __p, remove_reference_t<_D> && __d) noexcept requires
+        is_constructible_v<_D, decltype(__d)> : __ptr(__p),
+                                                __deleter(__ROSESTD::forward<decltype(__d)>(__d))
+
+    {
+    }
+
+    unique_ptr(unique_ptr && __u) noexcept requires is_move_constructible_v<_D>
+        : __ptr(__ROSESTD::exchange(__u.__ptr, nullptr)), __deleter(__ROSESTD::forward<_D>(__u.__deleter))
+    {
+    }
+
+    constexpr unique_ptr(nullptr_t) noexcept : __ptr(nullptr), __deleter()
+    {
+    }
+
+    template<typename _U, typename _E>
+    unique_ptr(unique_ptr<_U, _E> && __u) noexcept requires(
+        __implicitly_convertible<
+            typename unique_ptr<_U, _E>::pointer,
+            pointer> && !is_array_v<_U> && ((is_reference_v<_D> && is_same_v<_D, _E>) || (!is_reference_v<_D> && __implicitly_convertible<_E, _D>)))
+        : __ptr(__ROSESTD::exchange(__u.__ptr, nullptr)), __deleter(__ROSESTD::forward<_D>(__u.__deleter))
+    {
+    }
+
+    ~unique_ptr()
+    {
+        if (__ptr == nullptr)
+        {
+            return;
+        }
+        __deleter(__ptr);
+    }
+
+    unique_ptr & operator=(unique_ptr && __u) noexcept;
+    template<typename _U, typename _E>
+    unique_ptr & operator=(unique_ptr<_U, _E> && __u) noexcept;
+    unique_ptr & operator=(nullptr_t) noexcept;
+
+    add_lvalue_reference_t<_T> operator*() const;
+
+    pointer operator->() const noexcept
+    {
+        return __ptr;
+    }
+
+    pointer get() const noexcept
+    {
+        return __ptr;
+    }
+
+    deleter_type & get_deleter() noexcept;
+    const deleter_type & get_deleter() const noexcept;
+    explicit operator bool() const noexcept;
+
+    pointer release() noexcept
+    {
+        return exchange(__ptr, nullptr);
+    }
+
+    void reset(pointer __p = pointer()) noexcept;
+    void swap(unique_ptr & __u) noexcept;
+
+    unique_ptr(const unique_ptr &) = delete;
+    unique_ptr & operator=(const unique_ptr &) = delete;
+
+private:
+    pointer __ptr = nullptr;
+    deleter_type __deleter{};
+};
+
+template<typename _T, typename _D>
+class unique_ptr<_T[], _D>
+{
+public:
+    using pointer = typename __deleter_pointer<_T, _D>::type;
+    using element_type = _T;
+    using deleter_type = _D;
+
+    constexpr unique_ptr() noexcept;
+
+    template<typename _U>
+    explicit unique_ptr(_U __p) noexcept requires(
+        is_same_v<
+            _U,
+            pointer> || (is_same_v<pointer, element_type *> && is_pointer_v<_U> && is_convertible_v<remove_pointer<_U> (*)[], element_type (*)[]>))
+        : __ptr(__p)
+    {
+    }
+
+    // template<typename _U>
+    // unique_ptr(_U __p, see below __d) noexcept;
+    // template<typename _U>
+    // unique_ptr(_U __p, see below __d) noexcept;
+
+    unique_ptr(unique_ptr && __u) noexcept requires is_move_constructible_v<_D>
+        : __ptr(__ROSESTD::exchange(__u.__ptr, nullptr)), __deleter(__ROSESTD::forward<_D>(__u.__deleter))
+    {
+    }
+
+    template<typename _U, typename _E>
+    unique_ptr(unique_ptr<_U, _E> && __u) noexcept;
+    constexpr unique_ptr(nullptr_t) noexcept;
+
+    ~unique_ptr()
+    {
+        if (__ptr == nullptr)
+        {
+            return;
+        }
+        __deleter(__ptr);
+    }
+
+    unique_ptr & operator=(unique_ptr && __u) noexcept;
+    template<typename _U, typename _E>
+    unique_ptr & operator=(unique_ptr<_U, _E> && __u) noexcept;
+    unique_ptr & operator=(nullptr_t) noexcept;
+
+    _T & operator[](size_t __i) const
+    {
+        return __ptr[__i];
+    }
+
+    pointer get() const noexcept
+    {
+        return __ptr;
+    }
+
+    deleter_type & get_deleter() noexcept;
+    const deleter_type & get_deleter() const noexcept;
+    explicit operator bool() const noexcept;
+
+    pointer release() noexcept;
+    template<typename _U>
+    void reset(_U __p) noexcept;
+    void reset(nullptr_t = nullptr) noexcept;
+    void swap(unique_ptr & __u) noexcept;
+
+    unique_ptr(const unique_ptr &) = delete;
+    unique_ptr & operator=(const unique_ptr &) = delete;
+
+private:
+    pointer __ptr = nullptr;
+    deleter_type __deleter{};
+};
+
+template<typename _T, typename... _Args>
+unique_ptr<_T> make_unique(_Args &&... __args) requires(!is_array_v<_T>)
+{
+    return unique_ptr<_T>(new _T(__ROSESTD::forward<_Args>(__args)...));
+}
+
+template<typename _T>
+unique_ptr<_T> make_unique(size_t n) requires is_unbounded_array_v<_T>
+{
+    return unique_ptr<_T>(new remove_extent_t<_T>[n]());
+}
+
+template<typename _T, typename... _Args>
+void make_unique(_Args &&...) requires is_bounded_array_v<_T>
+= delete;
+
+template<typename _T>
+unique_ptr<_T> make_unique_for_overwrite() requires(!is_array_v<_T>)
+{
+    return unique_ptr<_T>(new _T);
+}
+
+template<typename _T>
+unique_ptr<_T> make_unique_for_overwrite(size_t n) requires is_unbounded_array_v<_T>
+{
+    return unique_ptr<_T>(new remove_extent_t<_T>[n]);
+}
+
+template<typename _T, typename... _Args>
+void make_unique_for_overwrite(_Args &&...) requires is_bounded_array_v<_T>
+= delete;
+
+__ROSESTD_CLOSE
+
+// vim: ft=cpp

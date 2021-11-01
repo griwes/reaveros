@@ -1,17 +1,26 @@
+function(_reaveros_add_target_maybe_tests _name)
+    add_custom_target(${_name})
+    if (REAVEROS_ENABLE_UNIT_TESTS)
+        add_custom_target(${_name}-build-tests)
+    endif()
+endfunction()
+
 function(reaveros_add_aggregate_targets _suffix)
     if (NOT "${_suffix}" STREQUAL "")
-        add_custom_target(all-${_suffix})
+        _reaveros_add_target_maybe_tests(all-${_suffix})
         set(_suffix "-${_suffix}")
+    else()
+        add_custom_target(all-build-tests)
     endif()
 
     foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
-        add_custom_target(all-${architecture}${_suffix})
+        _reaveros_add_target_maybe_tests(all-${architecture}${_suffix})
     endforeach()
 
     foreach (mode IN ITEMS freestanding hosted)
-        add_custom_target(all-${mode}${_suffix})
+        _reaveros_add_target_maybe_tests(all-${mode}${_suffix})
         foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
-            add_custom_target(all-${architecture}-${mode}${_suffix})
+            _reaveros_add_target_maybe_tests(all-${architecture}-${mode}${_suffix})
         endforeach()
     endforeach()
 endfunction()
@@ -43,6 +52,104 @@ endfunction()
 
 function(reaveros_register_target _target)
     _reaveros_register_target_impl(${_target} "" "${ARGN}")
+endfunction()
+
+function(reaveros_add_component _directory _prefix)
+    message(STATUS "Adding component ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}...")
+
+    if (NOT ${_prefix} STREQUAL "")
+        set(_prefix "${_prefix}-")
+    endif()
+
+    foreach (_architecture IN LISTS REAVEROS_COMPONENT_ARCHITECTURES)
+        foreach (_mode IN LISTS REAVEROS_COMPONENT_MODES)
+            if (REAVEROS_COMPONENT_SKIP_MODE_NAME)
+                set(_component_name ${_prefix}${_directory}-${_architecture})
+            else()
+                set(_component_name ${_prefix}${_directory}-${_mode}-${_architecture})
+            endif()
+            cmake_language(EVAL CODE "set(_depends ${REAVEROS_COMPONENT_DEPENDS})")
+            cmake_language(EVAL CODE "set(_install_path ${REAVEROS_COMPONENT_INSTALL_PATH})")
+
+            ExternalProject_Add(${_component_name}
+                EXCLUDE_FROM_ALL TRUE
+
+                DOWNLOAD_COMMAND ""
+                SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}
+                BUILD_ALWAYS 1
+
+                STEP_TARGETS build install
+
+                DEPENDS toolchain-llvm-install ${_depends}
+
+                INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/${_install_path}
+
+                ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
+
+                CMAKE_COMMAND ${REAVEROS_CMAKE}
+                CMAKE_ARGS
+                    --no-warn-unused-cli
+                    -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+                    -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+                    -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
+                    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                    -DCMAKE_TOOLCHAIN_FILE=${REAVEROS_BINARY_DIR}/install/toolchain/files/${_architecture}-${_mode}.cmake
+                    -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+                    -DREAVEROS_ARCH=${_architecture}
+            )
+
+            reaveros_register_target(${_component_name}-install ${_architecture} ${_mode} ${ARGN} ${_directory})
+
+            if (${_mode} STREQUAL "tests")
+                reaveros_register_target(${_component_name}-build build-tests ${_architecture} ${_mode} ${ARGN} ${_directory})
+
+                set_property(GLOBAL APPEND PROPERTY _REAVEROS_COMPONENTS "${_component_name}")
+                set_property(TARGET "${_component_name}"
+                    PROPERTY
+                        _REAVEROS_COMPONENT_LABELS "${_architecture};${ARGN};${_directory}"
+                )
+            endif()
+        endforeach()
+    endforeach()
+endfunction()
+
+function(reaveros_include_component _directory _prefix)
+    set(_component_vars
+        REAVEROS_COMPONENT_ARCHITECTURES
+        REAVEROS_COMPONENT_INSTALL_PATH
+        REAVEROS_COMPONENT_MODES
+        REAVEROS_COMPONENT_SKIP_MODE_NAME
+        REAVEROS_COMPONENT_DEPENDS
+    )
+    foreach (_variable IN LISTS _component_vars)
+        unset(${_variable})
+    endforeach()
+
+    include(${_directory}/component.cmake)
+
+    if (NOT DEFINED REAVEROS_COMPONENT_SKIP_MODE_NAME)
+        set(REAVEROS_COMPONENT_SKIP_MODE_NAME FALSE)
+    endif()
+
+    foreach (_variable IN LISTS _component_vars)
+        if (NOT DEFINED ${_variable})
+            message(FATAL_ERROR "Variable ${_variable} not defined for component ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}!")
+        endif()
+    endforeach()
+
+    reaveros_add_component(${_directory} "${_prefix}" ${ARGN})
+endfunction()
+
+function(reaveros_automatic_components _prefix)
+    file(GLOB _directories RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} CONFIGURE_DEPENDS *)
+
+    foreach (_directory IN LISTS _directories)
+        if (IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}
+                AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}/component.cmake
+        )
+            reaveros_include_component(${_directory} "${_prefix}" ${ARGN})
+        endif()
+    endforeach()
 endfunction()
 
 function(reaveros_add_ep_prune_target external_project)

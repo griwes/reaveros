@@ -1,0 +1,17 @@
+set(components @components@)
+@properties_for_trampoline@
+
+function(add_test name path)
+    set(_test_name "${component} :: ${name}")
+    _add_test("${_test_name}" "${component_directory_${component}}/test/${path}")
+    set_tests_properties(${_test_name}
+        PROPERTIES
+            LABELS "${component_labels_${component}}"
+    )
+endfunction()
+
+foreach (component IN LISTS components)
+    if (EXISTS "${component_directory_${component}}/test/CTestTestfile.cmake")
+        include("${component_directory_${component}}/test/CTestTestfile.cmake")
+    endif()
+endforeach()
