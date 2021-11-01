@@ -24,7 +24,7 @@ add_executable(kernel-elf
 )
 
 target_link_libraries(kernel-elf
-    ${CMAKE_SYSROOT}/usr/lib/libfreestanding.a
+    ${CMAKE_SYSROOT}/usr/lib/librosestd.a
 )
 
 set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/arch/${REAVEROS_ARCH}/kernel.lds)
@@ -50,3 +50,7 @@ add_custom_target(kernel-flat ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel)
 install(FILES ${CMAKE_BINARY_DIR}/kernel
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
+
+if (REAVEROS_ENABLE_UNIT_TESTS)
+    add_custom_target(build-tests)
+endif()

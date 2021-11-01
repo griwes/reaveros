@@ -11,6 +11,7 @@ option(REAVEROS_USE_CACHE "Enable the use of a cache program in builds." ON)
 set(REAVEROS_CACHE_PROGRAM "ccache" CACHE STRING "Name of the cache program to use (defaults to ccache).")
 
 set(REAVEROS_CMAKE ${REAVEROS_BINARY_DIR}/install/toolchain/cmake/bin/cmake)
+set(REAVEROS_CTEST ${REAVEROS_BINARY_DIR}/install/toolchain/cmake/bin/ctest)
 
 if (REAVEROS_USE_CACHE)
     find_program(_cache_program ${REAVEROS_CACHE_PROGRAM})
@@ -46,9 +47,50 @@ include(cmake/target_functions.cmake)
 reaveros_add_aggregate_targets("")
 add_custom_target(all-toolchain)
 
-add_subdirectory(toolchain EXCLUDE_FROM_ALL)
-add_subdirectory(libraries EXCLUDE_FROM_ALL)
-add_subdirectory(loaders EXCLUDE_FROM_ALL)
-include(kernel/meta.cmake EXCLUDE_FROM_ALL)
-add_subdirectory(userspace EXCLUDE_FROM_ALL)
-add_subdirectory(images EXCLUDE_FROM_ALL)
+option(REAVEROS_ENABLE_UNIT_TESTS OFF)
+if (REAVEROS_ENABLE_UNIT_TESTS)
+    set(_REAVEROS_TEST_TARGET test)
+endif()
+
+add_subdirectory(toolchain)
+add_subdirectory(libraries)
+add_subdirectory(loaders)
+reaveros_add_aggregate_targets(kernels)
+reaveros_include_component(kernel "" kernels)
+add_subdirectory(userspace)
+add_subdirectory(images)
+
+if (REAVEROS_ENABLE_UNIT_TESTS)
+    enable_testing()
+
+    set(_trampoline "${CMAKE_CURRENT_BINARY_DIR}/ctest_trampoline.cmake")
+
+    get_property(components GLOBAL PROPERTY _REAVEROS_COMPONENTS)
+
+    set(properties_for_trampoline "")
+    foreach (component IN LISTS components)
+        ExternalProject_Get_Property(${component} BINARY_DIR)
+        get_property(labels TARGET ${component} PROPERTY _REAVEROS_COMPONENT_LABELS)
+
+        set(properties_for_trampoline
+"${properties_for_trampoline}
+set(component_directory_${component} ${BINARY_DIR})
+set(component_labels_${component} ${labels})
+"
+        )
+    endforeach()
+
+    configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/ctest_trampoline.cmake.in"
+        "${_trampoline}"
+        @ONLY
+    )
+    set_property(
+        DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+        PROPERTY
+            TEST_INCLUDE_FILE "${_trampoline}"
+    )
+
+    add_custom_target(run-tests ctest .)
+    add_dependencies(run-tests all-build-tests)
+endif()

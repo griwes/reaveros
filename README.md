@@ -82,6 +82,7 @@ compiler launchers like `icecc`);
 * `REAVEROS_CACHE_PROGRAM` - specify the binary for the caching application (defaults to `ccache`);
 * `REAVEROS_ARCHITECTURES` - select the target CPU architectures to be enabled; currently only `amd64` is supported;
 * `REAVEROS_LOADERS` - select the bootloaders to be enabled; currently only `uefi` is supported.
+* `REAVEROS_ENABLE_UNIT_TESTS` - controls whether the build configuration includes unit tests for all components.
 
 ### Build targets
 
@@ -90,16 +91,15 @@ configuration will require. Instead, it provides more fine grained aggregate tar
 here; you can run `make help` to see them all. They should be self explanatory, but to name a few as an example:
 
 * `all-loaders-uefi` - will build UEFI bootloaders for all enabled architectures;
-* `all-amd64-user-libraries` - will build all usermode libraries for amd64.
+* `all-amd64-hosted-libraries` - will build all usermode libraries for amd64.
 
 Some of the aggregate targets are not useful and are only generated to allow for code simplicity in the functions creating them;
-for instance, `all-user-loaders` is not a reasonable target to run, because bootloaders fall neither into the userspace nor into
-kernel space (though they do use kernel-mode built libraries in their own builds).
+for instance, `all-hosted-loaders` is not a reasonable target to run, because bootloaders only use freestanding environments.
 
 There are also targets for the specific components of the build, for instance:
 
 * `toolchain`;
-* `library-libfreestanding-kernel-amd64`;
+* `library-rosestd-freestanding-amd64`;
 * `image-uefi-efipart-amd64`.
 
 There's one more group of targets that are of note - the prune targets. All toolchain targets have an associated prune target,
@@ -128,3 +128,18 @@ Platform requirements:
 * `amd64`:
 1. UEFI.
 2. HPET w/ FSB interrupt delivery; this is achieved in QEMU with `-global hpet.msi=on`.
+
+### Unit tests
+
+For testing, there's two kinds of interesting CMake targets:
+* `library-rosestd-tests-amd64-build`, which builds all tests of a specific component, and
+* `all-build-tests` and more fine-grained like `all-libraries-build-tests`, which aggregate the above targets.
+
+After the tests for a specific configuration have been built, they can be run with `ctest`. By default, all enabled tests for
+all enabled components for all enabled architectures are run. The set of tests to be run can be controlled using test labels;
+to see a list of labels available on a given configuration, run `ctest --print-labels`. To run tests matching a specific label,
+use `ctest -L`. See the `ctest` documentation for further instructions.
+
+For convenience, an additional target - `run-tests` - is exposed. This target is equivalent to building the `all-build-tests`
+target, followed by running `ctest` with no arguments.
+

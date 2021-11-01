@@ -1,0 +1,129 @@
+/*
+ * Copyright © 2021 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "__config"
+#include "atomic"
+#include "version"
+
+__ROSESTD_OPEN
+
+class mutex
+{
+public:
+    constexpr mutex() noexcept = default;
+    ~mutex() = default;
+
+    mutex(const mutex &) = delete;
+    mutex & operator=(const mutex &) = delete;
+
+    void lock()
+    {
+        bool __expected = false;
+        while (!__lock.compare_exchange_weak(__expected, true, memory_order_acquire))
+        {
+            __expected = false;
+        }
+    }
+
+    bool try_lock()
+    {
+        bool __expected = false;
+        return __lock.compare_exchange_strong(__expected, true, memory_order_acquire);
+    }
+
+    void unlock()
+    {
+        __lock.store(false, memory_order_release);
+    }
+
+    using native_handle_type = atomic<bool> *;
+    native_handle_type native_handle();
+
+private:
+    atomic<bool> __lock;
+};
+
+class recursive_mutex;
+class timed_mutex;
+class recursive_timed_mutex;
+
+struct defer_lock_t
+{
+    explicit defer_lock_t() = default;
+};
+struct try_to_lock_t
+{
+    explicit try_to_lock_t() = default;
+};
+struct adopt_lock_t
+{
+    explicit adopt_lock_t() = default;
+};
+
+inline constexpr defer_lock_t defer_lock{};
+inline constexpr try_to_lock_t try_to_lock{};
+inline constexpr adopt_lock_t adopt_lock{};
+
+template<class _Mutex>
+class lock_guard
+{
+public:
+    using mutex_type = _Mutex;
+
+    explicit lock_guard(mutex_type & __m) : __pm(__m)
+    {
+        __pm.lock();
+    }
+
+    lock_guard(mutex_type & __m, adopt_lock_t) : __pm(__m)
+    {
+    }
+
+    ~lock_guard()
+    {
+        __pm.unlock();
+    }
+
+    lock_guard(const lock_guard &) = delete;
+    lock_guard & operator=(const lock_guard &) = delete;
+
+private:
+    mutex_type & __pm;
+};
+
+template<class... _MutexTypes>
+class scoped_lock;
+template<class _Mutex>
+class unique_lock;
+
+template<class _Mutex>
+void swap(unique_lock<_Mutex> & __x, unique_lock<_Mutex> & __y) noexcept;
+
+template<class _L1, class _L2, class... _L3>
+int try_lock(_L1 &, _L2 &, _L3 &...);
+template<class _L1, class _L2, class... _L3>
+void lock(_L1 &, _L2 &, _L3 &...);
+
+struct once_flag;
+
+template<class _Callable, class... _Args>
+void call_once(once_flag & __flag, _Callable && __func, _Args &&... __args);
+
+__ROSESTD_CLOSE
+
+// vim: ft=cpp
