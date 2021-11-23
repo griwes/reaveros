@@ -67,6 +67,10 @@ function(reaveros_add_component _directory _prefix)
 
     foreach (_architecture IN LISTS REAVEROS_COMPONENT_ARCHITECTURES)
         foreach (_mode IN LISTS REAVEROS_COMPONENT_MODES)
+            if (${_mode} STREQUAL "tests" AND NOT REAVEROS_ENABLE_UNIT_TESTS)
+                continue()
+            endif()
+
             if (REAVEROS_COMPONENT_SKIP_MODE_NAME AND NOT _mode STREQUAL "tests")
                 set(_component_name ${_prefix}${_directory}-${_architecture})
             else()
