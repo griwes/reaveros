@@ -28,7 +28,7 @@
 #else
 
 #define __ROSESTD_OPEN                                                                                       \
-    namespace std::inline __v1                                                                                \
+    namespace std::inline __v1                                                                               \
     {
 #define __ROSESTD_CLOSE }
 

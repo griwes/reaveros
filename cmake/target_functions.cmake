@@ -17,7 +17,11 @@ function(reaveros_add_aggregate_targets _suffix)
         _reaveros_add_target_maybe_tests(all-${architecture}${_suffix})
     endforeach()
 
-    foreach (mode IN ITEMS freestanding hosted)
+    set(_modes freestanding hosted)
+    if (REAVEROS_ENABLE_UNIT_TESTS)
+        list(APPEND _modes tests)
+    endif()
+    foreach (mode IN LISTS _modes)
         _reaveros_add_target_maybe_tests(all-${mode}${_suffix})
         foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
             _reaveros_add_target_maybe_tests(all-${architecture}-${mode}${_suffix})
@@ -63,7 +67,7 @@ function(reaveros_add_component _directory _prefix)
 
     foreach (_architecture IN LISTS REAVEROS_COMPONENT_ARCHITECTURES)
         foreach (_mode IN LISTS REAVEROS_COMPONENT_MODES)
-            if (REAVEROS_COMPONENT_SKIP_MODE_NAME)
+            if (REAVEROS_COMPONENT_SKIP_MODE_NAME AND NOT _mode STREQUAL "tests")
                 set(_component_name ${_prefix}${_directory}-${_architecture})
             else()
                 set(_component_name ${_prefix}${_directory}-${_mode}-${_architecture})
@@ -104,9 +108,15 @@ function(reaveros_add_component _directory _prefix)
                 reaveros_register_target(${_component_name}-build build-tests ${_architecture} ${_mode} ${ARGN} ${_directory})
 
                 set_property(GLOBAL APPEND PROPERTY _REAVEROS_COMPONENTS "${_component_name}")
-                set_property(TARGET "${_component_name}"
-                    PROPERTY
-                        _REAVEROS_COMPONENT_LABELS "${_architecture};${ARGN};${_directory}"
+                if (NOT _directory STREQUAL "kernel")
+                    set(_labels "${_architecture};${ARGN};${_prefix}${_directory}")
+                else()
+                    set(_labels "${_architecture};${ARGN}")
+                endif()
+                set_target_properties("${_component_name}"
+                    PROPERTIES
+                        _REAVEROS_COMPONENT_LABELS "${_labels}"
+                        _REAVEROS_COMPONENT_TEST_NAME "${_prefix}${_directory}-${_architecture}"
                 )
             endif()
         endforeach()

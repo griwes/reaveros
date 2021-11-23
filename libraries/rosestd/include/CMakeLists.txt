@@ -26,7 +26,11 @@ set(includes
     __char_traits
 )
 
-set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include)
+if (NOT REAVEROS_ENABLE_UNIT_TESTS)
+    set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include)
+else()
+    set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include/rosestd)
+endif()
 
 install(FILES ${includes}
     DESTINATION ${install_dir}

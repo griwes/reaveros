@@ -37,8 +37,10 @@ void * __memcpy(void * s1, const void * s2, size_t n)
 }
 }
 
+#ifndef __ROSESTD_TESTING
 extern "C"
 {
+#endif
     void * memcpy(void * s1, const void * s2, size_t n)
     {
         auto s1_uint = reinterpret_cast<uintptr_t>(s1);
@@ -118,7 +120,9 @@ extern "C"
 
         return s - start;
     }
+#ifndef __ROSESTD_TESTING
 }
+#endif
 
 const void * memchr(const void * s, int c, size_t n)
 {

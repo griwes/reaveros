@@ -22,8 +22,10 @@
 
 __ROSESTD_OPEN
 
+#ifndef __ROSESTD_TESTING
 extern "C"
 {
+#endif
     void * memcpy(void * __s1, const void * __s2, size_t __n);
     void * memmove(void * __s1, const void * __s2, size_t __n);
     char * strcpy(char * __s1, const char * __s2);
@@ -46,7 +48,9 @@ extern "C"
     void * memset(void * __s, int __c, size_t __n);
     char * strerror(int __errnum);
     size_t strlen(const char * __s);
+#ifndef __ROSESTD_TESTING
 }
+#endif
 
 const void * memchr(const void * __s, int __c, size_t __n);
 const char * strchr(const char * __s, int __c);

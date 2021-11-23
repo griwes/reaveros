@@ -83,6 +83,7 @@ namespace kernel::log
 {
 void * get_syslog_mailbox();
 
+#ifndef REAVEROS_TESTING
 extern std::mutex log_lock;
 
 template<typename... Ts>
@@ -99,4 +100,10 @@ void println(std::__format_string<Ts...> fmt, const Ts &... args)
     auto it = std::format_to(kernel::boot_log::iterator(), fmt, args...);
     *it = '\n';
 }
+#else
+template<typename... Ts>
+void println(const Ts &...)
+{
+}
+#endif
 }

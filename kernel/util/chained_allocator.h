@@ -49,8 +49,12 @@ T * allocate_chained()
 
     if (!chained_head<T>)
     {
+#ifndef REAVEROS_TESTING
         auto frame_address = pmm::pop(0);
         T * current = static_cast<phys_ptr_t<T>>(frame_address).value();
+#else
+        T * current = reinterpret_cast<T *>(malloc(arch::vm::page_sizes[0]));
+#endif
         T * next = nullptr;
         T * last = current;
 

@@ -19,6 +19,7 @@ if (REAVEROS_USE_CACHE)
         set(CMAKE_C_COMPILER_LAUNCHER ${_cache_program})
         set(CMAKE_CXX_COMPILER_LAUNCHER ${_cache_program})
     endif()
+    mark_as_advanced(_cache_program)
 endif()
 
 if (NOT GIT_EXECUTABLE OR NOT GIT_VERSION_STRING)
@@ -71,11 +72,13 @@ if (REAVEROS_ENABLE_UNIT_TESTS)
     foreach (component IN LISTS components)
         ExternalProject_Get_Property(${component} BINARY_DIR)
         get_property(labels TARGET ${component} PROPERTY _REAVEROS_COMPONENT_LABELS)
+        get_property(display_name TARGET ${component} PROPERTY _REAVEROS_COMPONENT_TEST_NAME)
 
         set(properties_for_trampoline
 "${properties_for_trampoline}
 set(component_directory_${component} ${BINARY_DIR})
 set(component_labels_${component} ${labels})
+set(component_names_${component} ${display_name})
 "
         )
     endforeach()

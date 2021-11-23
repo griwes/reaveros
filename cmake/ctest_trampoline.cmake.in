@@ -2,7 +2,7 @@ set(components @components@)
 @properties_for_trampoline@
 
 function(add_test name path)
-    set(_test_name "${component} :: ${name}")
+    set(_test_name "${component_names_${component}} :: ${name}")
     _add_test("${_test_name}" "${component_directory_${component}}/test/${path}")
     set_tests_properties(${_test_name}
         PROPERTIES

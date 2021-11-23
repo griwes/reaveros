@@ -24,9 +24,10 @@ template<typename T>
 void test_value(T value, std::string_view str, int base = 10)
 {
     char buffer[10];
-    __ROSESTD::to_chars(std::begin(buffer), std::end(buffer), value, base);
+    auto result = __ROSESTD::to_chars(std::begin(buffer), std::end(buffer), value, base);
 
-    assert(str == buffer);
+    assert(result.ec == __ROSESTD::errc{});
+    assert(str == std::string_view(buffer, result.ptr - buffer));
 }
 
 template<typename T>

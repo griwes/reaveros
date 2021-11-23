@@ -1,5 +1,5 @@
 set(REAVEROS_COMPONENT_ARCHITECTURES ${REAVEROS_ARCHITECTURES})
 set(REAVEROS_COMPONENT_INSTALL_PATH [=[kernels/${_architecture}]=])
-set(REAVEROS_COMPONENT_MODES freestanding)
+set(REAVEROS_COMPONENT_MODES freestanding tests)
 set(REAVEROS_COMPONENT_SKIP_MODE_NAME TRUE)
 set(REAVEROS_COMPONENT_DEPENDS [=[all-${_architecture}-${_mode}-libraries]=])
