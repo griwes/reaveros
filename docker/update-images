@@ -7,6 +7,8 @@ sha=$(git rev-parse HEAD)
 docker pull ghcr.io/griwes/reaveros-build-env/unpruned:latest
 docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io/griwes/reaveros-build-env/unpruned:latest /usr/bin/env bash -c '
     set -xe
+    set -o pipefail
+
     apt update
     apt full-upgrade -y
     apt clean
