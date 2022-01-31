@@ -25,8 +25,17 @@ util::intrusive_ptr<mailbox> create_mailbox()
     return ret;
 }
 
-void mailbox::send(util::intrusive_ptr<handle>)
+void mailbox::send(util::intrusive_ptr<handle> handle)
 {
-    PANIC("implement sending a handle!");
+    auto message = std::make_unique<mailbox_message>(mailbox_message{ .payload = std::move(handle) });
+
+    std::lock_guard _(_lock);
+
+    _message_queue.push_back(std::move(message));
+
+    if (!_waiting_threads.empty())
+    {
+        PANIC("TODO: implement waking up threads sleeping on a mailbox");
+    }
 }
 }

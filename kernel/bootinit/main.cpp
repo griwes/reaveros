@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,12 @@
 
 [[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(rose::syscall::token_t mailbox)
 {
-    rose::syscall::early_log("hello world from userspace!");
-
     for (;;)
-        ;
+    {
+        asm volatile("" ::: "memory");
+    }
+
+    rose::syscall::early_log("hello world from userspace!");
 
     (void)mailbox;
 }

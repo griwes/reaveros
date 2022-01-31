@@ -66,10 +66,13 @@ void vas::map_vmo(util::intrusive_ptr<vmo> vm_object, virt_addr_t mapping_base, 
             mapping_base.value());
     }
 
+    log::println("mapping for {:#018x}", _asid.value());
+
     switch (vm_object->type())
     {
         case vmo_type::physical:
-            arch::vm::map_physical(mapping_base, mapping_base + vm_object->length(), vm_object->base(), fl);
+            arch::vm::map_physical(
+                this, mapping_base, mapping_base + vm_object->length(), vm_object->base(), fl);
             break;
 
         case vmo_type::sparse:
@@ -82,6 +85,7 @@ void vas::map_vmo(util::intrusive_ptr<vmo> vm_object, virt_addr_t mapping_base, 
                 }
 
                 arch::vm::map_physical(
+                    this,
                     mapping_base + element.offset,
                     mapping_base + element.offset + page_size,
                     *element.backing_address,
