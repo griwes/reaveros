@@ -21,7 +21,35 @@
 namespace kernel::util
 {
 template<typename T, typename PointerTraits = unique_ptr_traits<T>>
-struct fifo
+class fifo
 {
+public:
+    void push_back(typename PointerTraits::pointer element)
+    {
+        if (!_head)
+        {
+            _head = PointerTraits::unwrap(std::move(element));
+            _tail = _head;
+
+            _head->prev = nullptr;
+            _head->next = nullptr;
+
+            return;
+        }
+
+        _tail->next = PointerTraits::unwrap(std::move(element));
+        _tail->next->next = nullptr;
+        _tail->next->prev = _tail;
+        _tail = _tail->next;
+    }
+
+    bool empty() const
+    {
+        return _head == nullptr;
+    }
+
+private:
+    T * _head = nullptr;
+    T * _tail = nullptr;
 };
 };

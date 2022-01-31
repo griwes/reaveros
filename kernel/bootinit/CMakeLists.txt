@@ -27,8 +27,6 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/bootinit
             ${CMAKE_CURRENT_BINARY_DIR}/bootinit
 )
 
-add_custom_target(bootinit-flat DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/bootinit)
-
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/incbin_bootinit.asm
     "
     .section .bootinit
@@ -44,4 +42,8 @@ add_library(bootinit-incbin STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/incbin_bootinit.asm
 )
 
-add_dependencies(bootinit-incbin bootinit-flat)
+set_source_files_properties(
+    ${CMAKE_CURRENT_BINARY_DIR}/incbin_bootinit.asm
+    PROPERTIES
+    OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/bootinit
+)

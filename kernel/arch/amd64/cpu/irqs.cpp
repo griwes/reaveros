@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,6 +109,11 @@ void handle(context & ctx)
     {
         ctx.save_to(previous_thread->get_context());
         ctx.load_from(new_thread->get_context());
+
+        if (new_thread->get_container()->get_vas() != previous_thread->get_container()->get_vas())
+        {
+            vm::set_asid(new_thread->get_container()->get_vas()->get_asid());
+        }
     }
 
     if (ctx.number >= 32)

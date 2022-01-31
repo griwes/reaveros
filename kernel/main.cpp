@@ -117,8 +117,10 @@ std::size_t initrd_size;
     {
         kernel::log::println("[BOOT] Creating the bootinit process...");
 
-        auto bootinit_vas = kernel::vm::create_vas(false);
-        auto bootinit_process = kernel::scheduler::create_process(std::move(bootinit_vas));
+        auto bootinit_vas_uptr = kernel::vm::create_vas(false);
+        auto bootinit_vas = bootinit_vas_uptr.get();
+
+        auto bootinit_process = kernel::scheduler::create_process(std::move(bootinit_vas_uptr));
         auto bootinit_thread = bootinit_process->create_thread();
         bootinit_process.release(kernel::util::drop_count);
 
@@ -146,7 +148,8 @@ std::size_t initrd_size;
         bootinit_stack_vmo->commit_all();
         bootinit_vas->map_vmo(
             std::move(bootinit_stack_vmo),
-            bootinit::addresses::top_of_stack - 31 * kernel::arch::vm::page_sizes[0]);
+            bootinit::addresses::top_of_stack - 31 * kernel::arch::vm::page_sizes[0],
+            kernel::vm::flags::user);
 
         auto kernel_process = kernel::scheduler::get_kernel_process().get();
 
@@ -165,8 +168,6 @@ std::size_t initrd_size;
             0,
             kernel::create_handle(bootinit_thread->get_container(), std::move(bootinit_mailbox))
                 ->get_token());
-
-        bootinit_mailbox.release(kernel::util::drop_count);
 
         kernel::log::println(" > Posting the bootinit thread for scheduling. Kernel-side init done.");
         kernel::scheduler::post_schedule(std::move(bootinit_thread));

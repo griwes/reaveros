@@ -23,12 +23,17 @@
 namespace kernel::scheduler
 {
 class process;
+class thread;
 }
 
 namespace kernel::ipc
 {
 struct mailbox_message : util::chained_allocatable<mailbox_message>
 {
+    // TODO: this should be a variant, but I'd rather not stop to implement std::variant right now
+    // I'll fix this when this structure *actually* wants to hold different things
+
+    util::intrusive_ptr<handle> payload;
 };
 
 class mailbox : public util::intrusive_ptrable<mailbox>
@@ -37,8 +42,10 @@ public:
     void send(util::intrusive_ptr<handle> handle);
 
 private:
-    [[maybe_unused]] util::fifo<mailbox_message> _message_queue;
-    // util::fifo<scheduler::thread> _waiting_threads;
+    std::mutex _lock;
+
+    util::fifo<mailbox_message> _message_queue;
+    util::fifo<scheduler::thread> _waiting_threads;
 };
 
 util::intrusive_ptr<mailbox> create_mailbox();
