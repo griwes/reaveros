@@ -20,6 +20,8 @@
 #include "../util/handle.h"
 #include "../util/intrusive_ptr.h"
 
+#include <user/meta.h>
+
 namespace kernel::scheduler
 {
 class process;
@@ -40,6 +42,15 @@ class mailbox : public util::intrusive_ptrable<mailbox>
 {
 public:
     void send(util::intrusive_ptr<handle> handle);
+
+    // syscall handlers
+    static rose::syscall::result syscall_rose_mailbox_read_handler(
+        mailbox *,
+        std::uintptr_t,
+        rose::syscall::mailbox_message *);
+    static rose::syscall::result syscall_rose_mailbox_write_handler(
+        mailbox *,
+        const rose::syscall::mailbox_message *);
 
 private:
     std::mutex _lock;

@@ -12,6 +12,7 @@ set(REAVEROS_CACHE_PROGRAM "ccache" CACHE STRING "Name of the cache program to u
 
 set(REAVEROS_CMAKE ${REAVEROS_BINARY_DIR}/install/toolchain/cmake/bin/cmake)
 set(REAVEROS_CTEST ${REAVEROS_BINARY_DIR}/install/toolchain/cmake/bin/ctest)
+set(REAVEROS_THORN ${REAVEROS_BINARY_DIR}/install/toolchain/thorn/bin/thorn)
 
 if (REAVEROS_USE_CACHE)
     find_program(_cache_program ${REAVEROS_CACHE_PROGRAM})

@@ -85,6 +85,12 @@ constexpr bool cmp_greater_equal(_T __t, _U __u) noexcept;
 template<typename _R, typename _T>
 constexpr bool in_range(_T __t) noexcept;
 
+template<typename _T>
+constexpr underlying_type_t<_T> to_underlying(_T __value) noexcept
+{
+    return static_cast<underlying_type_t<_T>>(__value);
+}
+
 template<typename _T, _T... _I>
 struct integer_sequence
 {

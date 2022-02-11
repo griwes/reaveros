@@ -20,12 +20,8 @@
 
 namespace kernel
 {
-handle::handle(scheduler::process * owner, type_id * type, void * payload, dtor_t dtor)
-    : _token(owner->register_for_token(util::intrusive_ptr(this))),
-      _owner(owner),
-      _type(type),
-      _payload(payload),
-      _dtor(dtor)
+handle::handle(type_id * type, void * payload, dtor_t dtor, permissions perms)
+    : _perms(perms), _type(type), _payload(payload), _dtor(dtor)
 {
 }
 

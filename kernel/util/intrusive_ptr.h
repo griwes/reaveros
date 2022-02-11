@@ -114,6 +114,16 @@ public:
         return std::exchange(_ptr, nullptr);
     }
 
+    bool operator!() const
+    {
+        return !_ptr;
+    }
+
+    explicit operator bool() const
+    {
+        return _ptr;
+    }
+
 private:
     void _claim()
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 
 #include "../../../memory/pmm.h"
 #include "../../../memory/vas.h"
+#include "../../../util/bit_lock.h"
 #include "../../../util/log.h"
 #include "../../../util/mp.h"
 #include "../../../util/pointer_types.h"
@@ -79,7 +80,8 @@ namespace
         std::uint64_t global : 1 = 1;
         std::uint64_t ignored2 : 3;
         std::uint64_t address : 40;
-        std::uint64_t ignored3 : 11;
+        std::uint64_t ignored3 : 10;
+        std::uint64_t lock_bit : 1;
         std::uint64_t reserved2 : 1;
     };
 
@@ -108,7 +110,8 @@ namespace
         std::uint64_t global : 1 = 1;
         std::uint64_t ignored : 3;
         std::uint64_t address : 40;
-        std::uint64_t ignored2 : 11;
+        std::uint64_t ignored2 : 10;
+        std::uint64_t lock_bit : 1;
         std::uint64_t reserved : 1;
     };
 
@@ -144,6 +147,8 @@ namespace
 
         while (virt_start < virt_end)
         {
+            util::bit_lock<62> _(&table->entries[start_table_index]);
+
             auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
             entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
             //                                 ^ this is a protection against overflow on highest addresses
@@ -195,6 +200,8 @@ namespace
 
         while (virt_start < virt_end)
         {
+            util::bit_lock<62> _(&table->entries[start_table_index]);
+
             auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
             entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
             //                                 ^ this is a protection against overflow on highest addresses
@@ -343,6 +350,11 @@ namespace
         {
             while (first <= last)
             {
+                if (table->entries[first].lock_bit)
+                {
+                    PANIC("Page table lock set while unmapping lower half!");
+                }
+
                 if (table->entries[first].present == 1)
                 {
                     if (!table->entries[first].size)
@@ -368,6 +380,13 @@ phys_addr_t clone_upper_half()
 
     for (int i = 256; i < 512; ++i)
     {
+        util::bit_lock<62> _(&cr3->entries[i]);
+
+        if (!cr3->entries[i].present)
+        {
+            cr3->entries[i] = new pmlt<3>;
+        }
+
         ret->entries[i] = cr3->entries[i];
     }
 

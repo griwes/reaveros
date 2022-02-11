@@ -14,17 +14,57 @@
  * limitations under the License.
  */
 
-#include "../vdso/include/rose/syscall/early.h"
-#include "../vdso/include/rose/syscall/typedefs.h"
+#include <user/meta.h>
 
-[[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(rose::syscall::token_t mailbox)
+namespace sc = rose::syscall;
+
+std::uintptr_t logging_mailbox_token;
+
+[[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(std::uintptr_t mailbox_token)
 {
-    for (;;)
+    sc::mailbox_message message;
+
+    auto result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    if (result != sc::result::ok || message.type != sc::mailbox_message_type::handle_token)
     {
-        asm volatile("" ::: "memory");
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    rose::syscall::early_log("hello world from userspace!");
+    logging_mailbox_token = message.payload.handle_token;
 
-    (void)mailbox;
+    /*
+    log::println("[BOOT] Bootinit receiving initial handle tokens...");
+
+    result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    if (result != sc::result::ok)
+    {
+        PANIC("[ERR] Failed to read kernel caps token!");
+    }
+
+    if (message.type != sc::mailbox_message_type::handle_token)
+    {
+        PANIC("[ERR] Received wrong mailbox message type for kernel caps token!");
+    }
+
+    auto kernel_caps = message.payload.handle_token;
+    log::println(" > Kernel caps token received.");
+
+    result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    if (result != sc::result::ok)
+    {
+        PANIC("[ERR] Failed to read initrd VMO token!");
+    }
+
+    if (message.type != sc::mailbox_message_types::handle_token)
+    {
+        PANIC("[ERR] Receivfed wrong mailbox message type for initrd VMO token!");
+    }
+
+    auto initrd_vmo = message.payload.handle_token;
+    log::println(" > Initrd VMO token received.");
+    */
+
+    for (;;)
+        ;
 }

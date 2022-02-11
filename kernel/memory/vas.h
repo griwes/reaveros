@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@
 
 #include "vmo.h"
 
+#include "../util/avl_tree.h"
 #include "../util/chained_allocator.h"
+#include "vmo_mapping.h"
 
 #include <memory>
 
@@ -47,9 +49,37 @@ public:
 
     phys_addr_t get_asid() const;
 
-    void map_vmo(util::intrusive_ptr<vmo> vmo, virt_addr_t address, flags flags = flags::none);
+    util::intrusive_ptr<vmo_mapping> map_vmo(
+        util::intrusive_ptr<vmo> vmo,
+        virt_addr_t address,
+        flags flags = flags::none);
+
+    std::optional<std::unique_lock<std::mutex>> lock_address_range(
+        virt_addr_t start,
+        virt_addr_t end,
+        bool rw = false);
+
+    template<typename T>
+    std::optional<std::unique_lock<std::mutex>> lock_array_mapping(
+        T * ptr,
+        std::size_t count,
+        bool rw = false)
+    {
+        T * end = ptr + count;
+        return lock_address_range(
+            virt_addr_t(reinterpret_cast<std::uintptr_t>(ptr)),
+            virt_addr_t(reinterpret_cast<std::uintptr_t>(end)),
+            rw);
+    }
 
 private:
     phys_addr_t _asid;
+    std::mutex _lock;
+
+    util::avl_tree<
+        vmo_mapping,
+        vmo_mapping_address_compare,
+        util::intrusive_ptr_preserve_count_traits<vmo_mapping>>
+        _mappings;
 };
 }

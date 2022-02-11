@@ -9,7 +9,7 @@ configure_file(${linker_script_in} ${linker_script} @ONLY)
 
 set_target_properties(bootinit-elf
     PROPERTIES
-        COMPILE_FLAGS "-g -mcmodel=kernel -DREAVEROS_KERNEL_SOURCE_ROOT='\"${CMAKE_SOURCE_DIR}\"'"
+        COMPILE_FLAGS "-g"
         LINK_FLAGS "-T ${linker_script} -static -Map=bootinit.map -nostdlib"
         LINK_DEPENDS ${linker_script}
 )
@@ -22,9 +22,8 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/bootinit
     DEPENDS bootinit-elf
 
     COMMAND
-        ${CMAKE_OBJCOPY} -O binary -j .text -j .data
-            $<TARGET_FILE:bootinit-elf>
-            ${CMAKE_CURRENT_BINARY_DIR}/bootinit
+        ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:bootinit-elf> ${CMAKE_CURRENT_BINARY_DIR}/bootinit
+            --set-section-flags .data=alloc,load,contents
 )
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/incbin_bootinit.asm
@@ -45,5 +44,5 @@ add_library(bootinit-incbin STATIC
 set_source_files_properties(
     ${CMAKE_CURRENT_BINARY_DIR}/incbin_bootinit.asm
     PROPERTIES
-    OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/bootinit
+        OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/bootinit
 )

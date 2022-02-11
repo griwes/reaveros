@@ -29,3 +29,5 @@ include(llvm.cmake)
 if ("uefi" IN_LIST REAVEROS_LOADERS)
     include(fs-fat.cmake)
 endif()
+
+include(thorn.cmake)

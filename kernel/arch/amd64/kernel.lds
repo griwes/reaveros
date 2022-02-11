@@ -34,6 +34,7 @@ SECTIONS
         . = ALIGN(0x1000);
         *(COMMON)
         *(.bss)
+        *(.bss.*)
         *(.gnu.linkonce.b*)
 
         . = ALIGN(0x1000);

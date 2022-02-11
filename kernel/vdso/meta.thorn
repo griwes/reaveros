@@ -1,0 +1,32 @@
+include <scheduler/mailbox.h>;
+
+enum result(
+    ok,
+    invalid_token,
+    wrong_handle_type,
+    not_allowed,
+    invalid_pointers,
+    not_ready
+);
+
+enum mailbox_message_type(
+    handle_token
+);
+
+struct mailbox_message(
+    type: $::mailbox_message_type,
+    payload: union(
+        handle_token: std::uintptr_t
+    )
+);
+
+syscall(kernel::ipc::mailbox) rose_mailbox_read(
+    mailbox: token(read) kernel::ipc::mailbox,
+    timeout_ns: std::uintptr_t,
+    message: out ptr $::mailbox_message
+) -> $::result;
+
+syscall(kernel::ipc::mailbox) rose_mailbox_write(
+    mailbox: token(write) kernel::ipc::mailbox,
+    message: in ptr $::mailbox_message
+) -> $::result;

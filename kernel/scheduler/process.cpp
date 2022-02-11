@@ -56,6 +56,19 @@ handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
     return token;
 }
 
+util::intrusive_ptr<handle> process::get_handle(handle_token_t token) const
+{
+    std::lock_guard _(_lock);
+
+    auto it = _handles.find(token);
+    if (it == _handles.end())
+    {
+        return {};
+    }
+
+    return it->handle;
+}
+
 util::intrusive_ptr<thread> process::create_thread()
 {
     auto ret = util::make_intrusive<thread>(util::intrusive_ptr<process>(this));

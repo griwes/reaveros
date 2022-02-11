@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 #include "__config"
 #include "atomic"
+#include "memory"
+#include "utility"
 #include "version"
 
 __ROSESTD_OPEN
@@ -79,7 +81,7 @@ inline constexpr defer_lock_t defer_lock{};
 inline constexpr try_to_lock_t try_to_lock{};
 inline constexpr adopt_lock_t adopt_lock{};
 
-template<class _Mutex>
+template<typename _Mutex>
 class lock_guard
 {
 public:
@@ -106,10 +108,73 @@ private:
     mutex_type & __pm;
 };
 
-template<class... _MutexTypes>
+template<typename... _MutexTypes>
 class scoped_lock;
-template<class _Mutex>
-class unique_lock;
+
+template<typename _Mutex>
+class unique_lock
+{
+public:
+    using mutex_type = _Mutex;
+
+    // [thread.lock.unique.cons], construct/copy/destroy
+    unique_lock() noexcept;
+
+    explicit unique_lock(mutex_type & __m) : __pm(__ROSESTD::addressof(__m)), __owns(true)
+    {
+        __pm->lock();
+    }
+
+    unique_lock(mutex_type & __m, defer_lock_t) noexcept;
+    unique_lock(mutex_type & __m, try_to_lock_t);
+    unique_lock(mutex_type & __m, adopt_lock_t);
+    // template<class Clock, class Duration>
+    // unique_lock(mutex_type & m, const chrono::time_point<Clock, Duration> & abs_time);
+    // template<class Rep, class Period>
+    // unique_lock(mutex_type & m, const chrono::duration<Rep, Period> & rel_time);
+
+    ~unique_lock()
+    {
+        if (__owns)
+        {
+            __pm->unlock();
+        }
+    }
+
+    unique_lock(const unique_lock &) = delete;
+    unique_lock & operator=(const unique_lock &) = delete;
+
+    unique_lock(unique_lock && __u) noexcept
+        : __pm(__ROSESTD::exchange(__u.__pm, nullptr)), __owns(__ROSESTD::exchange(__u.__owns, false))
+    {
+    }
+
+    unique_lock & operator=(unique_lock && __u);
+
+    // [thread.lock.unique.locking], locking
+    void lock();
+    bool try_lock();
+
+    // template<class Rep, class Period>
+    // bool try_lock_for(const chrono::duration<Rep, Period> & rel_time);
+    // template<class Clock, class Duration>
+    // bool try_lock_until(const chrono::time_point<Clock, Duration> & abs_time);
+
+    void unlock();
+
+    // [thread.lock.unique.mod], modifiers
+    void swap(unique_lock & __u) noexcept;
+    mutex_type * release() noexcept;
+
+    // [thread.lock.unique.obs], observers
+    bool owns_lock() const noexcept;
+    explicit operator bool() const noexcept;
+    mutex_type * mutex() const noexcept;
+
+private:
+    mutex_type * __pm;
+    bool __owns;
+};
 
 template<class _Mutex>
 void swap(unique_lock<_Mutex> & __x, unique_lock<_Mutex> & __y) noexcept;

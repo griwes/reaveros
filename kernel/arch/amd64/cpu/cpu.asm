@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 .global load_gdtr
 .global load_idtr
 .global common_interrupt_stub
+.global syscall_handler_stub
 
 .extern common_interrupt_handler
+.extern syscall_handler
 
 load_gdtr:
     lgdt [rdi]
@@ -84,3 +86,47 @@ isr_context_return:
 
     iretq
 
+syscall_handler_stub:
+    swapgs
+
+    mov     rdx, rsp
+    mov     rsp, gs:[0]
+    mov     rsp, [rsp]
+
+    push    rax
+    push    rbx
+    push    rcx
+    push    rdx
+    push    rsi
+    push    rdi
+    push    rbp
+    push    r8
+    push    r9
+    push    r10
+    push    r11
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+
+    call    syscall_handler
+
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     r11
+    pop     r10
+    pop     r9
+    pop     r8
+    pop     rbp
+    pop     rdi
+    pop     rsi
+    pop     rdx
+    pop     rcx
+    pop     rbx
+    pop     rax
+
+    mov     rsp, rdx
+
+    sysretq

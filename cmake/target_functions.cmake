@@ -32,17 +32,17 @@ endfunction()
 function(_reaveros_register_target_impl _target _head _tail)
     list(LENGTH _tail _tail_length)
     math(EXPR _tail_length_prev "${_tail_length} - 1")
+    list(GET _tail ${_tail_length_prev} _last)
 
     foreach (_index RANGE 0 ${_tail_length_prev})
         list(GET _tail ${_index} _current_element)
         set(_full_list ${_head} ${_current_element})
 
-        string(REPLACE ";" "-" _aggregate_target "${_full_list}")
-        if (TARGET all-${_aggregate_target})
-            #message("add_dependencies(all-${_aggregate_target} ${_target})")
-            add_dependencies(all-${_aggregate_target} ${_target})
-            #else()
-            #message("skipping add_dependencies(all-${_aggregate_target} ${_target})")
+        if (${_index} EQUAL ${_tail_length_prev} OR NOT "${_last}" STREQUAL "build-tests")
+            string(REPLACE ";" "-" _aggregate_target "${_full_list}")
+            if (TARGET all-${_aggregate_target})
+                add_dependencies(all-${_aggregate_target} ${_target})
+            endif()
         endif()
 
         math(EXPR _index_next "${_index} + 1")
@@ -104,12 +104,13 @@ function(reaveros_add_component _directory _prefix)
                     -DCMAKE_TOOLCHAIN_FILE=${REAVEROS_BINARY_DIR}/install/toolchain/files/${_architecture}-${_mode}.cmake
                     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
                     -DREAVEROS_ARCH=${_architecture}
+                    -DREAVEROS_THORN=${REAVEROS_THORN}
             )
 
             reaveros_register_target(${_component_name}-install ${_architecture} ${_mode} ${ARGN} ${_directory})
 
             if (${_mode} STREQUAL "tests")
-                reaveros_register_target(${_component_name}-build build-tests ${_architecture} ${_mode} ${ARGN} ${_directory})
+                reaveros_register_target(${_component_name}-build ${_architecture} ${_mode} ${ARGN} ${_directory} build-tests)
 
                 set_property(GLOBAL APPEND PROPERTY _REAVEROS_COMPONENTS "${_component_name}")
                 if (NOT _directory STREQUAL "kernel")

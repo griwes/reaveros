@@ -21,14 +21,11 @@
 
 namespace kernel::util
 {
-namespace
-{
-    template<typename T>
-    T * chained_head = nullptr;
+template<typename T>
+T * chained_head = nullptr;
 
-    template<typename T>
-    std::mutex chained_lock;
-}
+template<typename T>
+std::mutex chained_lock;
 
 template<typename T>
 struct chained_allocatable

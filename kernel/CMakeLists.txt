@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 project(reaveros-kernel ASM CXX)
 
 if (NOT REAVEROS_ENABLE_UNIT_TESTS)
+    include_directories(${CMAKE_BINARY_DIR}/vdso/thorn)
+
     add_subdirectory(vdso)
     add_subdirectory(bootinit)
 
@@ -30,6 +32,7 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
     target_link_libraries(kernel-elf
         bootinit-incbin
         vdso-incbin
+        syscall_table
         ${CMAKE_SYSROOT}/usr/lib/librosestd.a
     )
 
@@ -46,9 +49,8 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
         DEPENDS kernel-elf
 
         COMMAND
-            ${CMAKE_OBJCOPY} -O binary -j .text -j .data
-                $<TARGET_FILE:kernel-elf>
-                ${CMAKE_BINARY_DIR}/kernel
+            ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:kernel-elf> ${CMAKE_BINARY_DIR}/kernel
+                --set-section-flags .data=alloc,load,contents
     )
 
     add_custom_target(kernel-flat ALL DEPENDS ${CMAKE_BINARY_DIR}/kernel)

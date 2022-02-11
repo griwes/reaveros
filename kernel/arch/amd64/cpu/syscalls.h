@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,20 @@
 
 #pragma once
 
+#include "thread.h"
+
 #include <cstdint>
 
-namespace rose::syscall
+namespace kernel::amd64::syscalls
 {
-using token_t = std::uintptr_t;
+struct [[gnu::packed]] context
+{
+    std::uint64_t r15, r14, r13, r12, rflags, r10, r9, r8;
+    std::uint64_t rbp, rdi, rsi, user_rsp, user_rip, rbx, rax;
+
+    void save_to(thread::context *) const;
+    void load_from(const thread::context *);
+};
+
+void initialize();
 }

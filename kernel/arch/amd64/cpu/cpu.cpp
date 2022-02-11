@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,27 @@
 #include "gdt.h"
 #include "idt.h"
 #include "lapic.h"
+#include "syscalls.h"
 
 namespace kernel::amd64::cpu
 {
+extern "C" void syscall_handler_entry();
+extern "C" void _syscall_handler();
+
 namespace
 {
     static const constexpr auto max_core_count = 1024;
     core cores[max_core_count];
     std::size_t core_count = max_core_count;
+
+    constexpr auto ia32_gs_base = 0xc0000101;
+    constexpr auto ia32_kernel_gs_base = 0xc0000102;
+
+    void initialize_local_storage(core * self)
+    {
+        wrmsr(ia32_gs_base, reinterpret_cast<std::uint64_t>(self->get_core_local_storage_ptr()));
+        wrmsr(ia32_kernel_gs_base, reinterpret_cast<std::uint64_t>(self->get_core_local_storage_ptr()));
+    }
 }
 
 namespace detail_for_mp
@@ -63,8 +76,8 @@ void initialize()
     idt::initialize();
     idt::load();
 
-    wrmsr(0xc0000101, reinterpret_cast<std::uint64_t>(bsp_core->get_core_local_storage_ptr()));
-    wrmsr(0xc0000102, reinterpret_cast<std::uint64_t>(bsp_core->get_core_local_storage_ptr()));
+    initialize_local_storage(bsp_core);
+    syscalls::initialize();
 }
 
 void idle()
@@ -86,8 +99,8 @@ void ap_initialize()
     core->load_gdt();
     idt::load();
 
-    wrmsr(0xc0000101, reinterpret_cast<std::uint64_t>(core->get_core_local_storage_ptr()));
-    wrmsr(0xc0000102, reinterpret_cast<std::uint64_t>(core->get_core_local_storage_ptr()));
+    initialize_local_storage(core);
+    syscalls::initialize();
 
     lapic_timer::ap_initialize();
 
