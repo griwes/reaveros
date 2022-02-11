@@ -15,6 +15,8 @@
  */
 
 #include "mailbox.h"
+#include "../arch/cpu.h"
+#include "thread.h"
 
 namespace kernel::ipc
 {
@@ -37,5 +39,41 @@ void mailbox::send(util::intrusive_ptr<handle> handle)
     {
         PANIC("TODO: implement waking up threads sleeping on a mailbox");
     }
+}
+
+// syscalls
+rose::syscall::result mailbox::syscall_rose_mailbox_read_handler(
+    mailbox * mb,
+    std::uintptr_t timeout,
+    rose::syscall::mailbox_message * target)
+{
+    std::lock_guard _(mb->_lock);
+
+    if (timeout != static_cast<std::uintptr_t>(-1))
+    {
+        PANIC("TODO: support with mailbox read with a timeout");
+    }
+
+    if (mb->_message_queue.empty())
+    {
+        return rose::syscall::result::not_ready;
+    }
+
+    auto message = mb->_message_queue.pop_front();
+
+    target->type = rose::syscall::mailbox_message_type::handle_token;
+
+    auto current_thread = arch::cpu::get_core_local_storage()->current_thread;
+    target->payload.handle_token =
+        current_thread->get_container()->register_for_token(std::move(message->payload)).value();
+
+    return rose::syscall::result::ok;
+}
+
+rose::syscall::result mailbox::syscall_rose_mailbox_write_handler(
+    mailbox *,
+    const rose::syscall::mailbox_message *)
+{
+    PANIC("got asked to write a message to a mailbox!");
 }
 }

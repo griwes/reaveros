@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,5 +26,7 @@ using ptrdiff_t = decltype(static_cast<char *>(nullptr) - static_cast<char *>(nu
 using nullptr_t = decltype(nullptr);
 
 __ROSESTD_CLOSE
+
+#define offsetof(t, m) __builtin_offsetof(t, m)
 
 // vim: ft=cpp

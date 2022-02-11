@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,18 @@
 #error unknown architecture
 #endif
 
+#include "../arch/vm.h"
 #include "../boot/screen.h"
+#include "../memory/pmm.h"
+
+#include <new>
 
 namespace kernel::boot_log
 {
 struct buffer_chunk
 {
     buffer_chunk * previous = nullptr;
-    char buffer[2 * 1024 * 1024 - sizeof(previous)]{}; // NOLINT(bugprone-sizeof-expression)
+    char buffer[arch::vm::page_sizes[1] - sizeof(previous)]{}; // NOLINT(bugprone-sizeof-expression)
 };
 
 namespace
@@ -63,8 +67,12 @@ const iterator::proxy & iterator::proxy::operator=(char c) const
     *log_cursor++ = c;
     if (log_cursor == std::end(latest_chunk->buffer))
     {
-        // allocate more, but need PMM for that
-        asm volatile("ud2");
+        auto new_buffer = pmm::pop(1);
+        auto previous = latest_chunk;
+        latest_chunk = new (phys_ptr_t<void>(new_buffer).value()) buffer_chunk{};
+        latest_chunk->previous = previous;
+
+        log_cursor = latest_chunk->buffer;
     }
 
     boot_screen::put_char(c);

@@ -360,8 +360,11 @@ struct is_nothrow_default_constructible : is_nothrow_constructible<_T>
 
 template<typename _T>
 struct is_nothrow_copy_constructible;
+
 template<typename _T>
-struct is_nothrow_move_constructible;
+struct is_nothrow_move_constructible : bool_constant<__is_nothrow_constructible(_T, _T &&)>
+{
+};
 
 template<typename _T, typename _U>
 struct is_nothrow_assignable;
@@ -867,8 +870,22 @@ struct common_reference
 {
 };
 
+template<typename _T, bool _IsEnum>
+struct __underlying_type_impl
+{
+    using type = __underlying_type(_T);
+};
+
 template<typename _T>
-struct underlying_type;
+struct __underlying_type_impl<_T, false>
+{
+};
+
+template<typename _T>
+struct underlying_type : __underlying_type_impl<_T, __is_enum(_T)>
+{
+};
+
 template<typename _Fn, typename... _ArgTypes>
 struct invoke_result;
 

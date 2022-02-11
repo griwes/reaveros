@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include "../../../scheduler/instance.h"
 #include "../timers/lapic.h"
 
+#include <cstddef>
 #include <cstdint>
 
 namespace kernel::amd64::mp
@@ -37,9 +38,12 @@ struct core_local_storage
     core_local_storage();
     ~core_local_storage();
 
+    std::uint64_t kernel_syscall_stack = 0;
     core * current_core = nullptr;
     util::intrusive_ptr<scheduler::thread> current_thread;
 };
+
+static_assert(offsetof(core_local_storage, kernel_syscall_stack) == 0);
 
 core_local_storage * get_core_local_storage();
 

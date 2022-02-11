@@ -31,6 +31,7 @@ public:
     process(std::unique_ptr<vm::vas> address_space);
 
     handle_token_t register_for_token(util::intrusive_ptr<handle>);
+    util::intrusive_ptr<handle> get_handle(handle_token_t token) const;
 
     util::intrusive_ptr<thread> create_thread();
 
@@ -64,7 +65,7 @@ private:
         }
     };
 
-    std::mutex _lock;
+    mutable std::mutex _lock;
     std::unique_ptr<vm::vas> _address_space;
     util::avl_tree<_handle_store, _handle_store_compare> _handles;
 };

@@ -43,6 +43,18 @@ public:
         _tail = _tail->next;
     }
 
+    typename PointerTraits::pointer pop_front()
+    {
+        if (empty())
+        {
+            return {};
+        }
+
+        auto ret_raw = _head;
+        _head = _head->next;
+        return PointerTraits::create(ret_raw);
+    }
+
     bool empty() const
     {
         return _head == nullptr;

@@ -33,6 +33,20 @@ struct type_id
 template<typename T>
 type_id type_id_of;
 
+enum class permissions : std::uintmax_t
+{
+    read = 1 << 0,
+    write = 1 << 1,
+    transfer = 1 << 2,
+
+    all = ~static_cast<std::uintmax_t>(0)
+};
+
+inline permissions operator|(permissions lhs, permissions rhs)
+{
+    return static_cast<permissions>(std::to_underlying(lhs) | std::to_underlying(rhs));
+}
+
 struct handle_token_tag
 {
 };
@@ -43,13 +57,8 @@ class handle : public util::intrusive_ptrable<handle>
 public:
     using dtor_t = void (*)(void *);
 
-    handle(scheduler::process * owner, type_id * type, void * payload, dtor_t dtor);
+    handle(type_id * type, void * payload, dtor_t dtor, permissions perms);
     ~handle();
-
-    handle_token_t get_token() const
-    {
-        return _token;
-    }
 
     template<typename T>
     bool is_a() const
@@ -63,29 +72,35 @@ public:
         return static_cast<T *>(_payload);
     }
 
+    bool has_permissions(permissions perms) const
+    {
+        return (std::to_underlying(perms) & std::to_underlying(_perms)) == std::to_underlying(perms);
+    }
+
 private:
-    handle_token_t _token;
-    [[maybe_unused]] scheduler::process * _owner;
+    const permissions _perms;
     type_id * _type;
     void * _payload;
     dtor_t _dtor;
 };
 
 template<typename T>
-util::intrusive_ptr<handle> create_handle(scheduler::process * owner, T * payload)
+util::intrusive_ptr<handle> create_handle(T * payload, permissions perms = permissions::all)
 {
     return util::make_intrusive<handle>(
-        owner, &type_id_of<T>, payload, +[](void *) {});
+        &type_id_of<T>, payload, +[](void *) {}, perms);
 }
 
 template<typename T>
-util::intrusive_ptr<handle> create_handle(scheduler::process * owner, util::intrusive_ptr<T> payload)
+util::intrusive_ptr<handle> create_handle(
+    util::intrusive_ptr<T> payload,
+    permissions perms = permissions::all)
 {
     return util::make_intrusive<handle>(
-        owner,
         &type_id_of<T>,
         payload.release(util::keep_count),
-        +[](void * payload) { util::intrusive_ptr(static_cast<T *>(payload)).release(util::drop_count); });
+        +[](void * payload) { util::intrusive_ptr(static_cast<T *>(payload)).release(util::drop_count); },
+        perms);
 }
 
 inline struct kernel_caps_t

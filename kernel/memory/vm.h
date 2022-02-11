@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ void set_vdso_vmo(util::intrusive_ptr<vmo> vdso);
 enum class flags : std::uintptr_t
 {
     none = 0,
-    user = 1 << 0
+    user = 1 << 0,
+    read_only = 1 << 1
 };
 
 inline bool operator&(flags lhs, flags rhs)

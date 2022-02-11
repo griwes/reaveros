@@ -151,23 +151,28 @@ std::size_t initrd_size;
             bootinit::addresses::top_of_stack - 31 * kernel::arch::vm::page_sizes[0],
             kernel::vm::flags::user);
 
-        auto kernel_process = kernel::scheduler::get_kernel_process().get();
-
-        kernel::log::println(" > Creating the bootstrap mailbox and sending handle tokens...");
+        kernel::log::println(" > Creating the bootstrap mailboxes and sending handle tokens...");
         auto bootinit_mailbox = kernel::ipc::create_mailbox();
+
+        kernel::log::println(" >> Creating and sending the logging mailbox...");
+        auto bootinit_logging_mailbox = kernel::ipc::create_mailbox();
+        auto blm_handle = kernel::create_handle(
+            std::move(bootinit_logging_mailbox), kernel::permissions::write | kernel::permissions::transfer);
+        bootinit_mailbox->send(std::move(blm_handle));
+
         kernel::log::println(" >> Sending kernel caps handle token...");
-        bootinit_mailbox->send(kernel::create_handle(kernel_process, &kernel::kernel_caps));
+        bootinit_mailbox->send(kernel::create_handle(&kernel::kernel_caps));
+
         kernel::log::println(" >> Sending initrd VMO handle token...");
-        bootinit_mailbox->send(kernel::create_handle(kernel_process, std::move(initrd_vmo)));
+        bootinit_mailbox->send(kernel::create_handle(std::move(initrd_vmo)));
 
         kernel::log::println(" > Preparing bootinit context...");
+        auto bm_handle = kernel::create_handle(std::move(bootinit_mailbox), kernel::permissions::read);
         bootinit_thread->get_context()->set_userspace();
         bootinit_thread->get_context()->set_instruction_pointer(bootinit::addresses::ip);
         bootinit_thread->get_context()->set_stack_pointer(bootinit::addresses::top_of_stack);
         bootinit_thread->get_context()->set_argument(
-            0,
-            kernel::create_handle(bootinit_thread->get_container(), std::move(bootinit_mailbox))
-                ->get_token());
+            0, bootinit_thread->get_container()->register_for_token(std::move(bm_handle)));
 
         kernel::log::println(" > Posting the bootinit thread for scheduling. Kernel-side init done.");
         kernel::scheduler::post_schedule(std::move(bootinit_thread));
