@@ -65,6 +65,7 @@ jobs:
                     set -e
                     set -o pipefail
                     cd /build
+                    cmake .
                     for target in $(make help | grep -- -install | sed "s/\.\.\. //")
                     do
                         rm -rf install/{images,kernels,loaders,sysroots,userspace}
