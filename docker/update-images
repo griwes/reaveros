@@ -10,6 +10,7 @@ docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io
     set -o pipefail
 
     apt update
+    apt install build-essential automake cmake git python3 bison flex libssl-dev ccache cpio -y
     apt full-upgrade -y
     apt clean
 
