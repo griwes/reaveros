@@ -1,5 +1,10 @@
 add_executable(bootinit-elf
     main.cpp
+    log.cpp
+)
+
+target_link_libraries(bootinit-elf
+    ${CMAKE_SYSROOT}/usr/lib/librosestd.a
 )
 
 set(linker_script_in ${CMAKE_CURRENT_SOURCE_DIR}/bootinit.lds.in)

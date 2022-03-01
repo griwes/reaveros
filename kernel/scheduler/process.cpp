@@ -15,6 +15,7 @@
  */
 
 #include "process.h"
+#include "../util/interrupt_control.h"
 #include "thread.h"
 
 namespace kernel::scheduler
@@ -58,6 +59,7 @@ handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
 
 util::intrusive_ptr<handle> process::get_handle(handle_token_t token) const
 {
+    util::interrupt_guard guard;
     std::lock_guard _(_lock);
 
     auto it = _handles.find(token);

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,11 +51,11 @@ void timer::bsp_initialize()
     lapic::write_timer_divisor(1);
     lapic::write_timer_counter(-1);
 
-    volatile bool interrupt_fired = false;
+    std::atomic<bool> interrupt_fired = false;
 
     using namespace std::literals;
     time::get_high_precision_timer().one_shot(
-        50ms, +[](volatile bool * fired) { *fired = true; }, &interrupt_fired);
+        50ms, +[](std::atomic<bool> * fired) { *fired = true; }, &interrupt_fired);
 
     asm volatile("sti");
 
@@ -84,7 +84,7 @@ void timer::initialize(timer * bsp)
     _period = bsp->_period;
 }
 
-void timer::_update_now()
+void timer::_update_now(const std::unique_lock<std::mutex> &)
 {
     auto current = lapic::read_timer_counter();
     auto last = std::exchange(_last_written, current);
@@ -102,7 +102,7 @@ void timer::_one_shot_after(std::chrono::nanoseconds duration_ns)
         divisor *= 2;
     }
 
-    auto count = duration_ns / (divisor * _period);
+    auto count = duration_ns / (divisor * _period) + 1;
     if (count > ~0u)
     {
         count = ~0u;

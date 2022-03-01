@@ -14,14 +14,37 @@
  * limitations under the License.
  */
 
+#include "log.h"
+
 #include <user/meta.h>
+
+using ctor_t = void (*)();
+extern "C" ctor_t __start_ctors;
+extern "C" ctor_t __end_ctors;
+
+extern "C" void __init()
+{
+    for (auto ctor = &__start_ctors; ctor != &__end_ctors; ++ctor)
+    {
+        (*ctor)();
+    }
+}
+
+extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
+{
+}
+
+[[noreturn]] extern "C" void __cxa_pure_virtual()
+{
+    PANIC("Pure virtual method called!");
+}
 
 namespace sc = rose::syscall;
 
-std::uintptr_t logging_mailbox_token;
-
 [[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(std::uintptr_t mailbox_token)
 {
+    __init();
+
     sc::mailbox_message message;
 
     auto result = sc::rose_mailbox_read(mailbox_token, -1, &message);
@@ -31,10 +54,18 @@ std::uintptr_t logging_mailbox_token;
         *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    logging_mailbox_token = message.payload.handle_token;
+    bootinit::log::logging_send_mailbox_token = message.payload.handle_token;
 
-    /*
-    log::println("[BOOT] Bootinit receiving initial handle tokens...");
+    result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    if (result != sc::result::ok || message.type != sc::mailbox_message_type::handle_token)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+
+    bootinit::log::logging_ack_mailbox_token = message.payload.handle_token;
+
+    bootinit::log::println("[BOOT] Bootinit receiving initial handle tokens...");
 
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
     if (result != sc::result::ok)
@@ -47,8 +78,8 @@ std::uintptr_t logging_mailbox_token;
         PANIC("[ERR] Received wrong mailbox message type for kernel caps token!");
     }
 
-    auto kernel_caps = message.payload.handle_token;
-    log::println(" > Kernel caps token received.");
+    [[maybe_unused]] auto kernel_caps = message.payload.handle_token;
+    bootinit::log::println(" > Kernel caps token received.");
 
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
     if (result != sc::result::ok)
@@ -56,14 +87,13 @@ std::uintptr_t logging_mailbox_token;
         PANIC("[ERR] Failed to read initrd VMO token!");
     }
 
-    if (message.type != sc::mailbox_message_types::handle_token)
+    if (message.type != sc::mailbox_message_type::handle_token)
     {
         PANIC("[ERR] Receivfed wrong mailbox message type for initrd VMO token!");
     }
 
-    auto initrd_vmo = message.payload.handle_token;
-    log::println(" > Initrd VMO token received.");
-    */
+    [[maybe_unused]] auto initrd_vmo = message.payload.handle_token;
+    bootinit::log::println(" > Initrd VMO token received.");
 
     for (;;)
         ;

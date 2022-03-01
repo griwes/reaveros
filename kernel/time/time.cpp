@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,9 +69,16 @@ timer & get_high_precision_timer(bool main)
     return *hpt;
 }
 
+timer & get_preemption_timer()
+{
+    return *arch::timers::get_preemption_timer();
+}
+
 std::chrono::time_point<timer> timer::now()
 {
-    _update_now();
+    util::interrupt_guard guard;
+    std::unique_lock _(_lock);
+    _update_now(_);
     return _now;
 }
 
@@ -80,59 +87,65 @@ void timer::handle(timer * self)
     self->_schedule_next();
 }
 
-event_token timer::_do(
+timer::event_token timer::_do(
     std::chrono::nanoseconds dur,
     void (*fptr)(void *, std::uint64_t),
     void * erased_fptr,
     std::uint64_t ctx,
     _mode mode)
 {
-    // TODO: lock
+    auto desc = util::make_intrusive<_timer_descriptor>();
 
-    _update_now();
-
-    auto desc = std::make_unique<_timer_descriptor>();
-    desc->id = ++_next_id
-        | (static_cast<std::size_t>(mode == _mode::periodic) << (sizeof(std::size_t) * CHAR_BIT - 1));
-    desc->trigger_time = _now + dur;
-    desc->callback = fptr;
-    desc->erased_callback = erased_fptr;
-    desc->context = ctx;
-
-    if (_next_id & (static_cast<std::size_t>(1) << (sizeof(std::size_t) * CHAR_BIT - 1))) [[unlikely]]
     {
-        PANIC("Somehow, timer IDs have been exhausted!");
-    }
+        util::interrupt_guard guard;
+        std::unique_lock _(_lock);
+        _update_now(_);
 
-    _heap.push(std::move(desc));
+        desc->id = ++_next_id
+            | (static_cast<std::size_t>(mode == _mode::periodic) << (sizeof(std::size_t) * CHAR_BIT - 1));
+        desc->trigger_time = _now + dur;
+        desc->callback = fptr;
+        desc->erased_callback = erased_fptr;
+        desc->context = ctx;
+
+        if (_next_id & (static_cast<std::size_t>(1) << (sizeof(std::size_t) * CHAR_BIT - 1))) [[unlikely]]
+        {
+            PANIC("Somehow, timer IDs have been exhausted!");
+        }
+
+        _heap.push(desc);
+    }
 
     _schedule_next();
 
-    return event_token(nullptr, 0);
+    return event_token(nullptr, 0, std::move(desc));
 }
 
 void timer::_schedule_next()
 {
-    // TODO: lock
+    util::interrupt_guard guard;
+    std::unique_lock lock(_lock);
 
-    _update_now();
+    _update_now(lock);
 
     for (auto top = _heap.peek(); top && top->trigger_time <= _now; top = _heap.peek())
     {
         auto desc = _heap.pop();
-        // drop lock
+        lock.unlock();
 
-        desc->callback(desc->erased_callback, desc->context);
+        if (desc->valid.load(std::memory_order_relaxed))
+        {
+            desc->callback(desc->erased_callback, desc->context);
+        }
 
-        _update_now();
+        lock.lock();
+        _update_now(lock);
 
         if (desc->id & (static_cast<std::size_t>(1) << (sizeof(std::size_t) * CHAR_BIT - 1)))
         {
             PANIC("implement periodic timer events already");
         }
     }
-
-    // TODO: lock
 
     auto top = _heap.peek();
     if (!top)
@@ -148,5 +161,11 @@ bool timer::_timer_descriptor_comparator::operator()(
     const timer::_timer_descriptor & rhs) const
 {
     return lhs.trigger_time < rhs.trigger_time;
+}
+
+void timer::event_token::cancel()
+{
+    _desc->valid.store(false, std::memory_order_relaxed);
+    _desc.release(util::drop_count);
 }
 }

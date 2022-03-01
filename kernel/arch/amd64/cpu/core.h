@@ -102,17 +102,21 @@ public:
 
     core_local_storage ** get_core_local_storage_ptr()
     {
+        _accessed.store(true, std::memory_order_relaxed);
         return &_cls_ptr;
     }
 
     void initialize_gdt();
     void load_gdt();
-    void initialize_idt();
-    void load_idt();
+    void set_kernel_stack(virt_addr_t stack);
+
+    void reinit_as(const core & other);
 
     friend void ::kernel::amd64::mp::boot();
 
 private:
+    // WARNING: remember to update reinit_as when updating the structure!
+
     std::uint32_t _is_valid : 1 = false;
     std::uint32_t _nmi_valid : 1 = false;
 
@@ -126,10 +130,12 @@ private:
     volatile std::uint8_t * _boot_flag = nullptr;
 
     gdt::entry _gdt[7];
-    gdt::gdtr_t _gdtr;
+    gdt::gdtr_t _gdtr{};
+    gdt::tss_t _tss{};
+
+    std::atomic<bool> _accessed = false;
 
     lapic_timer::timer _preempt_timer;
-
     scheduler::instance _local_scheduler;
 
     core_local_storage _cls;

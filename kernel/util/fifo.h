@@ -31,16 +31,18 @@ public:
             _head = PointerTraits::unwrap(std::move(element));
             _tail = _head;
 
-            _head->prev = nullptr;
             _head->next = nullptr;
+
+            ++_size;
 
             return;
         }
 
         _tail->next = PointerTraits::unwrap(std::move(element));
         _tail->next->next = nullptr;
-        _tail->next->prev = _tail;
         _tail = _tail->next;
+
+        ++_size;
     }
 
     typename PointerTraits::pointer pop_front()
@@ -49,6 +51,8 @@ public:
         {
             return {};
         }
+
+        --_size;
 
         auto ret_raw = _head;
         _head = _head->next;
@@ -60,8 +64,15 @@ public:
         return _head == nullptr;
     }
 
+    std::size_t size() const
+    {
+        return _size;
+    }
+
 private:
     T * _head = nullptr;
     T * _tail = nullptr;
+
+    std::size_t _size = 0;
 };
 };

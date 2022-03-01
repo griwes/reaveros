@@ -16,22 +16,29 @@
 
 #pragma once
 
-#include "thread.h"
-
 #include <cstdint>
 
-namespace kernel::amd64::syscalls
+namespace kernel::amd64::cpu
 {
-struct [[gnu::packed]] context
+inline bool interrupts_disabled()
 {
-    std::uint64_t r15, r14, r13, r12, rflags, r10, r9, r8;
-    std::uint64_t rbp, rdi, rsi, user_rsp, user_rip, rbx, rax;
+    std::uint64_t flags = 0;
+    asm volatile("pushfq; popq %0" : "=r"(flags)::"memory");
+    return !(flags & (1 << 9));
+}
 
-    std::uint64_t iret_rip, iret_cs, iret_rflags, iret_rsp, iret_ss;
+inline bool disable_interrupts()
+{
+    auto ret = interrupts_disabled();
+    if (!ret)
+    {
+        asm volatile("cli" ::: "memory");
+    }
+    return ret;
+}
 
-    void save_to(thread::context *) const;
-    void load_from(const thread::context *);
-};
-
-void initialize();
+inline void enable_interrupts()
+{
+    asm volatile("sti" ::: "memory");
+}
 }

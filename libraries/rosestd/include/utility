@@ -284,6 +284,24 @@ struct in_place_index_t
 template<size_t _I>
 inline constexpr in_place_index_t<_I> in_place_index{};
 
+template<typename _T>
+struct __is_variant_in_place_impl : false_type
+{
+};
+
+template<typename _T>
+struct __is_variant_in_place_impl<in_place_type_t<_T>> : true_type
+{
+};
+
+template<size_t _I>
+struct __is_variant_in_place_impl<in_place_index_t<_I>> : true_type
+{
+};
+
+template<typename _T>
+constexpr auto __is_variant_in_place = __is_variant_in_place_impl<_T>::value;
+
 __ROSESTD_CLOSE
 
 // vim: ft=cpp

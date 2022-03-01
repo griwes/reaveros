@@ -17,6 +17,7 @@
 #include "irqs.h"
 
 #include "../../../scheduler/thread.h"
+#include "../../../util/interrupt_control.h"
 #include "../../../util/log.h"
 #include "core.h"
 #include "cpu.h"
@@ -49,6 +50,8 @@ void context::save_to(thread::context * thctx) const
     thctx->rflags = rflags;
     thctx->cs = cs;
     thctx->ss = ss;
+
+    thctx->can_sysret = false;
 }
 
 void context::load_from(const thread::context * thctx)
@@ -90,35 +93,42 @@ namespace
     irq_handler irq_handlers[256];
 }
 
-void handle(context & ctx)
+extern "C" void interrupt_handler(context ctx)
 {
-    auto & handler = irq_handlers[ctx.number];
-
-    std::lock_guard lg(handler.lock);
-
-    if (!handler.valid)
+    if (ctx.ss == 0x13)
     {
-        PANIC("Unexpected IRQ: {:x}, {}", ctx.number, ctx.error);
+        // fix the sysret mess
+        ctx.ss = 0x23;
     }
 
-    auto previous_thread = cpu::get_core_local_storage()->current_thread;
-    handler.fptr(ctx, handler.erased_fptr, handler.context);
-    auto new_thread = cpu::get_core_local_storage()->current_thread;
+    auto number = ctx.number;
+    auto & handler = irq_handlers[number];
+
+    util::intrusive_ptr<scheduler::thread> previous_thread;
+    util::intrusive_ptr<scheduler::thread> new_thread;
+
+    {
+        std::lock_guard lg(handler.lock);
+
+        if (!handler.valid)
+        {
+            PANIC("Unexpected IRQ: {:#04x}, {:b}, @ {:#018x}", ctx.number, ctx.error, ctx.rip);
+        }
+
+        previous_thread = cpu::get_core_local_storage()->current_thread;
+        handler.fptr(ctx, handler.erased_fptr, handler.context);
+        new_thread = cpu::get_core_local_storage()->current_thread;
+    }
 
     if (new_thread != previous_thread)
     {
         ctx.save_to(previous_thread->get_context());
         ctx.load_from(new_thread->get_context());
-
-        if (new_thread->get_container()->get_vas() != previous_thread->get_container()->get_vas())
-        {
-            vm::set_asid(new_thread->get_container()->get_vas()->get_asid());
-        }
     }
 
     if (ctx.number >= 32)
     {
-        lapic::eoi(ctx.number);
+        lapic::eoi(number);
     }
 }
 

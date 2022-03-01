@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,4 +28,5 @@ namespace kernel::amd64::timers
 void initialize();
 void multicore_initialize();
 time::timer * get_high_precision_timer_for(std::size_t id);
+time::timer * get_preemption_timer();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 
 #include "gdt.h"
+#include "../../../memory/pmm.h"
+#include "../../../memory/vm.h"
+#include "../memory/vm.h"
 
 #include <cstring>
 
@@ -32,11 +35,48 @@ namespace
         entry.present = 1;
         entry.read_write = 1;
     }
+
+    void setup_tss(entry * tss_entry, tss_t & tss)
+    {
+        tss.iomap = sizeof(tss_t);
+
+        tss_entry->base_low = reinterpret_cast<std::uint64_t>(&tss) & 0xffffff;
+        tss_entry->base_high = (reinterpret_cast<std::uint64_t>(&tss) >> 24) & 0xff;
+        *reinterpret_cast<std::uint32_t *>(tss_entry + 1) =
+            (reinterpret_cast<std::uint64_t>(&tss) >> 32) & 0xffffffff;
+
+        tss_entry->limit_low = (sizeof(tss_t) & 0xffff) - 1;
+        tss_entry->limit_high = sizeof(tss_t) >> 16;
+
+        tss_entry->accessed = 1;
+        tss_entry->code = 1;
+        tss_entry->present = 1;
+        tss_entry->dpl = 3;
+
+        const auto page_size = vm::page_sizes[0];
+
+        virt_addr_t stack_bases[3];
+
+        for (auto i = 0; i < 3; ++i)
+        {
+            stack_bases[i] = kernel::vm::allocate_address_range(32 * page_size);
+
+            for (auto j = 1; j < 32; ++j)
+            {
+                vm::map_physical(
+                    stack_bases[i] + j * page_size, stack_bases[i] + (j + 1) * page_size, pmm::pop(0));
+            }
+        }
+
+        tss.ist1 = (stack_bases[0] + 32 * page_size).value();
+        tss.ist2 = (stack_bases[1] + 32 * page_size).value();
+        tss.ist3 = (stack_bases[2] + 32 * page_size).value();
+    }
 }
 
 extern "C" void load_gdtr(void * gdtr);
 
-void initialize(entry (&entries)[7], gdtr_t & gdtr)
+void initialize(entry (&entries)[7], gdtr_t & gdtr, tss_t & tss)
 {
     std::memset(entries, 0, sizeof(entries));
 
@@ -47,6 +87,7 @@ void initialize(entry (&entries)[7], gdtr_t & gdtr)
     setup_gdte(entries[2], false, false); // 0x10 kernel data
     setup_gdte(entries[3], true, true);   // 0x18 userspace code
     setup_gdte(entries[4], false, true);  // 0x20 userspace data
+    setup_tss(entries + 5, tss);          // 0x28 tss
 }
 
 void load_gdt(gdtr_t & gdtr)

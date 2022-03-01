@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,34 @@ core_local_storage * get_core_local_storage()
 
 void core::initialize_gdt()
 {
-    gdt::initialize(_gdt, _gdtr);
+    gdt::initialize(_gdt, _gdtr, _tss);
 }
 
 void core::load_gdt()
 {
     gdt::load_gdt(_gdtr);
+}
+
+void core::set_kernel_stack(virt_addr_t stack)
+{
+    _tss.rsp0 = stack.value();
+}
+
+void core::reinit_as(const core & other)
+{
+    if (_accessed.load(std::memory_order_relaxed))
+    {
+        PANIC("tried to reinit an already accessed core object!");
+    }
+
+    _is_valid = other._is_valid;
+    _nmi_valid = other._nmi_valid;
+
+    _id = other._id;
+    _apic_id = other._apic_id;
+    _acpi_id = other._acpi_id;
+
+    _nmi_vector = other._nmi_vector;
+    _nmi_flags = other._nmi_flags;
 }
 }

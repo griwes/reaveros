@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ public:
     void initialize(timer * bsp);
 
 protected:
-    virtual void _update_now() override final;
+    virtual void _update_now(const std::unique_lock<std::mutex> &) override final;
     virtual void _one_shot_after(std::chrono::nanoseconds) override final;
 
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,9 +54,9 @@ namespace
     {
         asm volatile(
             R"(
-            push $0
-            push %0
-            jmp common_interrupt_stub
+            pushq $0
+            pushq %0
+            jmp interrupt_handler_stub
         )" ::"i"(I));
     }
 
@@ -66,8 +66,8 @@ namespace
     {
         asm volatile(
             R"(
-            push %0
-            jmp common_interrupt_stub
+            pushq %0
+            jmp interrupt_handler_stub
         )" ::"i"(I));
     }
 
@@ -99,25 +99,25 @@ namespace
     template<std::size_t I>
     void setup_isr()
     {
-        setup_idte(I, &isr<I>, 0x8, true, 0, 0xe, idt);
+        setup_idte(I, &isr<I>, 0x8, true, 0, 0xe | (I < 32), idt);
     }
 
     template<>
     void setup_isr<2>()
     {
-        setup_idte(2, &isr<2>, 0x8, true, 0, 0xe, idt, 1);
+        setup_idte(2, &isr<2>, 0x8, true, 0, 0xf, idt, 1);
     }
 
     template<>
     void setup_isr<8>()
     {
-        setup_idte(8, &isr<8>, 0x8, true, 0, 0xe, idt, 2);
+        setup_idte(8, &isr<8>, 0x8, true, 0, 0xf, idt, 2);
     }
 
     template<>
     void setup_isr<14>()
     {
-        setup_idte(14, &isr<14>, 0x8, true, 0, 0xe, idt, 3);
+        setup_idte(14, &isr<14>, 0x8, true, 0, 0xf, idt, 3);
     }
 
     template<std::size_t... Is>
@@ -128,11 +128,6 @@ namespace
 }
 
 extern "C" void load_idtr(void *);
-
-extern "C" void common_interrupt_handler(irq::context ctx)
-{
-    irq::handle(ctx);
-}
 
 void initialize()
 {

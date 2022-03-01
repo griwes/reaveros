@@ -16,22 +16,23 @@
 
 #pragma once
 
-#include "thread.h"
+#ifdef __amd64__
 
-#include <cstdint>
+#include "amd64/cpu/int.h"
 
-namespace kernel::amd64::syscalls
+#define arch_namespace amd64
+
+#else
+
+#error "unknown architecture"
+
+#endif
+
+namespace kernel::arch::cpu
 {
-struct [[gnu::packed]] context
-{
-    std::uint64_t r15, r14, r13, r12, rflags, r10, r9, r8;
-    std::uint64_t rbp, rdi, rsi, user_rsp, user_rip, rbx, rax;
-
-    std::uint64_t iret_rip, iret_cs, iret_rflags, iret_rsp, iret_ss;
-
-    void save_to(thread::context *) const;
-    void load_from(const thread::context *);
-};
-
-void initialize();
+using arch_namespace::cpu::disable_interrupts;
+using arch_namespace::cpu::enable_interrupts;
+using arch_namespace::cpu::interrupts_disabled;
 }
+
+#undef arch_namespace

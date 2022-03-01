@@ -40,8 +40,12 @@ void context::save_to(thread::context * ctx) const
     ctx->rsp = user_rsp;
     ctx->rip = user_rip;
     ctx->rbx = rbx;
-
     ctx->rax = rax;
+
+    ctx->cs = 0x1b;
+    ctx->ss = 0x23;
+
+    ctx->can_sysret = true;
 }
 
 void context::load_from(const thread::context * ctx)
@@ -50,16 +54,26 @@ void context::load_from(const thread::context * ctx)
     r14 = ctx->r14;
     r13 = ctx->r13;
     r12 = ctx->r12;
-    rflags = ctx->rflags;
+    rflags = ctx->can_sysret ? ctx->rflags : ctx->r11;
     r10 = ctx->r10;
     r9 = ctx->r9;
     r8 = ctx->r8;
     rbp = ctx->rbp;
     rdi = ctx->rdi;
     rsi = ctx->rsi;
-    user_rsp = ctx->rsp;
-    user_rip = ctx->rip;
+    user_rsp = ctx->can_sysret ? ctx->rsp : ctx->rdx;
+    user_rip = ctx->can_sysret ? ctx->rip : ctx->rcx;
     rbx = ctx->rbx;
+    rax = ctx->rax;
+
+    if (!ctx->can_sysret)
+    {
+        iret_rip = ctx->rip;
+        iret_cs = ctx->cs;
+        iret_rflags = ctx->rflags;
+        iret_rsp = ctx->rsp;
+        iret_ss = ctx->ss;
+    }
 }
 
 extern "C" void syscall_handler_stub();
@@ -91,11 +105,6 @@ extern "C" void syscall_handler(context ctx)
     {
         ctx.save_to(previous_thread->get_context());
         ctx.load_from(new_thread->get_context());
-
-        if (new_thread->get_container()->get_vas() != previous_thread->get_container()->get_vas())
-        {
-            vm::set_asid(new_thread->get_container()->get_vas()->get_asid());
-        }
     }
 }
 
@@ -119,7 +128,7 @@ void initialize()
     cpu::get_core_local_storage()->kernel_syscall_stack = (stack + 32 * 4096).value();
 
     cpu::wrmsr(ia32_efer, cpu::rdmsr(ia32_efer) | 1);
-    cpu::wrmsr(ia32_star, (8ull << 32) | (8ull << 48));
+    cpu::wrmsr(ia32_star, (0x8ull << 32) | (0x8ull << 48));
     cpu::wrmsr(ia32_lstar, reinterpret_cast<std::uint64_t>(&syscall_handler_stub));
 }
 }
