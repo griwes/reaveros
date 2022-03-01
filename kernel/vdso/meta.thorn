@@ -10,13 +10,20 @@ enum result(
 );
 
 enum mailbox_message_type(
-    handle_token
+    handle_token,
+    user
+);
+
+struct mailbox_user_message(
+    data0: std::uintptr_t,
+    data1: std::uintptr_t
 );
 
 struct mailbox_message(
     type: $::mailbox_message_type,
     payload: union(
-        handle_token: std::uintptr_t
+        handle_token: std::uintptr_t,
+        user: $::mailbox_user_message
     )
 );
 

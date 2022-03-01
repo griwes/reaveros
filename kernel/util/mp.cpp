@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "../arch/cpu.h"
 #include "../arch/ipi.h"
 #include "../arch/irqs.h"
+#include "../util/interrupt_control.h"
 #include "log.h"
 
 #include <atomic>
@@ -85,6 +86,7 @@ void erased_parallel_execute(
 {
     auto & slot = slots[next_slot++ % arch::irq::parallel_exec_count];
 
+    util::interrupt_guard guard;
     std::lock_guard lock(slot.lock);
 
     slot.fptr = fptr;

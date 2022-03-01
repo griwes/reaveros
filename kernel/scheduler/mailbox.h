@@ -22,6 +22,8 @@
 
 #include <user/meta.h>
 
+#include <variant>
+
 namespace kernel::scheduler
 {
 class process;
@@ -32,10 +34,7 @@ namespace kernel::ipc
 {
 struct mailbox_message : util::chained_allocatable<mailbox_message>
 {
-    // TODO: this should be a variant, but I'd rather not stop to implement std::variant right now
-    // I'll fix this when this structure *actually* wants to hold different things
-
-    util::intrusive_ptr<handle> payload;
+    std::variant<util::intrusive_ptr<handle>, rose::syscall::mailbox_user_message> payload;
 };
 
 class mailbox : public util::intrusive_ptrable<mailbox>

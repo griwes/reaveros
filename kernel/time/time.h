@@ -17,6 +17,7 @@
 #pragma once
 
 #include "../util/chained_allocator.h"
+#include "../util/intrusive_ptr.h"
 #include "../util/tree_heap.h"
 
 #include <chrono>
@@ -30,25 +31,46 @@ void initialize();
 void initialize_multicore();
 void register_high_precision_timer(timer *);
 timer & get_high_precision_timer(bool main = false);
-
-class event_token
-{
-public:
-    event_token(timer * tmr, std::size_t id) : _timer(tmr), _id(id)
-    {
-    }
-
-    void cancel() const;
-
-private:
-    timer * _timer;
-    std::size_t _id;
-};
+timer & get_preemption_timer();
 
 class timer
 {
 public:
     using duration = std::chrono::nanoseconds;
+
+private:
+    struct _timer_descriptor : util::intrusive_ptrable<_timer_descriptor>
+    {
+        _timer_descriptor() = default;
+
+        using fptr = void (*)(void *, std::uint64_t);
+
+        _timer_descriptor * tree_parent = nullptr;
+
+        std::size_t id = 0;
+        std::chrono::time_point<timer> trigger_time;
+        fptr callback;
+        void * erased_callback;
+        std::uint64_t context;
+        std::atomic<bool> valid{ true };
+    };
+
+public:
+    class event_token
+    {
+    public:
+        event_token(timer * tmr, std::size_t id, util::intrusive_ptr<_timer_descriptor> desc)
+            : _timer(tmr), _id(id), _desc(std::move(desc))
+        {
+        }
+
+        void cancel();
+
+    private:
+        [[maybe_unused]] timer * _timer;
+        [[maybe_unused]] std::size_t _id;
+        util::intrusive_ptr<_timer_descriptor> _desc;
+    };
 
     template<typename Rep, typename Period>
     event_token one_shot(std::chrono::duration<Rep, Period> dur, void (*fptr)())
@@ -108,7 +130,7 @@ protected:
     void _handle();
     void _schedule_next();
 
-    virtual void _update_now() = 0;
+    virtual void _update_now(const std::unique_lock<std::mutex> &) = 0;
     virtual void _one_shot_after(std::chrono::nanoseconds) = 0;
 
     std::size_t _usage = 0;
@@ -117,27 +139,17 @@ protected:
     std::chrono::time_point<timer> _now;
 
 private:
-    struct _timer_descriptor : util::treeable<_timer_descriptor>
-    {
-        _timer_descriptor() = default;
-
-        using fptr = void (*)(void *, std::uint64_t);
-
-        _timer_descriptor * parent = nullptr;
-
-        std::size_t id = 0;
-        std::chrono::time_point<timer> trigger_time;
-        fptr callback;
-        void * erased_callback;
-        std::uint64_t context;
-    };
-
     struct _timer_descriptor_comparator
     {
         bool operator()(const _timer_descriptor & lhs, const _timer_descriptor & rhs) const;
     };
 
-    util::tree_heap<_timer_descriptor, _timer_descriptor_comparator> _heap;
-    std::size_t _next_id = 0;
+    std::mutex _lock;
+    util::tree_heap<
+        _timer_descriptor,
+        _timer_descriptor_comparator,
+        util::intrusive_ptr_preserve_count_traits<_timer_descriptor>>
+        _heap;
+    std::atomic<std::size_t> _next_id = 0;
 };
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ using arch_namespace::cpu::core;
 using arch_namespace::cpu::get_core_count;
 using arch_namespace::cpu::idle;
 using arch_namespace::cpu::initialize;
-using arch_namespace::cpu::interrupts_disabled;
 using arch_namespace::cpu::switch_to_clean_state;
 
 using arch_namespace::cpu::get_core_local_storage;

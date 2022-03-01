@@ -23,6 +23,7 @@
 #include "core.h"
 #include "gdt.h"
 #include "idt.h"
+#include "int.h"
 #include "lapic.h"
 #include "syscalls.h"
 
@@ -121,6 +122,8 @@ void switch_to_clean_state()
         vm::map_physical(stack + i * 4096, stack + (i + 1) * 4096, pmm::pop(0));
     }
 
+    get_current_core()->set_kernel_stack(stack + 32 * 4096);
+
     std::uint64_t rbp;
     asm volatile("mov %%rbp, %0" : "=r"(rbp)::"memory");
 
@@ -172,12 +175,5 @@ core * get_core_by_id(std::size_t id)
 std::size_t get_core_count()
 {
     return core_count;
-}
-
-bool interrupts_disabled()
-{
-    std::uintptr_t flags;
-    asm volatile("pushfq; pop %%rax" : "=a"(flags));
-    return !(flags & (1 << 9));
 }
 }

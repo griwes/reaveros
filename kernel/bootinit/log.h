@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "interrupt_control.h"
-
-#include <boot-memmap.h>
+#include <user/meta.h>
 
 #include <format>
+#include <iterator>
 #include <mutex>
-#include <string_view>
 
-// TODO: sane abstraction for this
 #define PANIC(...)                                                                                           \
-    kernel::log::println("PANIC: " __VA_ARGS__);                                                             \
-    asm volatile("cli; hlt;");                                                                               \
+    bootinit::log::println("PANIC: " __VA_ARGS__);                                                           \
+    for (;;)                                                                                                 \
+        ;                                                                                                    \
     __builtin_unreachable()
 
-namespace kernel::boot_log
+namespace bootinit::log
 {
-struct buffer_chunk;
-
-void initialize(std::size_t memmap_size, boot_protocol::memory_map_entry * memmap);
+extern std::uintptr_t logging_send_mailbox_token;
+extern std::uintptr_t logging_ack_mailbox_token;
 
 class iterator
 {
@@ -56,8 +51,7 @@ public:
     using pointer = char *;
     using reference = proxy;
 
-    iterator();
-    ~iterator();
+    iterator() = default;
 
     iterator(const iterator &) = default;
     iterator(iterator &&) = default;
@@ -79,34 +73,24 @@ public:
         return *this;
     }
 };
-}
 
-namespace kernel::log
-{
-void * get_syslog_mailbox();
-
-#ifndef REAVEROS_TESTING
 extern std::mutex log_lock;
+
+void flush();
 
 template<typename... Ts>
 void println(std::__format_string<Ts...> fmt, const Ts &... args)
 {
-    util::interrupt_guard guard;
-    std::lock_guard lock(log_lock);
+    std::lock_guard _(log_lock);
 
-    if (get_syslog_mailbox())
+    if (logging_send_mailbox_token == 0)
     {
-        // TODO
-        *(volatile bool *)0 = false;
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    auto it = std::format_to(kernel::boot_log::iterator(), fmt, args...);
+    auto it = std::format_to(iterator(), fmt, args...);
     *it = '\n';
+    flush();
 }
-#else
-template<typename... Ts>
-void println(const Ts &...)
-{
-}
-#endif
 }

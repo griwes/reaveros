@@ -21,6 +21,7 @@ set(includes
     system_error
     type_traits
     utility
+    variant
     version
 
     __config

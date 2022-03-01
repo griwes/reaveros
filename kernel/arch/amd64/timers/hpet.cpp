@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ namespace
             }
 
         protected:
-            virtual void _update_now() override final
+            virtual void _update_now(const std::unique_lock<std::mutex> &) override final
             {
                 _raw_now = _parent->_read(hpet_timer::_registers::main_counter);
                 _now =

@@ -165,6 +165,11 @@ public:
         return _top;
     }
 
+    std::size_t size() const
+    {
+        return _size;
+    }
+
 private:
     T * _top = nullptr;
     std::size_t _size = 0;

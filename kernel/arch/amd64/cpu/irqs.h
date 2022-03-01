@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ struct [[gnu::packed]] context
     void load_from(const thread::context *);
 };
 
-void handle(context & ctx);
+extern "C" void interrupt_handler(context ctx);
 
 using erased_irq_handler = void (*)(context &, void *, std::uint64_t);
 void register_erased_handler(std::uint8_t, erased_irq_handler, void *, std::uint64_t);

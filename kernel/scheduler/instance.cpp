@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #include "instance.h"
 
 #include "../arch/cpu.h"
+#include "../util/interrupt_control.h"
 #include "scheduler.h"
 #include "thread.h"
 
@@ -42,9 +43,28 @@ void instance::initialize(instance * parent)
 
 void instance::schedule(util::intrusive_ptr<thread> thread)
 {
+    if (!arch::cpu::interrupts_disabled())
+    {
+        PANIC("scheduler::schedule called with interrupts enabled (it's meant to only be called "
+              "in interrupt or syscall handlers)!");
+    }
+
+    auto lock = std::lock_guard(_lock);
+
     if (_current_thread == thread)
     {
-        return;
+        PANIC("rescheduling a running thread!");
+    }
+
+    _threads.push(std::move(thread));
+    _setup_preemption(lock);
+}
+
+void instance::_reschedule(std::lock_guard<std::mutex> & lock)
+{
+    if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this) [[unlikely]]
+    {
+        PANIC("_reschedule called on a scheduler instance not of the current core!");
     }
 
     if (_current_thread != _idle_thread)
@@ -53,7 +73,6 @@ void instance::schedule(util::intrusive_ptr<thread> thread)
         _threads.push(std::move(_current_thread));
     }
 
-    _threads.push(std::move(thread));
     _current_thread = _threads.pop();
 
     auto cls = arch::cpu::get_core_local_storage();
@@ -62,6 +81,34 @@ void instance::schedule(util::intrusive_ptr<thread> thread)
     if (old_thread->get_container()->get_vas() != _current_thread->get_container()->get_vas())
     {
         arch::vm::set_asid(_current_thread->get_container()->get_vas()->get_asid());
+    }
+
+    _setup_preemption(lock);
+}
+
+void instance::_setup_preemption(std::lock_guard<std::mutex> &)
+{
+    if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this) [[unlikely]]
+    {
+        PANIC("_setu_preemption called on a scheduler instance not of the current core!");
+    }
+
+    if (_threads.size())
+    {
+        if (_preemption_token)
+        {
+            _preemption_token->cancel();
+            _preemption_token.reset();
+        }
+
+        _preemption_token = time::get_preemption_timer().one_shot(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)) / 10,
+            +[](instance * self)
+            {
+                auto lock = std::lock_guard(self->_lock);
+                self->_reschedule(lock);
+            },
+            this);
     }
 }
 

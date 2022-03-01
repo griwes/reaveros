@@ -16,22 +16,33 @@
 
 #pragma once
 
-#include "thread.h"
+#include "../arch/int.h"
 
 #include <cstdint>
 
-namespace kernel::amd64::syscalls
+namespace kernel::util
 {
-struct [[gnu::packed]] context
+class [[nodiscard]] interrupt_guard
 {
-    std::uint64_t r15, r14, r13, r12, rflags, r10, r9, r8;
-    std::uint64_t rbp, rdi, rsi, user_rsp, user_rip, rbx, rax;
+public:
+    interrupt_guard() : _enable(arch::cpu::disable_interrupts())
+    {
+    }
 
-    std::uint64_t iret_rip, iret_cs, iret_rflags, iret_rsp, iret_ss;
+    ~interrupt_guard()
+    {
+        if (_enable)
+        {
+            arch::cpu::enable_interrupts();
+        }
+    }
 
-    void save_to(thread::context *) const;
-    void load_from(const thread::context *);
+    interrupt_guard(const interrupt_guard &) = delete;
+    interrupt_guard(interrupt_guard &&) = delete;
+    interrupt_guard & operator=(const interrupt_guard &) = delete;
+    interrupt_guard & operator=(interrupt_guard &&) = delete;
+
+private:
+    bool _enable = false;
 };
-
-void initialize();
 }

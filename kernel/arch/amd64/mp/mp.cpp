@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,7 +115,9 @@ void boot()
             }
 
             *phys_ptr_t<std::uint64_t>(base + trampoline_size * (i - booted) + stack_slot_offset) =
-                (stack + 32 * 1024).value();
+                (stack + 32 * 4096).value();
+
+            cores[i].set_kernel_stack(stack);
         }
 
         // SIPI
@@ -200,7 +202,7 @@ void boot()
                         cores[j + 1].apic_id(),
                         j,
                         cores[j].apic_id());
-                    cores[j] = cores[j + 1];
+                    cores[j].reinit_as(cores[j + 1]);
                 }
 
                 --i;

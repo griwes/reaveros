@@ -16,6 +16,7 @@
 
 #include "mailbox.h"
 #include "../arch/cpu.h"
+#include "../util/interrupt_control.h"
 #include "thread.h"
 
 namespace kernel::ipc
@@ -31,6 +32,7 @@ void mailbox::send(util::intrusive_ptr<handle> handle)
 {
     auto message = std::make_unique<mailbox_message>(mailbox_message{ .payload = std::move(handle) });
 
+    util::interrupt_guard guard;
     std::lock_guard _(_lock);
 
     _message_queue.push_back(std::move(message));
@@ -47,33 +49,84 @@ rose::syscall::result mailbox::syscall_rose_mailbox_read_handler(
     std::uintptr_t timeout,
     rose::syscall::mailbox_message * target)
 {
-    std::lock_guard _(mb->_lock);
+    util::interrupt_guard guard;
+    std::unique_lock _(mb->_lock);
 
-    if (timeout != static_cast<std::uintptr_t>(-1))
+    if (timeout != static_cast<std::uintptr_t>(-1) && timeout != 0)
     {
-        PANIC("TODO: support with mailbox read with a timeout");
+        PANIC("TODO: support with mailbox read with a specified timeout");
     }
 
     if (mb->_message_queue.empty())
     {
-        return rose::syscall::result::not_ready;
+        if (timeout == static_cast<std::uintptr_t>(-1))
+        {
+            return rose::syscall::result::not_ready;
+        }
+
+        PANIC("blocking mailbox read!");
     }
 
     auto message = mb->_message_queue.pop_front();
 
-    target->type = rose::syscall::mailbox_message_type::handle_token;
+    switch (message->payload.index())
+    {
+        case 0:
+        {
+            target->type = rose::syscall::mailbox_message_type::handle_token;
 
-    auto current_thread = arch::cpu::get_core_local_storage()->current_thread;
-    target->payload.handle_token =
-        current_thread->get_container()->register_for_token(std::move(message->payload)).value();
+            auto current_thread = arch::cpu::get_core_local_storage()->current_thread;
+            target->payload.handle_token = current_thread->get_container()
+                                               ->register_for_token(std::move(std::get<0>(message->payload)))
+                                               .value();
+
+            break;
+        }
+
+        case 1:
+        {
+            target->type = rose::syscall::mailbox_message_type::user;
+            target->payload.user = std::get<1>(message->payload);
+
+            break;
+        }
+
+        default:
+        {
+            PANIC("rose_mailbox_read from a malbox containing an unimplemented payload type");
+        }
+    }
 
     return rose::syscall::result::ok;
 }
 
 rose::syscall::result mailbox::syscall_rose_mailbox_write_handler(
-    mailbox *,
-    const rose::syscall::mailbox_message *)
+    mailbox * mb,
+    const rose::syscall::mailbox_message * source)
 {
-    PANIC("got asked to write a message to a mailbox!");
+    util::interrupt_guard guard;
+    std::lock_guard _(mb->_lock);
+
+    switch (source->type)
+    {
+        case rose::syscall::mailbox_message_type::handle_token:
+        {
+            PANIC("implement sending tokens");
+        }
+
+        case rose::syscall::mailbox_message_type::user:
+        {
+            mb->_message_queue.push_back(
+                std::make_unique<mailbox_message>(mailbox_message{ .payload = source->payload.user }));
+            break;
+        }
+
+        default:
+        {
+            PANIC("rose_mailbox_write with a message containing an unimplemented payload type");
+        }
+    }
+
+    return rose::syscall::result::ok;
 }
 }

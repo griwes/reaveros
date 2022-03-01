@@ -61,8 +61,7 @@ public:
             _T,
             _U> && !is_same_v<remove_cvref_t<_U>, in_place_t> && !is_same_v<remove_cvref_t<_U>, optional>)
     {
-        new (static_cast<void *>(addressof(__storage.__value))) _T(static_cast<_U &&>(__u));
-        __engaged = true;
+        __init(__ROSESTD::forward<_U>(__u));
     }
 
     template<typename _U>
@@ -77,14 +76,36 @@ public:
 
     constexpr ~optional()
     {
-        if (__engaged)
-        {
-            __storage.__value._T::~_T();
-        }
+        reset();
     }
 
     constexpr optional & operator=(nullopt_t) noexcept;
-    constexpr optional & operator=(const optional &);
+
+    // TODO: add a trivial version when Clang people finally implement P0848R3
+    constexpr optional & operator=(const optional & __rhs)
+    {
+        if (__engaged)
+        {
+            if (__rhs.__engaged)
+            {
+                __storage.__value = *__rhs;
+            }
+            else
+            {
+                reset();
+            }
+        }
+        else
+        {
+            if (__rhs.__engaged)
+            {
+                __init(*__rhs);
+            }
+        }
+
+        return *this;
+    }
+
     constexpr optional & operator=(optional &&) noexcept(
         is_nothrow_move_assignable_v<_T> && is_nothrow_move_constructible_v<_T>);
 
@@ -101,19 +122,26 @@ public:
         }
         else
         {
-            new (static_cast<void *>(addressof(__storage.__value))) _T(static_cast<_U &&>(__u));
-            __engaged = true;
+            __init(__ROSESTD::forward<_U>(__u));
         }
 
         return *this;
     }
 
-    template<typename _U>
+    /*template<typename _U>
     constexpr optional & operator=(const optional<_U> &);
     template<typename _U>
-    constexpr optional & operator=(optional<_U> &&);
+    constexpr optional & operator=(optional<_U> &&);*/
+
     template<class... _Args>
-    constexpr _T & emplace(_Args &&...);
+    constexpr _T & emplace(_Args &&... __args)
+    {
+        static_assert(is_constructible_v<_T, _Args...>);
+        reset();
+        __init(__ROSESTD::forward<_Args>(__args)...);
+        return __storage.__value;
+    }
+
     // template<typename _U, class... _Args>
     // constexpr _T & emplace(initializer_list<_U>, _Args &&...);
 
@@ -165,10 +193,22 @@ public:
     template<typename _U>
     constexpr _T value_or(_U &&) &&;
 
-    // [optional.mod], modifiers
-    constexpr void reset() noexcept;
+    constexpr void reset() noexcept
+    {
+        if (__engaged)
+        {
+            __storage.__value._T::~_T();
+        }
+    }
 
 private:
+    template<typename... _Args>
+    void __init(_Args &&... __args)
+    {
+        new (static_cast<void *>(addressof(__storage.__value))) _T(__ROSESTD::forward<_Args>(__args)...);
+        __engaged = true;
+    }
+
     union __storage_t
     {
         constexpr __storage_t()

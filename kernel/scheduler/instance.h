@@ -16,8 +16,11 @@
 
 #pragma once
 
+#include "../time/time.h"
 #include "../util/intrusive_ptr.h"
 #include "../util/tree_heap.h"
+
+#include <optional>
 
 namespace kernel::scheduler
 {
@@ -31,15 +34,23 @@ public:
 
     void initialize(instance * parent);
     void schedule(util::intrusive_ptr<thread> thread);
+    void deschedule();
 
     util::intrusive_ptr<thread> get_idle_thread();
     util::intrusive_ptr<thread> get_current_thread();
 
 private:
+    void _reschedule(std::lock_guard<std::mutex> & lock);
+    void _setup_preemption(std::lock_guard<std::mutex> & lock);
+
     struct _thread_timestamp_compare
     {
         bool operator()(const thread & lhs, const thread & rhs) const;
     };
+
+    std::mutex _lock;
+
+    std::optional<time::timer::event_token> _preemption_token;
 
     instance * _parent = nullptr;
     instance * _children = nullptr;

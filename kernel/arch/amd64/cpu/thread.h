@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ struct context
     std::uint64_t r12 = 0, r13 = 0, r14 = 0, r15 = 0;
     std::uint64_t cs = 0x8, ss = 0x10;
     std::uint64_t rip = 0, rflags = 1 << 9;
+
+    bool can_sysret = false;
 
     void set_userspace();
     void set_instruction_pointer(virt_addr_t address);

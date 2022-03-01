@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@
 namespace kernel::arch::timers
 {
 using arch_namespace::timers::get_high_precision_timer_for;
+using arch_namespace::timers::get_preemption_timer;
 using arch_namespace::timers::initialize;
 using arch_namespace::timers::multicore_initialize;
 }

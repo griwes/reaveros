@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,6 @@ struct [[gnu::packed]] tss_t
     std::uint16_t iomap;
 };
 
-void initialize(entry (&entries)[7], gdtr_t & gdtr);
+void initialize(entry (&entries)[7], gdtr_t & gdtr, tss_t & tss);
 void load_gdt(gdtr_t & gdtr);
 }

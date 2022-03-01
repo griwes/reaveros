@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,5 +60,4 @@ core * get_current_core();
 core * get_core_by_apic_id(std::uint32_t id);
 core * get_core_by_id(std::size_t id);
 std::size_t get_core_count();
-bool interrupts_disabled();
 }
