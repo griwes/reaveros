@@ -313,7 +313,7 @@ constexpr bool operator!=(const optional<_T> & __lhs, const _U & __rhs)
                           } -> convertible_to<bool>;
                   });
 
-    return __lhs.has_value() ? *__lhs != __rhs : false;
+    return __lhs.has_value() ? *__lhs != __rhs : true;
 }
 
 template<typename _T, typename _U>
