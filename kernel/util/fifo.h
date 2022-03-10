@@ -20,15 +20,17 @@
 
 namespace kernel::util
 {
-template<typename T, typename PointerTraits = unique_ptr_traits<T>>
+template<typename T, template<typename> typename UnboundTraits = unique_ptr_traits>
 class fifo
 {
+    using Traits = UnboundTraits<T>;
+
 public:
-    void push_back(typename PointerTraits::pointer element)
+    void push_back(typename Traits::pointer element)
     {
         if (!_head)
         {
-            _head = PointerTraits::unwrap(std::move(element));
+            _head = Traits::unwrap(std::move(element));
             _tail = _head;
 
             _head->next = nullptr;
@@ -38,14 +40,14 @@ public:
             return;
         }
 
-        _tail->next = PointerTraits::unwrap(std::move(element));
+        _tail->next = Traits::unwrap(std::move(element));
         _tail->next->next = nullptr;
         _tail = _tail->next;
 
         ++_size;
     }
 
-    typename PointerTraits::pointer pop_front()
+    typename Traits::pointer pop_front()
     {
         if (empty())
         {
@@ -56,7 +58,7 @@ public:
 
         auto ret_raw = _head;
         _head = _head->next;
-        return PointerTraits::create(ret_raw);
+        return Traits::create(ret_raw);
     }
 
     bool empty() const

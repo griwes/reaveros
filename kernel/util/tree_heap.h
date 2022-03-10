@@ -23,9 +23,11 @@
 
 namespace kernel::util
 {
-template<typename T, typename Comparator, typename PointerTraits = unique_ptr_traits<T>>
+template<typename T, typename Comparator, template<typename> typename UnboundTraits = unique_ptr_traits>
 class tree_heap
 {
+    using Traits = UnboundTraits<T>;
+
 public:
     ~tree_heap()
     {
@@ -35,17 +37,17 @@ public:
         }
     }
 
-    void push(typename PointerTraits::pointer element_ptr)
+    void push(typename Traits::pointer element_ptr)
     {
         if (!_top)
         {
-            _top = PointerTraits::unwrap(std::move(element_ptr));
+            _top = Traits::unwrap(std::move(element_ptr));
             ++_size;
             return;
         }
 
         auto parent = _parent_of_leftmost_empty();
-        auto element = PointerTraits::unwrap(std::move(element_ptr));
+        auto element = Traits::unwrap(std::move(element_ptr));
 
         element->tree_parent = parent;
         element->prev = nullptr;
@@ -70,7 +72,7 @@ public:
         ++_size;
     }
 
-    typename PointerTraits::pointer pop()
+    typename Traits::pointer pop()
     {
         switch (_size)
         {
@@ -79,7 +81,7 @@ public:
 
             case 1:
                 --_size;
-                return PointerTraits::create(std::exchange(_top, nullptr));
+                return Traits::create(std::exchange(_top, nullptr));
 
             case 2:
             {
@@ -89,7 +91,7 @@ public:
                 _top->tree_parent = nullptr;
 
                 --_size;
-                return PointerTraits::create(top);
+                return Traits::create(top);
             }
 
             case 3:
@@ -112,7 +114,7 @@ public:
                 _top->tree_parent = nullptr;
 
                 --_size;
-                return PointerTraits::create(top);
+                return Traits::create(top);
             }
         }
 
@@ -153,7 +155,7 @@ public:
             if (best == element)
             {
                 --_size;
-                return PointerTraits::create(top);
+                return Traits::create(top);
             }
 
             _swap(element, best);

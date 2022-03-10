@@ -321,6 +321,8 @@ void context::_insert_syscall(std::string_view module, const parser::parsed_sysc
         std::exit(1);
     }
 
+    desc.blocking = ast.blocking;
+
     s.description = std::move(desc);
 
     _insert_symbol(ast.name, std::move(s));

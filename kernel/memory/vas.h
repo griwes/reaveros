@@ -76,10 +76,7 @@ private:
     phys_addr_t _asid;
     std::mutex _lock;
 
-    util::avl_tree<
-        vmo_mapping,
-        vmo_mapping_address_compare,
-        util::intrusive_ptr_preserve_count_traits<vmo_mapping>>
+    util::avl_tree<vmo_mapping, vmo_mapping_address_compare, util::intrusive_ptr_preserve_count_traits>
         _mappings;
 };
 }

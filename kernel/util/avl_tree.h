@@ -20,9 +20,11 @@
 
 namespace kernel::util
 {
-template<typename T, typename Comparator, typename PointerTraits = unique_ptr_traits<T>>
+template<typename T, typename Comparator, template<typename> typename UnboundTraits = unique_ptr_traits>
 class avl_tree
 {
+    using Traits = UnboundTraits<T>;
+
     struct _tree_element : private T
     {
         static _tree_element * wrap(T * ptr)
@@ -93,7 +95,7 @@ public:
     class iterator
     {
     public:
-        friend class avl_tree<T, Comparator, PointerTraits>;
+        friend class avl_tree<T, Comparator, UnboundTraits>;
 
         using difference_type = std::ptrdiff_t;
         using value_type = T;
@@ -205,7 +207,7 @@ public:
             }
 
             _root->set_tree_parent(nullptr);
-            (void)PointerTraits::create(old_root->unwrap());
+            (void)Traits::create(old_root->unwrap());
         }
     }
 
@@ -229,11 +231,11 @@ public:
         return iterator{ nullptr };
     }
 
-    std::pair<iterator, bool> insert(typename PointerTraits::pointer element_ptr)
+    std::pair<iterator, bool> insert(typename Traits::pointer element_ptr)
     {
         if (!_root)
         {
-            _root = _tree_element::wrap(PointerTraits::unwrap(std::move(element_ptr)));
+            _root = _tree_element::wrap(Traits::unwrap(std::move(element_ptr)));
             ++_size;
             return std::make_pair(iterator{ _root }, true);
         }
@@ -249,7 +251,7 @@ public:
                     continue;
                 }
 
-                current->set_left(_tree_element::wrap(PointerTraits::unwrap(std::move(element_ptr))));
+                current->set_left(_tree_element::wrap(Traits::unwrap(std::move(element_ptr))));
 
                 current->get_left()->set_tree_parent(current);
                 current = current->get_left();
@@ -264,7 +266,7 @@ public:
                     continue;
                 }
 
-                current->set_right(_tree_element::wrap(PointerTraits::unwrap(std::move(element_ptr))));
+                current->set_right(_tree_element::wrap(Traits::unwrap(std::move(element_ptr))));
 
                 current->get_right()->set_tree_parent(current);
                 current = current->get_right();
@@ -279,14 +281,14 @@ public:
         return std::make_pair(iterator{ current }, true);
     }
 
-    iterator insert([[maybe_unused]] iterator hint, typename PointerTraits::pointer element_ptr)
+    iterator insert([[maybe_unused]] iterator hint, typename Traits::pointer element_ptr)
     {
         // TODO: make this actually perform better when the hint is correct
         // keeping it like this right now to allow for client code to use this once it's implemented
         return insert(std::move(element_ptr)).first;
     }
 
-    iterator erase(typename PointerTraits::pointer element_ptr);
+    iterator erase(typename Traits::pointer element_ptr);
     iterator erase(iterator position);
 
     template<typename Key>

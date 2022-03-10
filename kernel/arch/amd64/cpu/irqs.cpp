@@ -123,7 +123,18 @@ extern "C" void interrupt_handler(context ctx)
     if (new_thread != previous_thread)
     {
         ctx.save_to(previous_thread->get_context());
-        ctx.load_from(new_thread->get_context());
+
+        while (true)
+        {
+            ctx.load_from(new_thread->get_context());
+
+            if (new_thread->invoke_continuation(ctx.rax))
+            {
+                break;
+            }
+
+            new_thread = cpu::get_core_local_storage()->current_thread;
+        }
     }
 
     if (ctx.number >= 32)
