@@ -51,7 +51,7 @@ add_library(syscall_table STATIC
 
 set_target_properties(syscall_table
     PROPERTIES
-        COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR}"
+        COMPILE_FLAGS "-I${CMAKE_SOURCE_DIR} -g -mcmodel=kernel"
 )
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/incbin_vdso.asm

@@ -42,10 +42,20 @@ void context::save_to(thread::context * ctx) const
     ctx->rbx = rbx;
     ctx->rax = rax;
 
-    ctx->cs = 0x1b;
-    ctx->ss = 0x23;
+    if (ctx->rcx < 0x8000000000000000)
+    {
+        ctx->cs = 0x1b;
+        ctx->ss = 0x23;
 
-    ctx->can_sysret = true;
+        ctx->can_sysret = true;
+    }
+    else
+    {
+        ctx->cs = 0x8;
+        ctx->ss = 0x10;
+
+        ctx->can_sysret = false;
+    }
 }
 
 void context::load_from(const thread::context * ctx)
@@ -73,6 +83,18 @@ void context::load_from(const thread::context * ctx)
         iret_rflags = ctx->rflags;
         iret_rsp = ctx->rsp;
         iret_ss = ctx->ss;
+    }
+}
+
+void context::check_kernel_space()
+{
+    if (!iret_rip && user_rip >= 0x8000000000000000)
+    {
+        iret_rip = user_rip;
+        iret_cs = 0x8;
+        iret_rflags = rflags;
+        iret_rsp = user_rsp;
+        iret_ss = 0x10;
     }
 }
 
@@ -104,8 +126,21 @@ extern "C" void syscall_handler(context ctx)
     if (new_thread != previous_thread)
     {
         ctx.save_to(previous_thread->get_context());
-        ctx.load_from(new_thread->get_context());
+
+        while (true)
+        {
+            ctx.load_from(new_thread->get_context());
+
+            if (new_thread->invoke_continuation(ctx.rax))
+            {
+                break;
+            }
+
+            new_thread = cpu::get_core_local_storage()->current_thread;
+        }
     }
+
+    ctx.check_kernel_space();
 }
 
 namespace

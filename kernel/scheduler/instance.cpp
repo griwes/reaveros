@@ -60,6 +60,16 @@ void instance::schedule(util::intrusive_ptr<thread> thread)
     _setup_preemption(lock);
 }
 
+util::intrusive_ptr<thread> instance::deschedule()
+{
+    auto lock = std::lock_guard(_lock);
+
+    auto ret = std::move(_current_thread);
+    _reschedule(lock);
+
+    return ret;
+}
+
 void instance::_reschedule(std::lock_guard<std::mutex> & lock)
 {
     if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this) [[unlikely]]
@@ -67,13 +77,20 @@ void instance::_reschedule(std::lock_guard<std::mutex> & lock)
         PANIC("_reschedule called on a scheduler instance not of the current core!");
     }
 
-    if (_current_thread != _idle_thread)
+    if (_current_thread && _current_thread != _idle_thread)
     {
         _current_thread->timestamp = time::get_high_precision_timer().now();
         _threads.push(std::move(_current_thread));
     }
 
-    _current_thread = _threads.pop();
+    if (_threads.size())
+    {
+        _current_thread = _threads.pop();
+    }
+    else
+    {
+        _current_thread = _idle_thread;
+    }
 
     auto cls = arch::cpu::get_core_local_storage();
     auto old_thread = std::exchange(cls->current_thread, _current_thread);
@@ -90,7 +107,7 @@ void instance::_setup_preemption(std::lock_guard<std::mutex> &)
 {
     if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this) [[unlikely]]
     {
-        PANIC("_setu_preemption called on a scheduler instance not of the current core!");
+        PANIC("_setup_preemption called on a scheduler instance not of the current core!");
     }
 
     if (_threads.size())

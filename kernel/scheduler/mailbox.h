@@ -22,6 +22,7 @@
 
 #include <user/meta.h>
 
+#include <optional>
 #include <variant>
 
 namespace kernel::scheduler
@@ -43,7 +44,7 @@ public:
     void send(util::intrusive_ptr<handle> handle);
 
     // syscall handlers
-    static rose::syscall::result syscall_rose_mailbox_read_handler(
+    static std::optional<rose::syscall::result> syscall_rose_mailbox_read_handler(
         mailbox *,
         std::uintptr_t,
         rose::syscall::mailbox_message *);
@@ -55,7 +56,7 @@ private:
     std::mutex _lock;
 
     util::fifo<mailbox_message> _message_queue;
-    util::fifo<scheduler::thread> _waiting_threads;
+    util::fifo<scheduler::thread, util::intrusive_ptr_preserve_count_traits> _waiting_threads;
 };
 
 util::intrusive_ptr<mailbox> create_mailbox();

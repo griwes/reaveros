@@ -48,6 +48,8 @@ int main()
         heap.push(std::move(f));
     }
 
+    assert(heap.size() == insert.size());
+
     for (auto && i : pop)
     {
         auto v = heap.pop();
@@ -55,4 +57,5 @@ int main()
     }
 
     assert(!heap.peek());
+    assert(!heap.size());
 }

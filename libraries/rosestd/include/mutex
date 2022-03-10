@@ -149,7 +149,16 @@ public:
     {
     }
 
-    unique_lock & operator=(unique_lock && __u);
+    unique_lock & operator=(unique_lock && __u)
+    {
+        if (__owns)
+        {
+            __pm->unlock();
+        }
+
+        __pm = __ROSESTD::exchange(__u.__pm, nullptr);
+        __owns = __ROSESTD::exchange(__u.__owns, false);
+    }
 
     void lock()
     {

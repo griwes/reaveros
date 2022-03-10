@@ -62,6 +62,7 @@ struct syscall_description
     std::vector<std::pair<std::string, std::variant<std::string, handle_token, pointer>>> parameters;
     std::optional<std::string> return_type;
     std::size_t id;
+    bool blocking = false;
 };
 
 struct symbol
@@ -169,6 +170,7 @@ private:
     std::unordered_map<std::string, std::fstream> _output_kernel_files;
     std::unordered_map<std::string, std::fstream> _output_vdso_files;
     std::unordered_map<std::string, std::fstream> _output_user_files;
+    std::fstream _output_kernel_header;
 
     std::map<std::size_t, std::string> _syscalls;
 };

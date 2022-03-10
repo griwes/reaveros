@@ -17,6 +17,7 @@
 #include "mailbox.h"
 #include "../arch/cpu.h"
 #include "../util/interrupt_control.h"
+#include "scheduler.h"
 #include "thread.h"
 
 namespace kernel::ipc
@@ -39,12 +40,12 @@ void mailbox::send(util::intrusive_ptr<handle> handle)
 
     if (!_waiting_threads.empty())
     {
-        PANIC("TODO: implement waking up threads sleeping on a mailbox");
+        auto thread = _waiting_threads.pop_front();
+        scheduler::schedule(std::move(thread));
     }
 }
 
-// syscalls
-rose::syscall::result mailbox::syscall_rose_mailbox_read_handler(
+std::optional<rose::syscall::result> mailbox::syscall_rose_mailbox_read_handler(
     mailbox * mb,
     std::uintptr_t timeout,
     rose::syscall::mailbox_message * target)
@@ -64,7 +65,10 @@ rose::syscall::result mailbox::syscall_rose_mailbox_read_handler(
             return rose::syscall::result::not_ready;
         }
 
-        PANIC("blocking mailbox read!");
+        auto cls = arch::cpu::get_core_local_storage();
+        mb->_waiting_threads.push_back(cls->current_core->get_scheduler()->deschedule());
+
+        return std::nullopt;
     }
 
     auto message = mb->_message_queue.pop_front();
@@ -125,6 +129,12 @@ rose::syscall::result mailbox::syscall_rose_mailbox_write_handler(
         {
             PANIC("rose_mailbox_write with a message containing an unimplemented payload type");
         }
+    }
+
+    if (!mb->_waiting_threads.empty())
+    {
+        auto thread = mb->_waiting_threads.pop_front();
+        scheduler::schedule(std::move(thread));
     }
 
     return rose::syscall::result::ok;

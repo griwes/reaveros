@@ -52,10 +52,53 @@ public:
     thread * tree_parent = nullptr;
     std::chrono::time_point<time::timer> timestamp;
 
+    using continuation_t = bool (*)(std::uintptr_t &, void *);
+    using destructor_t = void (*)(void *);
+
+    template<typename State>
+    void set_continuation(continuation_t c, State state)
+    {
+        static_assert(sizeof(State) < 512, "too large continuation state");
+
+        auto _ = std::lock_guard(_continuation_lock);
+
+        if (_continuation)
+        {
+            PANIC("tried to set a continuation for a thread with an active continuation");
+        }
+
+        _continuation = c;
+        new (&_continuation_state) State(std::move(state));
+        _destructor = +[](void * ptr) { reinterpret_cast<State *>(ptr)->~State(); };
+    }
+
+    bool invoke_continuation(std::uintptr_t & return_register)
+    {
+        auto _ = std::lock_guard(_continuation_lock);
+
+        if (_continuation)
+        {
+            auto ret = _continuation(return_register, &_continuation_state);
+            if (ret)
+            {
+                _destructor(&_continuation_state);
+            }
+            _continuation = nullptr;
+            return ret;
+        }
+
+        return true;
+    }
+
 private:
     util::intrusive_ptr<process> _container;
 
     arch::thread::context _context;
     arch::cpu::core * _core;
+
+    std::mutex _continuation_lock;
+    continuation_t _continuation = nullptr;
+    destructor_t _destructor = nullptr;
+    char _continuation_state[512];
 };
 }

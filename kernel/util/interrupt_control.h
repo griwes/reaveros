@@ -25,7 +25,7 @@ namespace kernel::util
 class [[nodiscard]] interrupt_guard
 {
 public:
-    interrupt_guard() : _enable(arch::cpu::disable_interrupts())
+    interrupt_guard() : _enable(!arch::cpu::disable_interrupts())
     {
     }
 

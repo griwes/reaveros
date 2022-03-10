@@ -95,6 +95,8 @@ namespace sc = rose::syscall;
     [[maybe_unused]] auto initrd_vmo = message.payload.handle_token;
     bootinit::log::println(" > Initrd VMO token received.");
 
+    bootinit::log::println("[BOOT] Done, spinning forever.");
+
     for (;;)
         ;
 }

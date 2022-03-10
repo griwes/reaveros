@@ -34,7 +34,7 @@ public:
 
     void initialize(instance * parent);
     void schedule(util::intrusive_ptr<thread> thread);
-    void deschedule();
+    util::intrusive_ptr<thread> deschedule();
 
     util::intrusive_ptr<thread> get_idle_thread();
     util::intrusive_ptr<thread> get_current_thread();
@@ -59,7 +59,6 @@ private:
     util::intrusive_ptr<thread> _idle_thread;
     util::intrusive_ptr<thread> _current_thread;
 
-    util::tree_heap<thread, _thread_timestamp_compare, util::intrusive_ptr_preserve_count_traits<thread>>
-        _threads;
+    util::tree_heap<thread, _thread_timestamp_compare, util::intrusive_ptr_preserve_count_traits> _threads;
 };
 }

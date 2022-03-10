@@ -44,6 +44,7 @@ struct parameter
 struct parsed_syscall
 {
     qualified_name scope;
+    bool blocking = false;
     std::string name;
     std::vector<parameter> parameters;
     std::optional<qualified_name> return_type;

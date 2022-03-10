@@ -118,6 +118,14 @@ parsed_syscall parse_syscall(std::string_view filename, lexer::tokenizer_iterato
     expect(filename, it, lexer::token_type::syscall);
     expect(filename, it, lexer::token_type::open_paren);
     ret.scope = parse_qualified_name(filename, it);
+
+    if (it->type == lexer::token_type::comma)
+    {
+        expect(filename, it, lexer::token_type::comma);
+        expect(filename, it, lexer::token_type::blocking);
+        ret.blocking = true;
+    }
+
     expect(filename, it, lexer::token_type::close_paren);
     ret.name = expect(filename, it, lexer::token_type::identifier);
 
@@ -128,6 +136,7 @@ parsed_syscall parse_syscall(std::string_view filename, lexer::tokenizer_iterato
         expect(filename, it, lexer::token_type::comma);
         ret.parameters.push_back(parse_parameter(filename, it));
     }
+
     expect(filename, it, lexer::token_type::close_paren);
 
     if (it->type == lexer::token_type::arrow)

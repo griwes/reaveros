@@ -49,7 +49,13 @@ public:
     constexpr optional(nullopt_t) noexcept {};
 
     constexpr optional(const optional &);
-    constexpr optional(optional &&) noexcept(is_nothrow_move_constructible_v<_T>);
+
+    constexpr optional(optional && __rhs) noexcept(is_nothrow_move_constructible_v<_T>) requires
+        is_move_constructible_v<_T>
+    {
+        __init(__ROSESTD::move(*__rhs));
+    }
+
     // template<class... Args>
     // constexpr explicit optional(in_place_t, Args &&...);
     // template<typename _U, class... Args>
@@ -106,8 +112,31 @@ public:
         return *this;
     }
 
-    constexpr optional & operator=(optional &&) noexcept(
-        is_nothrow_move_assignable_v<_T> && is_nothrow_move_constructible_v<_T>);
+    constexpr optional & operator=(optional && __rhs) noexcept(
+        is_nothrow_move_assignable_v<_T> && is_nothrow_move_constructible_v<
+            _T>) requires(is_move_constructible_v<_T> && is_move_assignable_v<_T>)
+    {
+        if (__engaged)
+        {
+            if (__rhs.__engaged)
+            {
+                __storage.__value = std::move(*__rhs);
+            }
+            else
+            {
+                reset();
+            }
+        }
+        else
+        {
+            if (__rhs.__engaged)
+            {
+                __init(std::move(*__rhs));
+            }
+        }
+
+        return *this;
+    }
 
     template<typename _U = _T>
     requires(
@@ -183,7 +212,11 @@ public:
         return __engaged;
     }
 
-    constexpr bool has_value() const noexcept;
+    constexpr bool has_value() const noexcept
+    {
+        return __engaged;
+    }
+
     constexpr const _T & value() const &;
     constexpr _T & value() &;
     constexpr _T && value() &&;
@@ -252,13 +285,43 @@ constexpr strong_ordering operator<=>(const optional<_T> &, nullopt_t) noexcept;
 
 // [optional.comp.with.t], comparison with T
 template<typename _T, typename _U>
-constexpr bool operator==(const optional<_T> &, const _U &);
+constexpr bool operator==(const optional<_T> & __lhs, const _U & __rhs)
+{
+    static_assert(requires
+                  {
+                      {
+                          *__lhs == __rhs
+                          } -> convertible_to<bool>;
+                  });
+
+    return __lhs.has_value() ? *__lhs == __rhs : false;
+}
+
 template<typename _T, typename _U>
-constexpr bool operator==(const _T &, const optional<_U> &);
+constexpr bool operator==(const _T & __lhs, const optional<_U> & __rhs)
+{
+    return __rhs == __lhs;
+}
+
 template<typename _T, typename _U>
-constexpr bool operator!=(const optional<_T> &, const _U &);
+constexpr bool operator!=(const optional<_T> & __lhs, const _U & __rhs)
+{
+    static_assert(requires
+                  {
+                      {
+                          *__lhs == __rhs
+                          } -> convertible_to<bool>;
+                  });
+
+    return __lhs.has_value() ? *__lhs != __rhs : false;
+}
+
 template<typename _T, typename _U>
-constexpr bool operator!=(const _T &, const optional<_U> &);
+constexpr bool operator!=(const _T & __lhs, const optional<_U> & __rhs)
+{
+    return __rhs != __lhs;
+}
+
 template<typename _T, typename _U>
 constexpr bool operator<(const optional<_T> &, const _U &);
 template<typename _T, typename _U>

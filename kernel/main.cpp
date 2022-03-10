@@ -69,13 +69,11 @@ kernel::phys_addr_t initrd_base;
 std::size_t initrd_size;
 
 void bootinit_log_handler(
-    kernel::ipc::mailbox * recv_mailbox,
-    kernel::ipc::mailbox * ack_mailbox,
+    std::uintptr_t recv_mailbox,
+    std::uintptr_t ack_mailbox,
     kernel::scheduler::process * process,
     kernel::vm::vmo_mapping * mapping)
 {
-    kernel::util::intrusive_ptr bootinit_logging_recv_mailbox(recv_mailbox, kernel::util::adopt);
-    kernel::util::intrusive_ptr bootinit_logging_ack_mailbox(ack_mailbox, kernel::util::adopt);
     kernel::util::intrusive_ptr bootinit_process(process, kernel::util::adopt);
     kernel::util::intrusive_ptr stack_mapping(mapping, kernel::util::adopt);
 
@@ -83,11 +81,7 @@ void bootinit_log_handler(
     {
         rose::syscall::mailbox_message msg{};
 
-        auto result = [&]
-        {
-            kernel::util::interrupt_guard guard;
-            return kernel::ipc::mailbox::syscall_rose_mailbox_read_handler(recv_mailbox, 0, &msg);
-        }();
+        auto result = rose::syscall::rose_mailbox_read(recv_mailbox, 0, &msg);
 
         if (result == rose::syscall::result::not_ready)
         {
@@ -96,7 +90,9 @@ void bootinit_log_handler(
 
         if (result != rose::syscall::result::ok)
         {
-            PANIC("failed to receive a message from the bootinit logging mailbox!");
+            PANIC(
+                "failed to receive a message from the bootinit logging mailbox: {}",
+                std::to_underlying(result));
         }
 
         if (msg.type != rose::syscall::mailbox_message_type::user)
@@ -107,29 +103,31 @@ void bootinit_log_handler(
         auto start = kernel::virt_addr_t(msg.payload.user.data0);
         auto end = start + msg.payload.user.data1;
 
-        kernel::util::interrupt_guard guard;
-
-        auto lock = bootinit_process->get_vas()->lock_address_range(start, end, false);
-
-        if (!lock)
         {
-            PANIC("bootinit logging mailbox contained a message pointing to an unmapped address!");
-        }
+            kernel::util::interrupt_guard guard;
 
-        {
-            std::lock_guard _(kernel::log::log_lock);
-            auto it = kernel::boot_log::iterator();
-            for (auto ptr = reinterpret_cast<char *>(start.value());
-                 ptr != reinterpret_cast<char *>(end.value());
-                 ++ptr)
+            auto lock = bootinit_process->get_vas()->lock_address_range(start, end, false);
+
+            if (!lock)
             {
-                *it++ = *ptr;
+                PANIC("bootinit logging mailbox contained a message pointing to an unmapped address!");
+            }
+
+            {
+                std::lock_guard _(kernel::log::log_lock);
+                auto it = kernel::boot_log::iterator();
+                for (auto ptr = reinterpret_cast<char *>(start.value());
+                     ptr != reinterpret_cast<char *>(end.value());
+                     ++ptr)
+                {
+                    *it++ = *ptr;
+                }
             }
         }
 
-        msg = {};
+        msg.payload = {};
 
-        result = kernel::ipc::mailbox::syscall_rose_mailbox_write_handler(ack_mailbox, &msg);
+        result = rose::syscall::rose_mailbox_write(ack_mailbox, &msg);
         if (result != rose::syscall::result::ok)
         {
             PANIC("failed to send an ack message to the bootinit logging mailbox!");
@@ -255,7 +253,7 @@ void bootinit_log_handler(
         auto log_stack_addr = kernel::vm::allocate_address_range(32 * kernel::arch::vm::page_sizes[0]);
         auto log_stack_vmo = kernel::vm::create_sparse_vmo(31 * kernel::arch::vm::page_sizes[0]);
         log_stack_vmo->commit_all();
-        auto log_stack_mapping = kernel::scheduler::get_kernel_process()->get_vas()->map_vmo(
+        auto log_stack_mapping = bootinit_process->get_vas()->map_vmo(
             std::move(log_stack_vmo), log_stack_addr + kernel::arch::vm::page_sizes[0]);
 
         auto log_thread = bootinit_process->create_thread();
@@ -264,10 +262,13 @@ void bootinit_log_handler(
         log_thread->get_context()->set_stack_pointer(
             log_stack_addr + 32 * kernel::arch::vm::page_sizes[0] - 8);
         log_thread->get_context()->set_argument(
-            0, reinterpret_cast<std::uintptr_t>(bootinit_logging_mailbox.release(kernel::util::keep_count)));
+            0,
+            bootinit_process->register_for_token(
+                kernel::create_handle(std::move(bootinit_logging_mailbox), kernel::permissions::read)));
         log_thread->get_context()->set_argument(
             1,
-            reinterpret_cast<std::uintptr_t>(bootinit_logging_ack_mailbox.release(kernel::util::keep_count)));
+            bootinit_process->register_for_token(
+                kernel::create_handle(std::move(bootinit_logging_ack_mailbox), kernel::permissions::write)));
         log_thread->get_context()->set_argument(
             2, reinterpret_cast<std::uintptr_t>(bootinit_process.release(kernel::util::keep_count)));
         log_thread->get_context()->set_argument(

@@ -145,11 +145,9 @@ private:
     };
 
     std::mutex _lock;
-    util::tree_heap<
-        _timer_descriptor,
-        _timer_descriptor_comparator,
-        util::intrusive_ptr_preserve_count_traits<_timer_descriptor>>
-        _heap;
+    util::
+        tree_heap<_timer_descriptor, _timer_descriptor_comparator, util::intrusive_ptr_preserve_count_traits>
+            _heap;
     std::atomic<std::size_t> _next_id = 0;
 };
 }

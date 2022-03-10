@@ -31,6 +31,7 @@ struct [[gnu::packed]] context
 
     void save_to(thread::context *) const;
     void load_from(const thread::context *);
+    void check_kernel_space();
 };
 
 void initialize();

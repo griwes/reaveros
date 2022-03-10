@@ -81,7 +81,7 @@ namespace
         std::uint64_t ignored2 : 3;
         std::uint64_t address : 40;
         std::uint64_t ignored3 : 10;
-        std::uint64_t lock_bit : 1;
+        std::uint64_t lock_bit : 1 = 0;
         std::uint64_t reserved2 : 1;
     };
 
@@ -388,6 +388,7 @@ phys_addr_t clone_upper_half()
         }
 
         ret->entries[i] = cr3->entries[i];
+        ret->entries[i].lock_bit = false;
     }
 
     return phys_ptr_t<pml4_t>(ret).representation();

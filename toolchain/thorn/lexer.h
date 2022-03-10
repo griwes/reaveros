@@ -46,7 +46,8 @@ enum class token_type
     arrow,
     dollar,
     include,
-    header_name
+    header_name,
+    blocking
 };
 
 inline const std::unordered_map<token_type, std::string> descriptions = {
@@ -68,7 +69,8 @@ inline const std::unordered_map<token_type, std::string> descriptions = {
     { token_type::arrow, "'->'" },
     { token_type::dollar, "'$'" },
     { token_type::include, "'include'" },
-    { token_type::header_name, "header-name" }
+    { token_type::header_name, "header-name" },
+    { token_type::blocking, "'blocking'" }
 };
 
 inline const std::unordered_map<char, token_type> symbol_types = { { '(', token_type::open_paren },
@@ -83,7 +85,7 @@ inline const std::unordered_map<std::string, token_type> keywords = {
     { "token", token_type::token },      { "read", token_type::permission },
     { "write", token_type::permission }, { "in", token_type::direction },
     { "out", token_type::direction },    { "ptr", token_type::ptr },
-    { "include", token_type::include }
+    { "include", token_type::include },  { "blocking", token_type::blocking }
 };
 
 struct token

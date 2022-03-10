@@ -379,7 +379,7 @@ template<typename _T>
 struct is_nothrow_copy_assignable;
 
 template<typename _T>
-struct is_nothrow_move_assignable : std::false_type
+struct is_nothrow_move_assignable : false_type
 {
 };
 

@@ -36,7 +36,10 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
         ${CMAKE_SYSROOT}/usr/lib/librosestd.a
     )
 
-    set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/arch/${REAVEROS_ARCH}/kernel.lds)
+    set(linker_script_in ${CMAKE_CURRENT_SOURCE_DIR}/arch/${REAVEROS_ARCH}/kernel.lds.in)
+    set(linker_script ${CMAKE_CURRENT_BINARY_DIR}/kernel.lds)
+
+    configure_file(${linker_script_in} ${linker_script} @ONLY)
 
     set_target_properties(kernel-elf
         PROPERTIES
