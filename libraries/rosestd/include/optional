@@ -309,7 +309,7 @@ constexpr bool operator!=(const optional<_T> & __lhs, const _U & __rhs)
     static_assert(requires
                   {
                       {
-                          *__lhs == __rhs
+                          *__lhs != __rhs
                           } -> convertible_to<bool>;
                   });
 
