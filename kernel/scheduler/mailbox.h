@@ -42,6 +42,7 @@ class mailbox : public util::intrusive_ptrable<mailbox>
 {
 public:
     void send(util::intrusive_ptr<handle> handle);
+    void send(rose::syscall::mailbox_user_message message);
 
     // syscall handlers
     static std::optional<rose::syscall::result> syscall_rose_mailbox_read_handler(
@@ -53,6 +54,8 @@ public:
         const rose::syscall::mailbox_message *);
 
 private:
+    void _push(std::unique_ptr<mailbox_message>);
+
     std::mutex _lock;
 
     util::fifo<mailbox_message> _message_queue;

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,11 +111,100 @@ struct from_chars_result
     friend bool operator==(const from_chars_result &, const from_chars_result &) = default;
 };
 
+template<typename _T>
+struct __max
+{
+    static const constexpr auto value = static_cast<_T>(-1);
+};
+
+template<typename _T>
+requires is_signed_v<_T>
+struct __max<_T>
+{
+    static const constexpr auto value = static_cast<_T>(__max<make_unsigned_t<_T>>::value / 2);
+};
+
 from_chars_result from_chars(
     const char * __first,
     const char * __last,
     integral auto & __value,
-    int __base = 10);
+    int __base = 10)
+{
+    using _T = remove_cvref_t<decltype(__value)>;
+
+    if (__first == __last)
+    {
+        return { __first, errc::invalid_argument };
+    }
+
+    bool __negative = false;
+    if constexpr (is_signed_v<_T>)
+    {
+        if (*__first == '-')
+        {
+            __negative = true;
+            ++__first;
+        }
+
+        if (__first == __last)
+        {
+            return { __first, errc::invalid_argument };
+        }
+    }
+
+    auto __to_value = [](char c) -> int
+    {
+        if (c >= '0' && c <= '9')
+        {
+            return c - '0';
+        }
+        if (c >= 'a' && c <= 'z')
+        {
+            return c - 'a' + 10;
+        }
+        if (c >= 'A' && c <= 'Z')
+        {
+            return c - 'A' + 10;
+        }
+        return -1;
+    };
+
+    _T __temp = 0;
+    bool __valid = false;
+
+    while (__first != __last)
+    {
+        auto __c = __to_value(*__first);
+
+        if (__c == -1 || __c >= __base)
+        {
+            if (!__valid)
+            {
+                return { __first, errc::invalid_argument };
+            }
+            break;
+        }
+
+        if (__temp > __max<_T>::value / 10 + (__c != 0))
+        {
+            return { __first, errc::result_out_of_range };
+        }
+
+        __temp = __temp * __base + __c;
+        ++__first;
+    }
+
+    if constexpr (is_signed_v<_T>)
+    {
+        if (__negative)
+        {
+            __temp *= -1;
+        }
+    }
+    __value = __temp;
+
+    return { __first, errc{} };
+}
 
 from_chars_result from_chars(
     const char * __first,

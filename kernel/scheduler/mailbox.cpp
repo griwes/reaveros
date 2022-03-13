@@ -29,10 +29,8 @@ util::intrusive_ptr<mailbox> create_mailbox()
     return ret;
 }
 
-void mailbox::send(util::intrusive_ptr<handle> handle)
+void mailbox::_push(std::unique_ptr<mailbox_message> message)
 {
-    auto message = std::make_unique<mailbox_message>(mailbox_message{ .payload = std::move(handle) });
-
     util::interrupt_guard guard;
     std::lock_guard _(_lock);
 
@@ -43,6 +41,16 @@ void mailbox::send(util::intrusive_ptr<handle> handle)
         auto thread = _waiting_threads.pop_front();
         scheduler::schedule(std::move(thread));
     }
+}
+
+void mailbox::send(util::intrusive_ptr<handle> handle)
+{
+    _push(std::make_unique<mailbox_message>(mailbox_message{ .payload = std::move(handle) }));
+}
+
+void mailbox::send(rose::syscall::mailbox_user_message message)
+{
+    _push(std::make_unique<mailbox_message>(mailbox_message{ .payload = message }));
 }
 
 std::optional<rose::syscall::result> mailbox::syscall_rose_mailbox_read_handler(

@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
+#include "addresses.h"
 #include "log.h"
+
+#include <archive/cpio.h>
 
 #include <user/meta.h>
 
@@ -70,12 +73,12 @@ namespace sc = rose::syscall;
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
     if (result != sc::result::ok)
     {
-        PANIC("[ERR] Failed to read kernel caps token!");
+        PANIC("Failed to read kernel caps token!");
     }
 
     if (message.type != sc::mailbox_message_type::handle_token)
     {
-        PANIC("[ERR] Received wrong mailbox message type for kernel caps token!");
+        PANIC("Received wrong mailbox message type for kernel caps token!");
     }
 
     [[maybe_unused]] auto kernel_caps = message.payload.handle_token;
@@ -84,18 +87,55 @@ namespace sc = rose::syscall;
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
     if (result != sc::result::ok)
     {
-        PANIC("[ERR] Failed to read initrd VMO token!");
+        PANIC("Failed to read initrd VMO token!");
     }
 
     if (message.type != sc::mailbox_message_type::handle_token)
     {
-        PANIC("[ERR] Receivfed wrong mailbox message type for initrd VMO token!");
+        PANIC("Received wrong mailbox message type for initrd VMO token!");
     }
 
     [[maybe_unused]] auto initrd_vmo = message.payload.handle_token;
     bootinit::log::println(" > Initrd VMO token received.");
 
-    bootinit::log::println("[BOOT] Done, spinning forever.");
+    result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    if (result != sc::result::ok)
+    {
+        PANIC("Failed to read initrd size!");
+    }
+
+    if (message.type != sc::mailbox_message_type::user)
+    {
+        PANIC("Received wrong mailbox message type for initrd size!");
+    }
+
+    auto initrd_size = message.payload.user.data0;
+
+    bootinit::log::println(" > Initrd size: {} bytes.", initrd_size);
+
+    bootinit::log::println("[BOOT] Parsing initrd image...");
+
+    auto initrd_result =
+        archive::try_cpio(reinterpret_cast<char *>(bootinit::addresses::initrd.value()), initrd_size);
+
+    if (!initrd_result.archive)
+    {
+        PANIC(
+            "The initrd image is not a valid cpio archive! Reason: {}, header offset: {}.",
+            initrd_result.error_message,
+            initrd_result.header_offset);
+    }
+
+    auto & initrd = *initrd_result.archive;
+
+    bootinit::log::println(" > Number of regular files in initrd: {}.", initrd.size());
+
+    auto test_file = initrd["test-file"];
+    if (!test_file)
+    {
+        PANIC("'test-file not found!");
+    }
+    bootinit::log::println(" > Contents of test-file: '{}'.", *test_file);
 
     for (;;)
         ;

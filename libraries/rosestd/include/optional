@@ -231,6 +231,7 @@ public:
         if (__engaged)
         {
             __storage.__value._T::~_T();
+            __engaged = false;
         }
     }
 
