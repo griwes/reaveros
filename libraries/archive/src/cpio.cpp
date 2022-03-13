@@ -88,8 +88,6 @@ namespace
 
         if (std::string_view(hdr->magic, 6) != "070701")
         {
-            for (;;)
-                ;
             return { std::nullopt, "magic did not match", base };
         }
 
