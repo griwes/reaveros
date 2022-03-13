@@ -5,6 +5,7 @@ add_executable(bootinit-elf
 
 target_link_libraries(bootinit-elf
     ${CMAKE_SYSROOT}/usr/lib/librosestd.a
+    ${CMAKE_SYSROOT}/usr/lib/libarchive.a
 )
 
 set(linker_script_in ${CMAKE_CURRENT_SOURCE_DIR}/bootinit.lds.in)

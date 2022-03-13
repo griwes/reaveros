@@ -65,6 +65,7 @@ util::intrusive_ptr<thread> instance::deschedule()
     auto lock = std::lock_guard(_lock);
 
     auto ret = std::move(_current_thread);
+    ret->timestamp = time::get_high_precision_timer().now();
     _reschedule(lock);
 
     return ret;

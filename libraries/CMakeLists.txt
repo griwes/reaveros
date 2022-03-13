@@ -4,6 +4,8 @@ set(libraries
     rosestd
 
     boot-protocol
+
+    archive
 )
 
 foreach (library IN LISTS libraries)

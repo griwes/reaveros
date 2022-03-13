@@ -237,8 +237,9 @@ void bootinit_log_handler(
         kernel::log::println(" >> Sending kernel caps handle token...");
         bootinit_mailbox->send(kernel::create_handle(&kernel::kernel_caps));
 
-        kernel::log::println(" >> Sending initrd VMO handle token...");
+        kernel::log::println(" >> Sending initrd VMO handle token and size...");
         bootinit_mailbox->send(kernel::create_handle(std::move(initrd_vmo)));
+        bootinit_mailbox->send(rose::syscall::mailbox_user_message{ .data0 = initrd_size });
 
         kernel::log::println(" > Preparing bootinit context...");
         auto bm_handle = kernel::create_handle(std::move(bootinit_mailbox), kernel::permissions::read);

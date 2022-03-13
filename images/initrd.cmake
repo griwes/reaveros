@@ -14,7 +14,9 @@ function(_reaveros_add_initrd_image_target architecture)
         COMMAND rm -rf ${_working_path}
         COMMAND mkdir ${_working_path}
 
-        COMMAND find ${_working_path} | cpio --create > ${_target_path}
+        COMMAND echo -n "this is a test" > ${_working_path}/test-file
+
+        COMMAND cd ${_working_path} && find . | cpio --no-absolute-filenames --format=newc --create > ${_target_path}
     )
 
     add_custom_target(image-initrd-${architecture}
