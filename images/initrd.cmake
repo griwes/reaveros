@@ -7,12 +7,12 @@ function(_reaveros_add_initrd_image_target architecture)
 
     add_custom_command(OUTPUT ${_target_path} "always rebuilt"
         DEPENDS
-            # all-${architecture}-userspace-services-core
-            # all-${architecture}-userspace-services-storage
-            # all-${architecture}-userspace-services-filesystem
+            all-${architecture}-userspace-services
 
         COMMAND rm -rf ${_working_path}
         COMMAND mkdir ${_working_path}
+
+        COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/userspace/services/${architecture}/* ${_working_path}
 
         COMMAND echo -n "this is a test" > ${_working_path}/test-file
 

@@ -1,6 +1,7 @@
 reaveros_add_aggregate_targets(libraries)
 
 set(libraries
+    rosert
     rosestd
 
     boot-protocol

@@ -17,9 +17,9 @@ set(CMAKE_ASM_FLAGS "-masm=intel")
 
 set(CMAKE_C_COMPILER ${tools}/clang)
 set(CMAKE_C_COMPILER_TARGET ${triple})
-set(CMAKE_C_FLAGS "-nostdlib")
+set(CMAKE_C_FLAGS "")
 set(CMAKE_C_COMPILE_FLAGS
-    "-fPIC -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone \
+    "-mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx \
     -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable"
 )
 
@@ -28,7 +28,8 @@ set(CMAKE_C_COMPILE_OBJECT
 )
 
 set(CMAKE_C_LINK_EXECUTABLE
-    "<CMAKE_LINKER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> -lclang_rt.builtins"
+    "<CMAKE_LINKER> --pie <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> \
+    -lrosert-crt -lclang_rt.builtins"
 )
 
 set(CMAKE_C_STANDARD @REAVEROS_C_STANDARD@)
@@ -36,10 +37,9 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 set(CMAKE_CXX_COMPILER ${tools}/clang++)
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
-set(CMAKE_CXX_FLAGS "-nostdlib")
+set(CMAKE_CXX_FLAGS "")
 set(CMAKE_CXX_COMPILE_FLAGS
-    "-ffreestanding -fno-rtti -fno-exceptions -fPIC \
-    -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone \
+    "-mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx \
     -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable"
 )
 
@@ -48,7 +48,8 @@ set(CMAKE_CXX_COMPILE_OBJECT
 )
 
 set(CMAKE_CXX_LINK_EXECUTABLE
-    "<CMAKE_LINKER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> -lclang_rt.builtins"
+    "<CMAKE_LINKER> --pie <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> \
+    -lrosert-crt -lclang_rt.builtins"
 )
 
 set(CMAKE_CXX_STANDARD @REAVEROS_CXX_STANDARD@)
