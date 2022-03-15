@@ -137,6 +137,10 @@ namespace sc = rose::syscall;
     }
     bootinit::log::println(" > Contents of test-file: '{}'.", *test_file);
 
+    // auto vasmgr_image = initrd["system/vasmgr.srv"];
+    // auto procmgr_image = initrd["system/procmgr.srv"];
+    // auto broker_image = initrd["system/broker.srv"];
+
     for (;;)
         ;
 }
