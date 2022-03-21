@@ -48,27 +48,52 @@ namespace sc = rose::syscall;
 {
     __init();
 
+    std::uintptr_t log_read_token;
+    std::uintptr_t ack_write_token;
+
+    auto result = sc::rose_mailbox_create(&log_read_token, &bootinit::log::logging_send_mailbox_token);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+    result = sc::rose_mailbox_create(&bootinit::log::logging_ack_mailbox_token, &ack_write_token);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+
     sc::mailbox_message message;
 
-    auto result = sc::rose_mailbox_read(mailbox_token, -1, &message);
+    result = sc::rose_mailbox_read(mailbox_token, 0, &message);
     if (result != sc::result::ok || message.type != sc::mailbox_message_type::handle_token)
     {
         // ... panic ...
         *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    bootinit::log::logging_send_mailbox_token = message.payload.handle_token;
+    auto accept_mailbox_token = message.payload.handle_token;
 
-    result = sc::rose_mailbox_read(mailbox_token, -1, &message);
-    if (result != sc::result::ok || message.type != sc::mailbox_message_type::handle_token)
+    message.type = sc::mailbox_message_type::handle_token;
+    message.payload.handle_token = log_read_token;
+    result = sc::rose_mailbox_write(accept_mailbox_token, &message);
+    if (result != sc::result::ok)
     {
         // ... panic ...
         *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    bootinit::log::logging_ack_mailbox_token = message.payload.handle_token;
+    message.type = sc::mailbox_message_type::handle_token;
+    message.payload.handle_token = ack_write_token;
+    result = sc::rose_mailbox_write(accept_mailbox_token, &message);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
 
-    bootinit::log::println("[BOOT] Bootinit receiving initial handle tokens...");
+    bootinit::log::println("Receiving initial handle tokens...");
 
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
     if (result != sc::result::ok)
@@ -113,7 +138,7 @@ namespace sc = rose::syscall;
 
     bootinit::log::println(" > Initrd size: {} bytes.", initrd_size);
 
-    bootinit::log::println("[BOOT] Parsing initrd image...");
+    bootinit::log::println("Parsing initrd image...");
 
     auto initrd_result =
         archive::try_cpio(reinterpret_cast<char *>(bootinit::addresses::initrd.value()), initrd_size);

@@ -31,6 +31,7 @@ handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
 
     handle_token_t token;
 
+    util::interrupt_guard guard;
     std::lock_guard _(_lock);
 
     while (true)
@@ -55,6 +56,19 @@ handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
     }
 
     return token;
+}
+
+void process::unregister_token(handle_token_t token)
+{
+    util::interrupt_guard guard;
+    std::lock_guard _(_lock);
+
+    auto it = _handles.find(token);
+    if (it == _handles.end())
+    {
+        PANIC("tried to unregister a token that doesn't exit");
+    }
+    _handles.erase(it);
 }
 
 util::intrusive_ptr<handle> process::get_handle(handle_token_t token) const

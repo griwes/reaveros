@@ -60,13 +60,13 @@ void flush()
     auto result = sc::rose_mailbox_write(logging_send_mailbox_token, &msg);
     if (result != sc::result::ok)
     {
-        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = std::to_underlying(result);
     }
 
     result = sc::rose_mailbox_read(logging_ack_mailbox_token, 0, &msg);
     if (result != sc::result::ok)
     {
-        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+        *reinterpret_cast<volatile std::uintptr_t *>(1) = std::to_underlying(result);
     }
 
     log_cursor = log_buffer;

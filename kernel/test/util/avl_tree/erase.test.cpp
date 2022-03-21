@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <map>
 #include <vector>
 
 struct foo : kernel::util::treeable<foo>
@@ -46,8 +45,9 @@ struct comp
 
 int main()
 {
-    std::vector insert = { 17, 14, 19, 12, 11, 7, 2, 8, 9, 27, 29, 21, 22, 25, 24, 31, 32, 30 };
-    auto iter = insert;
+    std::vector erase = { 17, 14, 12, 11, 7, 2, 8, 9, 27, 29, 21, 19, 22, 25, 24, 31, 32, 30 };
+    auto insert = erase;
+    std::sort(insert.begin(), insert.end());
 
     kernel::util::avl_tree<foo, comp> tree;
 
@@ -55,37 +55,23 @@ int main()
     {
         auto f = std::make_unique<foo>();
         f->id = i;
-        tree.insert(std::move(f));
+        auto result = tree.insert(std::move(f));
+        assert(result.second);
     }
 
-    std::map<int, bool> expected_results = { { 17, true }, { 11, true },  { 32, true },
-                                             { 2, true },  { -5, false }, { 100, false } };
+    auto check = tree.check_invariants();
+    assert(check.correct);
 
-    for (auto [k, v] : expected_results)
+    for (auto && i : erase)
     {
-        auto it = tree.find(foo{ .id = k });
-        if (it == tree.end())
-        {
-            assert(v == false);
-        }
-        else
-        {
-            assert(it->id == k);
-            assert(v == true);
-        }
-    }
+        assert(tree.find(i) != tree.end());
 
-    for (auto [k, v] : expected_results)
-    {
-        auto it = tree.find(k);
-        if (it == tree.end())
-        {
-            assert(v == false);
-        }
-        else
-        {
-            assert(it->id == k);
-            assert(v == true);
-        }
+        auto it = tree.erase(i);
+        assert(it == tree.end() || it->id > i);
+
+        auto check = tree.check_invariants();
+        assert(check.correct);
+
+        assert(tree.find(i) == tree.end());
     }
 }

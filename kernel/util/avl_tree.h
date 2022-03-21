@@ -288,8 +288,156 @@ public:
         return insert(std::move(element_ptr)).first;
     }
 
-    iterator erase(typename Traits::pointer element_ptr);
-    iterator erase(iterator position);
+    iterator erase(T * element_ptr)
+    {
+        auto wrapped = _tree_element::wrap(element_ptr);
+        auto ret = iterator(wrapped);
+        ++ret;
+
+        bool has_left = wrapped->get_left();
+        bool has_right = wrapped->get_right();
+
+        bool has_both = has_left && has_right;
+
+        bool shortened_left;
+        _tree_element * shortened_base = nullptr;
+
+        if (!has_both)
+        {
+            auto replacement = has_left ? wrapped->get_left() : wrapped->get_right();
+            if (wrapped == _root)
+            {
+                _root = replacement;
+                if (replacement)
+                {
+                    replacement->set_tree_parent(nullptr);
+                }
+            }
+            else
+            {
+                if (wrapped == wrapped->get_tree_parent()->get_left())
+                {
+                    wrapped->get_tree_parent()->set_left(replacement);
+                    shortened_base = wrapped->get_tree_parent();
+                    shortened_left = true;
+                }
+                else
+                {
+                    wrapped->get_tree_parent()->set_right(replacement);
+                    shortened_base = wrapped->get_tree_parent();
+                    shortened_left = false;
+                }
+
+                if (replacement)
+                {
+                    replacement->set_tree_parent(wrapped->get_tree_parent());
+                }
+            }
+        }
+
+        else
+        {
+            if (!wrapped->get_right()->get_left())
+            {
+                auto next = wrapped->get_right();
+
+                if (wrapped->get_tree_parent())
+                {
+                    if (wrapped == wrapped->get_tree_parent()->get_left())
+                    {
+                        wrapped->get_tree_parent()->set_left(next);
+                    }
+                    else
+                    {
+                        wrapped->get_tree_parent()->set_right(next);
+                    }
+                }
+
+                next->set_balance_factor(wrapped->get_balance_factor() - 1);
+                next->set_left(wrapped->get_left());
+                if (next->get_left())
+                {
+                    next->get_left()->set_tree_parent(next);
+                }
+
+                shortened_base = next->get_tree_parent();
+                shortened_left = false;
+
+                next->set_tree_parent(wrapped->get_tree_parent());
+                if (!next->get_tree_parent())
+                {
+                    _root = next;
+                    if (wrapped->get_balance_factor() < 0)
+                    {
+                        _rebalance_right(next);
+                    }
+                    shortened_base = nullptr;
+                }
+            }
+            else
+            {
+                auto next = wrapped->get_right()->get_left();
+                while (next->get_left())
+                {
+                    next = next->get_left();
+                }
+
+                if (wrapped->get_tree_parent())
+                {
+                    if (wrapped == wrapped->get_tree_parent()->get_left())
+                    {
+                        wrapped->get_tree_parent()->set_left(next);
+                    }
+                    else
+                    {
+                        wrapped->get_tree_parent()->set_right(next);
+                    }
+                }
+
+                next->set_balance_factor(wrapped->get_balance_factor());
+
+                shortened_base = next->get_tree_parent();
+                shortened_left = true;
+
+                next->get_tree_parent()->set_left(next->get_right());
+                if (next->get_right())
+                {
+                    next->get_right()->set_tree_parent(next->get_tree_parent());
+                }
+                next->set_left(wrapped->get_left());
+                next->get_left()->set_tree_parent(next);
+                next->set_right(wrapped->get_right());
+                next->get_right()->set_tree_parent(next);
+
+                next->set_tree_parent(wrapped->get_tree_parent());
+                if (!next->get_tree_parent())
+                {
+                    _root = next;
+                }
+            }
+        }
+
+        if (shortened_base)
+        {
+            _erase_rebalance(shortened_base, shortened_left);
+        }
+
+        Traits::create(element_ptr);
+        --_size;
+        return ret;
+    }
+
+    iterator erase(iterator position)
+    {
+        return erase(position._element->unwrap());
+    }
+
+    template<typename Key>
+    iterator erase(const Key & value) requires(
+        !std::same_as<Key, iterator> && !std::same_as<Key, T *> && !std::same_as<Key, const T *>)
+    {
+        return erase(find(value));
+    }
 
     template<typename Key>
     iterator find(const Key & value) const
@@ -430,11 +578,12 @@ private:
                 {
                     if (current->get_balance_factor() < 0)
                     {
-                        _rotate_right(current, true);
-                        current = current->get_tree_parent();
-                        continue;
+                        current = _rebalance_right_left(parent);
                     }
-                    _rotate_left(parent);
+                    else
+                    {
+                        current = _rebalance_left(parent);
+                    }
                     break;
                 }
 
@@ -459,11 +608,12 @@ private:
                 {
                     if (current->get_balance_factor() > 0)
                     {
-                        _rotate_left(current, true);
-                        current = current->get_tree_parent();
-                        continue;
+                        current = _rebalance_left_right(parent);
                     }
-                    _rotate_right(parent);
+                    else
+                    {
+                        current = _rebalance_right(parent);
+                    }
                     break;
                 }
 
@@ -484,7 +634,89 @@ private:
         }
     }
 
-    void _rotate_left(_tree_element * node, bool unbalancing = false)
+    void _erase_rebalance(_tree_element * current, bool shortened_left)
+    {
+        // "parent" is a parent of a node that moved elsewhere
+        for (auto parent = current; parent; parent = current->get_tree_parent(),
+                  shortened_left = (parent ? current == parent->get_left() : false))
+        {
+            if (shortened_left)
+            {
+                if (parent->get_balance_factor() > 0)
+                {
+                    auto right = parent->get_right();
+                    auto b = right->get_balance_factor();
+                    if (b < 0)
+                    {
+                        current = _rebalance_right_left(parent);
+                    }
+                    else
+                    {
+                        current = _rebalance_left(parent);
+                    }
+
+                    if (b == 0)
+                    {
+                        break;
+                    }
+
+                    current = right;
+                }
+
+                else if (parent->get_balance_factor() == 0)
+                {
+                    parent->set_balance_factor(1);
+                    break;
+                }
+
+                else
+                {
+                    current = parent;
+                    current->set_balance_factor(0);
+                    continue;
+                }
+            }
+
+            else
+            {
+                if (parent->get_balance_factor() < 0)
+                {
+                    auto left = parent->get_left();
+                    auto b = left->get_balance_factor();
+                    if (b > 0)
+                    {
+                        current = _rebalance_left_right(parent);
+                    }
+                    else
+                    {
+                        current = _rebalance_right(parent);
+                    }
+
+                    if (b == 0)
+                    {
+                        break;
+                    }
+
+                    current = left;
+                }
+
+                else if (parent->get_balance_factor() == 0)
+                {
+                    parent->set_balance_factor(-1);
+                    break;
+                }
+
+                else
+                {
+                    current = parent;
+                    current->set_balance_factor(0);
+                    continue;
+                }
+            }
+        }
+    }
+
+    auto _rotate_left(_tree_element * node)
     {
         auto parent = node->get_tree_parent();
         auto right = node->get_right();
@@ -516,21 +748,10 @@ private:
             _root = right;
         }
 
-        auto rf = right->get_balance_factor();
-        auto nf = node->get_balance_factor() - (!rf ? 1 : rf);
-        if (unbalancing)
-        {
-            node->set_balance_factor(0);
-            right->set_balance_factor(-nf);
-        }
-        else
-        {
-            node->set_balance_factor(nf);
-            right->set_balance_factor(0);
-        }
+        return right;
     }
 
-    void _rotate_right(_tree_element * node, bool unbalancing = false)
+    auto _rotate_right(_tree_element * node)
     {
         auto parent = node->get_tree_parent();
         auto left = node->get_left();
@@ -562,18 +783,89 @@ private:
             _root = left;
         }
 
-        auto lf = left->get_balance_factor();
-        auto nf = node->get_balance_factor() - (!lf ? -1 : lf);
-        if (unbalancing)
+        return left;
+    }
+
+    auto _rebalance_left(_tree_element * node)
+    {
+        if (node->get_right()->get_balance_factor() == 0)
         {
-            node->set_balance_factor(0);
-            left->set_balance_factor(-nf);
+            node->set_balance_factor(1);
+            node->get_right()->set_balance_factor(-1);
         }
         else
         {
-            node->set_balance_factor(nf);
-            left->set_balance_factor(0);
+            node->set_balance_factor(0);
+            node->get_right()->set_balance_factor(0);
         }
+
+        return _rotate_left(node);
+    }
+
+    auto _rebalance_right(_tree_element * node)
+    {
+        if (node->get_left()->get_balance_factor() == 0)
+        {
+            node->set_balance_factor(-1);
+            node->get_left()->set_balance_factor(1);
+        }
+        else
+        {
+            node->set_balance_factor(0);
+            node->get_left()->set_balance_factor(0);
+        }
+
+        return _rotate_right(node);
+    }
+
+    auto _rebalance_left_right(_tree_element * node)
+    {
+        auto bf = node->get_left()->get_right()->get_balance_factor();
+        if (bf == 0)
+        {
+            node->set_balance_factor(0);
+            node->get_left()->set_balance_factor(0);
+        }
+        else if (bf < 0)
+        {
+            node->set_balance_factor(1);
+            node->get_left()->set_balance_factor(0);
+        }
+        else
+        {
+            node->set_balance_factor(0);
+            node->get_left()->set_balance_factor(-1);
+        }
+
+        _rotate_left(node->get_left());
+        auto ret = _rotate_right(node);
+        ret->set_balance_factor(0);
+        return ret;
+    }
+
+    auto _rebalance_right_left(_tree_element * node)
+    {
+        auto bf = node->get_right()->get_left()->get_balance_factor();
+        if (bf == 0)
+        {
+            node->set_balance_factor(0);
+            node->get_right()->set_balance_factor(0);
+        }
+        else if (bf > 0)
+        {
+            node->set_balance_factor(-1);
+            node->get_right()->set_balance_factor(0);
+        }
+        else
+        {
+            node->set_balance_factor(0);
+            node->get_right()->set_balance_factor(1);
+        }
+
+        _rotate_right(node->get_right());
+        auto ret = _rotate_left(node);
+        ret->set_balance_factor(0);
+        return ret;
     }
 
     invariant_check_result _check_invariants(_tree_element * node) const
