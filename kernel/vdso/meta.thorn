@@ -27,6 +27,11 @@ struct mailbox_message(
     )
 );
 
+syscall(kernel::ipc::mailbox) rose_mailbox_create(
+    read_token: out ptr std::uintptr_t,
+    write_token: out ptr std::uintptr_t
+) -> $::result;
+
 syscall(kernel::ipc::mailbox, blocking) rose_mailbox_read(
     mailbox: token(read) kernel::ipc::mailbox,
     timeout_ns: std::uintptr_t,

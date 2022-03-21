@@ -53,6 +53,24 @@ void mailbox::send(rose::syscall::mailbox_user_message message)
     _push(std::make_unique<mailbox_message>(mailbox_message{ .payload = message }));
 }
 
+rose::syscall::result mailbox::syscall_rose_mailbox_create_handler(
+    std::uintptr_t * read_token,
+    std::uintptr_t * write_token)
+{
+    auto current_thread = arch::cpu::get_core_local_storage()->current_thread;
+
+    auto mb = create_mailbox();
+
+    auto read_handle = create_handle(mb, permissions::read | permissions::transfer | permissions::clone);
+    *read_token = current_thread->get_container()->register_for_token(std::move(read_handle)).value();
+
+    auto write_handle =
+        create_handle(std::move(mb), permissions::write | permissions::transfer | permissions::clone);
+    *write_token = current_thread->get_container()->register_for_token(std::move(write_handle)).value();
+
+    return rose::syscall::result::ok;
+}
+
 std::optional<rose::syscall::result> mailbox::syscall_rose_mailbox_read_handler(
     mailbox * mb,
     std::uintptr_t timeout,
@@ -123,7 +141,25 @@ rose::syscall::result mailbox::syscall_rose_mailbox_write_handler(
     {
         case rose::syscall::mailbox_message_type::handle_token:
         {
-            PANIC("implement sending tokens");
+            auto current_process = arch::cpu::get_core_local_storage()->current_thread->get_container();
+            auto token = handle_token_t(source->payload.handle_token);
+            auto handle = current_process->get_handle(token);
+
+            if (!handle)
+            {
+                return rose::syscall::result::invalid_token;
+            }
+
+            if (!handle->has_permissions(permissions::transfer))
+            {
+                return rose::syscall::result::not_allowed;
+            }
+
+            current_process->unregister_token(token);
+
+            mb->_message_queue.push_back(
+                std::make_unique<mailbox_message>(mailbox_message{ .payload = std::move(handle) }));
+            break;
         }
 
         case rose::syscall::mailbox_message_type::user:

@@ -54,6 +54,10 @@ void context::set_argument(std::size_t idx, std::uintptr_t value)
             rcx = value;
             break;
 
+        case 4:
+            r8 = value;
+            break;
+
         default:
             PANIC("Unsupported thread context argument index: #{} = {}!", idx, value);
     }

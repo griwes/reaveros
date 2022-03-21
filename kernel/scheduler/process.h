@@ -31,6 +31,7 @@ public:
     process(std::unique_ptr<vm::vas> address_space);
 
     handle_token_t register_for_token(util::intrusive_ptr<handle>);
+    void unregister_token(handle_token_t);
     util::intrusive_ptr<handle> get_handle(handle_token_t token) const;
 
     util::intrusive_ptr<thread> create_thread();

@@ -45,6 +45,7 @@ public:
     void send(rose::syscall::mailbox_user_message message);
 
     // syscall handlers
+    static rose::syscall::result syscall_rose_mailbox_create_handler(std::uintptr_t *, std::uintptr_t *);
     static std::optional<rose::syscall::result> syscall_rose_mailbox_read_handler(
         mailbox *,
         std::uintptr_t,

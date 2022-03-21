@@ -38,6 +38,7 @@ enum class permissions : std::uintmax_t
     read = 1 << 0,
     write = 1 << 1,
     transfer = 1 << 2,
+    clone = 1 << 3,
 
     all = ~static_cast<std::uintmax_t>(0)
 };
