@@ -61,11 +61,16 @@ rose::syscall::result mailbox::syscall_rose_mailbox_create_handler(
 
     auto mb = create_mailbox();
 
-    auto read_handle = create_handle(mb, permissions::read | permissions::transfer | permissions::clone);
+    auto read_handle = create_handle(
+        mb,
+        rose::syscall::permissions::read | rose::syscall::permissions::transfer
+            | rose::syscall::permissions::clone);
     *read_token = current_thread->get_container()->register_for_token(std::move(read_handle)).value();
 
-    auto write_handle =
-        create_handle(std::move(mb), permissions::write | permissions::transfer | permissions::clone);
+    auto write_handle = create_handle(
+        std::move(mb),
+        rose::syscall::permissions::write | rose::syscall::permissions::transfer
+            | rose::syscall::permissions::clone);
     *write_token = current_thread->get_container()->register_for_token(std::move(write_handle)).value();
 
     return rose::syscall::result::ok;
@@ -150,7 +155,7 @@ rose::syscall::result mailbox::syscall_rose_mailbox_write_handler(
                 return rose::syscall::result::invalid_token;
             }
 
-            if (!handle->has_permissions(permissions::transfer))
+            if (!handle->has_permissions(rose::syscall::permissions::transfer))
             {
                 return rose::syscall::result::not_allowed;
             }

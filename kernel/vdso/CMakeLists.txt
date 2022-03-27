@@ -3,7 +3,7 @@ file(GLOB thorn_files
     *.thorn
 )
 
-set(_thorn_user_files)
+set(_thorn_user_files "${CMAKE_CURRENT_BINARY_DIR}/thorn/user/types.h")
 set(_thorn_vdso_files)
 set(_thorn_kernel_files)
 
@@ -27,6 +27,12 @@ add_custom_command(
     DEPENDS ${REAVEROS_THORN} ${thorn_files}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+add_custom_target(thorn-generation
+    DEPENDS
+        ${_thorn_user_files}
+        ${_thorn_vdso_files}
+        ${_thorn_kernel_files}
+)
 
 set_source_files_properties(
     FILES
@@ -40,14 +46,22 @@ set_source_files_properties(
 add_library(vdso SHARED
     ${_thorn_vdso_files}
 )
+add_dependencies(vdso thorn-generation)
+
+string(REGEX REPLACE
+    "sysroots/${REAVEROS_ARCH}-freestanding$"
+    "sysroots/${REAVEROS_ARCH}-hosted"
+    _hosted_sysroot ${CMAKE_SYSROOT}
+)
 
 install(FILES ${_thorn_user_files}
-    DESTINATION ${CMAKE_SYSROOT}/include/rose/syscall
+    DESTINATION ${_hosted_sysroot}/include/rose/syscall
 )
 
 add_library(syscall_table STATIC
     ${_thorn_kernel_files}
 )
+add_dependencies(syscall_table thorn-generation)
 
 set_target_properties(syscall_table
     PROPERTIES

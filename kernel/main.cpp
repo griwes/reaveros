@@ -222,11 +222,11 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         log_thread->get_context()->set_argument(
             0,
             process->register_for_token(
-                kernel::create_handle(std::move(log_mailbox), kernel::permissions::read)));
+                kernel::create_handle(std::move(log_mailbox), rose::syscall::permissions::read)));
         log_thread->get_context()->set_argument(
             1,
             process->register_for_token(
-                kernel::create_handle(std::move(ack_mailbox), kernel::permissions::write)));
+                kernel::create_handle(std::move(ack_mailbox), rose::syscall::permissions::write)));
         log_thread->get_context()->set_argument(2, reinterpret_cast<std::uintptr_t>(*process_tag));
         log_thread->get_context()->set_argument(3, reinterpret_cast<std::uintptr_t>(process));
         log_thread->get_context()->set_argument(
@@ -328,8 +328,8 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
 
         kernel::log::println(" >> Creating and sending the log accept mailbox...");
         auto log_accept_mailbox = kernel::ipc::create_mailbox();
-        auto lab_handle =
-            kernel::create_handle(log_accept_mailbox /* not moved on purpose */, kernel::permissions::write);
+        auto lab_handle = kernel::create_handle(
+            log_accept_mailbox /* not moved on purpose */, rose::syscall::permissions::write);
         bootinit_mailbox->send(std::move(lab_handle));
 
         log_accept_mailbox->send(kernel::create_handle(bootinit_process));
@@ -342,7 +342,7 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         bootinit_mailbox->send(rose::syscall::mailbox_user_message{ .data0 = initrd_size });
 
         kernel::log::println(" > Preparing bootinit context...");
-        auto bm_handle = kernel::create_handle(std::move(bootinit_mailbox), kernel::permissions::read);
+        auto bm_handle = kernel::create_handle(std::move(bootinit_mailbox), rose::syscall::permissions::read);
         bootinit_thread->get_context()->set_userspace();
         bootinit_thread->get_context()->set_instruction_pointer(bootinit::addresses::ip);
         bootinit_thread->get_context()->set_stack_pointer(bootinit::addresses::top_of_stack);
@@ -366,7 +366,7 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         log_accepter_thread->get_context()->set_argument(
             0,
             kernel::scheduler::get_kernel_process()->register_for_token(
-                kernel::create_handle(std::move(log_accept_mailbox), kernel::permissions::read)));
+                kernel::create_handle(std::move(log_accept_mailbox), rose::syscall::permissions::read)));
         log_accepter_thread->get_context()->set_argument(
             1,
             reinterpret_cast<std::uintptr_t>(log_accepter_stack_mapping.release(kernel::util::keep_count)));

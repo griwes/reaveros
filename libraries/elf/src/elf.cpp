@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "handle.h"
-
-#include "../scheduler/process.h"
-
-namespace kernel
-{
-handle::handle(type_id * type, void * payload, dtor_t dtor, rose::syscall::permissions perms)
-    : _perms(perms), _type(type), _payload(payload), _dtor(dtor)
-{
-}
-
-handle::~handle()
-{
-    _dtor(_payload);
-}
-}

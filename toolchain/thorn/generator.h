@@ -28,6 +28,12 @@
 
 namespace thorn::generator
 {
+struct permission_description
+{
+    std::string name;
+    int flag_bit;
+};
+
 struct enum_description
 {
     std::vector<std::pair<std::string, std::uintptr_t>> enumerations;
@@ -95,6 +101,7 @@ public:
 
     void set_dependencies(const std::unordered_map<std::string, std::unordered_set<std::string>> & deps);
     void set_includes(const std::unordered_map<std::string, std::unordered_set<std::string>> & deps);
+    void set_known_permissions(const std::vector<permission_description> & perms);
     void generate_symbol(std::string_view name, const symbol & symb);
 
 private:

@@ -39,7 +39,8 @@ enum class token_type
     semicolon,
     scope,
     token,
-    permission,
+    permissions,
+    for_,
     direction,
     ptr,
     identifier,
@@ -51,25 +52,16 @@ enum class token_type
 };
 
 inline const std::unordered_map<token_type, std::string> descriptions = {
-    { token_type::syscall, "'syscall'" },
-    { token_type::enum_, "'enum'" },
-    { token_type::struct_, "'struct'" },
-    { token_type::union_, "'union'" },
-    { token_type::open_paren, "'('" },
-    { token_type::close_paren, "')'" },
-    { token_type::colon, "':'" },
-    { token_type::comma, "','" },
-    { token_type::semicolon, "';'" },
-    { token_type::scope, "'::'" },
-    { token_type::token, "'token'" },
-    { token_type::permission, "permission-specifier" },
-    { token_type::direction, "direction-specifier" },
-    { token_type::ptr, "'ptr'" },
-    { token_type::identifier, "identifier" },
-    { token_type::arrow, "'->'" },
-    { token_type::dollar, "'$'" },
-    { token_type::include, "'include'" },
-    { token_type::header_name, "header-name" },
+    { token_type::syscall, "'syscall'" },  { token_type::enum_, "'enum'" },
+    { token_type::struct_, "'struct'" },   { token_type::union_, "'union'" },
+    { token_type::open_paren, "'('" },     { token_type::close_paren, "')'" },
+    { token_type::colon, "':'" },          { token_type::comma, "','" },
+    { token_type::semicolon, "';'" },      { token_type::scope, "'::'" },
+    { token_type::token, "'token'" },      { token_type::permissions, "'permissions'" },
+    { token_type::for_, "'for'" },         { token_type::direction, "direction-specifier" },
+    { token_type::ptr, "'ptr'" },          { token_type::identifier, "identifier" },
+    { token_type::arrow, "'->'" },         { token_type::dollar, "'$'" },
+    { token_type::include, "'include'" },  { token_type::header_name, "header-name" },
     { token_type::blocking, "'blocking'" }
 };
 
@@ -80,12 +72,12 @@ inline const std::unordered_map<char, token_type> symbol_types = { { '(', token_
                                                                    { '$', token_type::dollar } };
 
 inline const std::unordered_map<std::string, token_type> keywords = {
-    { "syscall", token_type::syscall },  { "enum", token_type::enum_ },
-    { "struct", token_type::struct_ },   { "union", token_type::union_ },
-    { "token", token_type::token },      { "read", token_type::permission },
-    { "write", token_type::permission }, { "in", token_type::direction },
-    { "out", token_type::direction },    { "ptr", token_type::ptr },
-    { "include", token_type::include },  { "blocking", token_type::blocking }
+    { "syscall", token_type::syscall }, { "enum", token_type::enum_ },
+    { "struct", token_type::struct_ },  { "union", token_type::union_ },
+    { "token", token_type::token },     { "permissions", token_type::permissions },
+    { "for", token_type::for_ },        { "in", token_type::direction },
+    { "out", token_type::direction },   { "ptr", token_type::ptr },
+    { "include", token_type::include }, { "blocking", token_type::blocking }
 };
 
 struct token

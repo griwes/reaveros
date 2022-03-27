@@ -32,6 +32,12 @@ struct qualified_name
     std::vector<std::string> name_elements;
 };
 
+struct permissions_definition
+{
+    std::optional<qualified_name> object_type;
+    std::vector<std::string> permissions;
+};
+
 struct parameter
 {
     std::string name;
@@ -84,6 +90,7 @@ struct parsed_include
     std::string header_name;
 };
 
+permissions_definition parse_permissions(std::string_view filename, lexer::tokenizer_iterator & it);
 parsed_syscall parse_syscall(std::string_view filename, lexer::tokenizer_iterator & it);
 parsed_enum parse_enum(std::string_view filename, lexer::tokenizer_iterator & it);
 parsed_struct parse_struct(std::string_view filename, lexer::tokenizer_iterator & it);

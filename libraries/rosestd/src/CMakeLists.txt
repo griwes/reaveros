@@ -1,6 +1,14 @@
 file(GLOB sources *.cpp)
 
-add_library(rosestd STATIC
+add_definitions(-g)
+
+if (REAVEROS_IS_FREESTANDING)
+    set(_library_type STATIC)
+else()
+    set(_library_type SHARED)
+endif()
+
+add_library(rosestd ${_library_type}
     ${sources}
 )
 

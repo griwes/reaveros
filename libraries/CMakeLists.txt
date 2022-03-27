@@ -7,6 +7,7 @@ set(libraries
     boot-protocol
 
     archive
+    elf
 )
 
 foreach (library IN LISTS libraries)

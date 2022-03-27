@@ -62,5 +62,7 @@ private:
     std::unordered_map<std::string, std::unordered_set<std::string>> _module_includes;
     std::vector<std::string> _syscalls;
     std::vector<std::string> _symbols_in_order;
+    std::unordered_map<std::string, std::vector<std::string>> _permissions;
+    std::optional<std::vector<std::string>> _global_permissions;
 };
 }
