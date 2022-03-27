@@ -28,6 +28,44 @@ void context::process(std::string filename)
     {
         switch (it->type)
         {
+            case lexer::token_type::permissions:
+            {
+                auto line = it->line;
+                auto column = it->column;
+
+                auto permissions = parser::parse_permissions(filename, it);
+
+                if (permissions.object_type)
+                {
+                    auto type_name =
+                        _process_qualified_name(filename, permissions.object_type.value()).value();
+                    auto it = _permissions.find(type_name);
+                    if (it != _permissions.end())
+                    {
+                        REPORT_ERROR(
+                            filename,
+                            line,
+                            column,
+                            "permissions enum for '" << type_name << "' specified more than once");
+                    }
+
+                    _permissions.emplace(std::move(type_name), std::move(permissions.permissions));
+                }
+
+                else
+                {
+                    if (_global_permissions)
+                    {
+                        REPORT_ERROR(
+                            filename, line, column, "global permissions enum specified more than once");
+                    }
+
+                    _global_permissions = std::move(std::move(permissions.permissions));
+                }
+
+                break;
+            }
+
             case lexer::token_type::enum_:
             {
                 auto enum_ = parser::parse_enum(filename, it);
@@ -80,6 +118,28 @@ void context::output()
 
     gen_ctx.set_dependencies(_module_deps);
     gen_ctx.set_includes(_module_includes);
+
+    std::vector<generator::permission_description> perms;
+    if (_global_permissions)
+    {
+        int i = 0;
+        for (auto && perm : *_global_permissions)
+        {
+            perms.push_back(generator::permission_description{ perm, i++ });
+        }
+    }
+
+    for (auto && [_, permissions] : _permissions)
+    {
+        int i = 0;
+        for (auto && perm : permissions)
+        {
+            perms.push_back(generator::permission_description{ perm, 64 + i });
+        }
+    }
+
+    gen_ctx.set_known_permissions(perms);
+
     for (auto && name : _symbols_in_order)
     {
         gen_ctx.generate_symbol(name, _symbols[name]);
@@ -257,13 +317,7 @@ void context::_insert_syscall(std::string_view module, const parser::parsed_sysc
 
         else if (param.token_permissions)
         {
-            // TODO: semantic validation of permissions before putting them in for the code generator
             generator::handle_token tdesc;
-
-            for (auto && perm : *param.token_permissions)
-            {
-                tdesc.required_permissions.push_back(perm);
-            }
 
             if (!tdesc.required_permissions.empty())
             {
@@ -275,6 +329,31 @@ void context::_insert_syscall(std::string_view module, const parser::parsed_sysc
             {
                 tdesc.deref_type.append("::");
                 tdesc.deref_type.append(param.type_spec.name_elements[i]);
+            }
+
+            for (auto && perm : *param.token_permissions)
+            {
+                if ((_global_permissions
+                     && std::find(_global_permissions->begin(), _global_permissions->end(), perm)
+                         != _global_permissions->end())
+                    || (_permissions.contains(tdesc.deref_type) &&
+                        [&]
+                        {
+                            auto & class_perms = _permissions.find(tdesc.deref_type)->second;
+                            return std::find(class_perms.begin(), class_perms.end(), perm)
+                                != class_perms.end();
+                        }()))
+                {
+                    tdesc.required_permissions.push_back(perm);
+                }
+                else
+                {
+                    std::cerr << "thorn: semantic error: the parameter '" << param.name << "' of syscall '"
+                              << ast.name << "' specifies a permission '" << perm
+                              << "' which is not a valid permission for a kernel object of type '"
+                              << tdesc.deref_type << "'" << std::endl;
+                    std::exit(1);
+                }
             }
 
             desc.parameters.push_back(std::make_pair(param.name, std::move(tdesc)));

@@ -22,6 +22,8 @@
 #include "../util/chained_allocator.h"
 #include "vmo_mapping.h"
 
+#include <user/meta.h>
+
 #include <memory>
 
 namespace kernel::vm
@@ -71,6 +73,10 @@ public:
             virt_addr_t(reinterpret_cast<std::uintptr_t>(end)),
             rw);
     }
+
+    static rose::syscall::result syscall_rose_vas_create_handler(
+        kernel_caps_t *,
+        std::uintptr_t * result_token);
 
 private:
     phys_addr_t _asid;

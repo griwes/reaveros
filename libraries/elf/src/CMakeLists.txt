@@ -8,12 +8,12 @@ else()
     set(_library_type SHARED)
 endif()
 
-add_library(archive ${_library_type}
+add_library(elf ${_library_type}
     ${sources}
 )
 
 set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/lib)
 
-install(TARGETS archive
+install(TARGETS elf
     DESTINATION ${install_dir}
 )

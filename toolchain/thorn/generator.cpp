@@ -113,6 +113,29 @@ void context::set_includes(const std::unordered_map<std::string, std::unordered_
     _includes = includes;
 }
 
+void context::set_known_permissions(const std::vector<permission_description> & perms)
+{
+    auto && stream = _get_stream("types", _stream_kind::user);
+
+    stream << "enum class permissions : std::uint128_t\n";
+    stream << "{\n";
+    for (auto && [name, flag_bit] : perms)
+    {
+        stream << "    " << name << " = static_cast<std::uint128_t>(1) << " << flag_bit << ",\n";
+    }
+    stream << "    all = ~static_cast<std::uint128_t>(0)\n";
+    stream << "}\n\n;";
+
+    for (auto && op : { "|", "&" })
+    {
+        stream << "inline permissions operator" << op << "(permissions lhs, permissions rhs)\n";
+        stream << "{\n";
+        stream << "    return static_cast<permissions>(std::to_underlying(lhs) " << op
+               << " std::to_underlying(rhs));\n";
+        stream << "}\n\n";
+    }
+}
+
 void context::generate_symbol(std::string_view name, const symbol & symb)
 {
     auto & user_stream = _get_stream(symb.module, _stream_kind::user);
@@ -355,9 +378,8 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
                         // TODO: fold into a single has_permissions call
                         for (auto && perm : handle_spec.required_permissions)
                         {
-                            handler_stream << "    if (!" << pname
-                                           << "_handle->has_permissions(kernel::permissions::" << perm
-                                           << "))\n";
+                            handler_stream << "    if (!" << pname << "_handle->has_permissions(" << _scope
+                                           << "::permissions::" << perm << "))\n";
                             handler_stream << "    {\n";
                             handler_stream << "        return_register = std::to_underlying(::" << _scope
                                            << "::result::not_allowed);\n";
@@ -540,6 +562,14 @@ std::fstream & context::_get_stream(std::string module, _stream_kind kind)
         case _stream_kind::user:
             stream << "#pragma once\n";
             stream << "\n";
+            if (module != "types")
+            {
+                stream << "#include \"types.h\"\n";
+            }
+            else
+            {
+                stream << "#include <utility>\n";
+            }
             stream << "#include <cstdint>\n";
             break;
 

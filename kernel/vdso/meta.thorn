@@ -1,5 +1,16 @@
 include <scheduler/mailbox.h>;
 
+permissions(
+    read,
+    write,
+    transfer,
+    clone
+);
+
+permissions for kernel::kernel_caps_t(
+    create_vas
+);
+
 enum result(
     ok,
     invalid_token,
@@ -41,4 +52,9 @@ syscall(kernel::ipc::mailbox, blocking) rose_mailbox_read(
 syscall(kernel::ipc::mailbox) rose_mailbox_write(
     mailbox: token(write) kernel::ipc::mailbox,
     message: in ptr $::mailbox_message
+) -> $::result;
+
+syscall(kernel::vm::vas) rose_vas_create(
+    kernel_caps: token(create_vas) kernel::kernel_caps_t,
+    vas: out ptr std::uintptr_t
 ) -> $::result;

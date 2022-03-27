@@ -66,6 +66,31 @@ qualified_name parse_qualified_name(std::string_view filename, lexer::tokenizer_
     return ret;
 }
 
+permissions_definition parse_permissions(std::string_view filename, lexer::tokenizer_iterator & it)
+{
+    permissions_definition ret;
+
+    expect(filename, it, lexer::token_type::permissions);
+    if (it->type != lexer::token_type::open_paren)
+    {
+        expect(filename, it, lexer::token_type::for_);
+        ret.object_type = parse_qualified_name(filename, it);
+    }
+
+    expect(filename, it, lexer::token_type::open_paren);
+    ret.permissions.push_back(expect(filename, it, lexer::token_type::identifier));
+    while (it->type != lexer::token_type::close_paren)
+    {
+        expect(filename, it, lexer::token_type::comma);
+        ret.permissions.push_back(expect(filename, it, lexer::token_type::identifier));
+    }
+    expect(filename, it, lexer::token_type::close_paren);
+
+    expect(filename, it, lexer::token_type::semicolon);
+
+    return ret;
+}
+
 parameter parse_parameter(std::string_view filename, lexer::tokenizer_iterator & it)
 {
     parameter ret;
@@ -97,11 +122,11 @@ parameter parse_parameter(std::string_view filename, lexer::tokenizer_iterator &
 
         expect(filename, it, lexer::token_type::token);
         expect(filename, it, lexer::token_type::open_paren);
-        ret.token_permissions->push_back(expect(filename, it, lexer::token_type::permission));
+        ret.token_permissions->push_back(expect(filename, it, lexer::token_type::identifier));
         while (it->type != lexer::token_type::close_paren)
         {
             expect(filename, it, lexer::token_type::comma);
-            ret.token_permissions->push_back(expect(filename, it, lexer::token_type::permission));
+            ret.token_permissions->push_back(expect(filename, it, lexer::token_type::identifier));
         }
         expect(filename, it, lexer::token_type::close_paren);
     }

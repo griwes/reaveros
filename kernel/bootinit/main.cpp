@@ -44,6 +44,37 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 
 namespace sc = rose::syscall;
 
+namespace
+{
+std::uintptr_t kernel_caps_token;
+
+struct mailbox_desc
+{
+    std::uintptr_t in;
+    std::uintptr_t out;
+};
+
+struct create_process_result
+{
+    std::uintptr_t process_token;
+    std::uintptr_t vas_token;
+    std::uintptr_t protocol_mailbox_token;
+};
+
+create_process_result create_process(std::string_view)
+{
+    create_process_result ret;
+
+    auto result = sc::rose_vas_create(kernel_caps_token, &ret.vas_token);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to create a new virtual address space!");
+    }
+
+    return ret;
+}
+}
+
 [[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(std::uintptr_t mailbox_token)
 {
     __init();
@@ -106,7 +137,7 @@ namespace sc = rose::syscall;
         PANIC("Received wrong mailbox message type for kernel caps token!");
     }
 
-    [[maybe_unused]] auto kernel_caps = message.payload.handle_token;
+    kernel_caps_token = message.payload.handle_token;
     bootinit::log::println(" > Kernel caps token received.");
 
     result = sc::rose_mailbox_read(mailbox_token, -1, &message);
@@ -162,9 +193,34 @@ namespace sc = rose::syscall;
     }
     bootinit::log::println(" > Contents of test-file: '{}'.", *test_file);
 
-    // auto vasmgr_image = initrd["system/vasmgr.srv"];
-    // auto procmgr_image = initrd["system/procmgr.srv"];
-    // auto broker_image = initrd["system/broker.srv"];
+    bootinit::log::println("Creating vasmgr process...");
+
+    auto vasmgr_image = initrd["system/vasmgr.srv"];
+    if (!vasmgr_image)
+    {
+        PANIC("system/vasmgr.srv not found in the initrd image!");
+    }
+
+    [[maybe_unused]] auto [vasmgr_process, vasmgr_vas, vasmgr_protocol_mailbox] =
+        create_process(*vasmgr_image);
+
+    /*
+    auto procmgr_image = initrd["system/procmgr.srv"];
+    if (!procmgr_image)
+    {
+        PANIC("system/procmgr.srv not found in the initrd image!");
+    }
+
+    auto [procmgr_process, procmgr_vas, procmgr_protocol_mailbox] = create_process(*procmgr_image);
+
+    auto broker_image = initrd["system/broker.srv"];
+    if (!broker_image)
+    {
+        PANIC("system/broker.srv not found in the initrd image!");
+    }
+
+    auto [broker_process, broker_vas, broker_protocol_mailbox] = create_process(*broker_image);
+    */
 
     for (;;)
         ;

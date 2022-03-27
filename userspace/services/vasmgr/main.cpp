@@ -16,7 +16,7 @@
 
 #include <cstdint>
 
-extern "C" void rose_main([[maybe_unused]] std::uintptr_t inbox, [[maybe_unused]] std::uintptr_t outbox)
+extern "C" void rose_main([[maybe_unused]] std::uintptr_t inbox)
 {
     for (;;)
         ;

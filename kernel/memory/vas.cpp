@@ -140,4 +140,9 @@ std::optional<std::unique_lock<std::mutex>> vas::lock_address_range(
 
     return { it->lock() };
 }
+
+rose::syscall::result vas::syscall_rose_vas_create_handler(kernel_caps_t *, std::uintptr_t *)
+{
+    PANIC("got to creating the VAS");
+}
 }

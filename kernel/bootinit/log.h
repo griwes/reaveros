@@ -89,7 +89,8 @@ void println(std::__format_string<Ts...> fmt, const Ts &... args)
         *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    auto it = std::format_to(iterator(), fmt, args...);
+    auto it = iterator();
+    it = std::format_to(it, fmt, args...);
     *it = '\n';
     flush();
 }
