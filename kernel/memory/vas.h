@@ -51,6 +51,7 @@ public:
     ~vas();
 
     phys_addr_t get_asid() const;
+    bool claim_for_process();
 
     std::optional<virt_addr_t> get_vdso_base() const
     {
@@ -100,6 +101,7 @@ public:
 private:
     phys_addr_t _asid;
     std::mutex _lock;
+    bool _was_claimed_for_process = false;
 
     util::avl_tree<vmo_mapping, vmo_mapping_address_compare, util::intrusive_ptr_preserve_count_traits>
         _mappings;

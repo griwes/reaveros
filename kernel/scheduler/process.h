@@ -42,6 +42,16 @@ public:
     }
 
     static rose::syscall::result syscall_rose_token_release_handler(std::uintptr_t token);
+    static rose::syscall::result syscall_rose_process_create_handler(
+        kernel_caps_t *,
+        vm::vas * vas,
+        std::uintptr_t * token);
+    // TODO: this should allow for blocking the current thread, but doesn't
+    static rose::syscall::result syscall_rose_process_start_handler(
+        process * process,
+        std::uintptr_t entrypoint,
+        std::uintptr_t top_of_stack,
+        std::uintptr_t bootstrap_token);
 
 private:
     struct _handle_store : util::treeable<_handle_store>
@@ -69,6 +79,7 @@ private:
     };
 
     mutable std::mutex _lock;
+    bool _started = false;
     util::intrusive_ptr<vm::vas> _address_space;
     util::avl_tree<_handle_store, _handle_store_compare> _handles;
 };

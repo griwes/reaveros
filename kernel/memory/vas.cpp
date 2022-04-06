@@ -63,6 +63,19 @@ phys_addr_t vas::get_asid() const
     return _asid;
 }
 
+bool vas::claim_for_process()
+{
+    std::lock_guard _(_lock);
+
+    if (_was_claimed_for_process)
+    {
+        return false;
+    }
+
+    _was_claimed_for_process = true;
+    return true;
+}
+
 util::intrusive_ptr<vmo_mapping> vas::map_vmo(
     util::intrusive_ptr<vmo> vm_object,
     virt_addr_t mapping_base,

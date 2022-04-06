@@ -410,6 +410,11 @@ public:
         return _symbol_entry->value;
     }
 
+    bool is_defined() const
+    {
+        return _symbol_entry->value != 0;
+    }
+
 private:
     const symbol * _symbol_entry;
     const char * _strtab;
@@ -474,6 +479,11 @@ public:
     std::string_view get_os_abi_description() const;
     std::string_view get_type_description() const;
     int get_abi_version() const;
+
+    std::uintptr_t get_entry_point() const
+    {
+        return _header->entry;
+    }
 
     sections sections() const
     {
