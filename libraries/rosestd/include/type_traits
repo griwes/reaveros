@@ -363,7 +363,9 @@ struct is_nothrow_default_constructible : is_nothrow_constructible<_T>
 };
 
 template<typename _T>
-struct is_nothrow_copy_constructible;
+struct is_nothrow_copy_constructible : bool_constant<__is_nothrow_constructible(_T, const _T &)>
+{
+};
 
 template<typename _T>
 struct is_nothrow_move_constructible : bool_constant<__is_nothrow_constructible(_T, _T &&)>

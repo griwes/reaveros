@@ -1,0 +1,165 @@
+/*
+ * Copyright © 2022 Michał 'Griwes' Dominiak
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "__config"
+#include "atomic"
+#include "cstdint"
+#include "mutex"
+
+__ROSESTD_OPEN
+
+class shared_mutex
+{
+public:
+    shared_mutex() = default;
+    ~shared_mutex() = default;
+
+    shared_mutex(const shared_mutex &) = delete;
+    shared_mutex & operator=(const shared_mutex &) = delete;
+
+    void lock()
+    {
+        uintptr_t __expected = 0;
+        while (!__lock.compare_exchange_weak(__expected, __unique_mask, memory_order_acquire))
+        {
+            __expected = 0;
+        }
+    }
+
+    bool try_lock()
+    {
+        uintptr_t __expected = 0;
+        return __lock.compare_exchange_strong(__expected, __unique_mask, memory_order_acquire);
+    }
+
+    void unlock()
+    {
+        __lock.fetch_xor(__unique_mask, memory_order_release);
+    }
+
+    void lock_shared()
+    {
+        auto __value = __lock.fetch_add(1, memory_order_acquire);
+        while (__value & __unique_mask)
+        {
+            __value = __lock.load(memory_order_relaxed);
+        }
+    }
+
+    bool try_lock_shared()
+    {
+        auto __value = __lock.fetch_add(1, memory_order_acquire);
+        if (__value & __unique_mask)
+        {
+            __lock.fetch_sub(1, memory_order_release);
+            return false;
+        }
+        return true;
+    }
+
+    void unlock_shared()
+    {
+        __lock.fetch_sub(1, memory_order_release);
+    }
+
+private:
+    static const constexpr auto __unique_mask = static_cast<uintptr_t>(1)
+        << (sizeof(uintptr_t) * CHAR_BIT - 1);
+
+    atomic<uintptr_t> __lock{ 0 };
+};
+
+class shared_timed_mutex;
+
+template<typename _Mutex>
+class [[nodiscard]] shared_lock
+{
+public:
+    using mutex_type = _Mutex;
+
+    shared_lock() noexcept;
+
+    explicit shared_lock(mutex_type & __m) : __pm(__ROSESTD::addressof(__m)), __owns(true)
+    {
+        __pm->lock_shared();
+    }
+
+    shared_lock(mutex_type & m, defer_lock_t) noexcept;
+    shared_lock(mutex_type & m, try_to_lock_t);
+    shared_lock(mutex_type & m, adopt_lock_t);
+    // template<class Clock, class Duration>
+    // shared_lock(mutex_type & m, const chrono::time_point<Clock, Duration> & abs_time);
+    // template<class Rep, class Period>
+    // shared_lock(mutex_type & m, const chrono::duration<Rep, Period> & rel_time);
+
+    ~shared_lock()
+    {
+        if (__owns)
+        {
+            __pm->unlock_shared();
+        }
+    }
+
+    shared_lock(const shared_lock &) = delete;
+    shared_lock & operator=(const shared_lock &) = delete;
+
+    shared_lock(shared_lock && __s) noexcept
+        : __pm(__ROSESTD::exchange(__s.__pm, nullptr)), __owns(__ROSESTD::exchange(__s.__owns, false))
+    {
+    }
+
+    shared_lock & operator=(shared_lock && __s)
+    {
+        if (__owns)
+        {
+            __pm->unlock();
+        }
+
+        __pm = __ROSESTD::exchange(__s.__pm, nullptr);
+        __owns = __ROSESTD::exchange(__s.__owns, false);
+    }
+
+    // [thread.lock.shared.locking], locking
+    void lock();
+    bool try_lock();
+    // template<class Rep, class Period>
+    // bool try_lock_for(const chrono::duration<Rep, Period> & rel_time);
+    // template<class Clock, class Duration>
+    // bool try_lock_until(const chrono::time_point<Clock, Duration> & abs_time);
+    void unlock();
+
+    // [thread.lock.shared.mod], modifiers
+    void swap(shared_lock & __u) noexcept;
+    mutex_type * release() noexcept;
+
+    // [thread.lock.shared.obs], observers
+    bool owns_lock() const noexcept;
+    explicit operator bool() const noexcept;
+    mutex_type * mutex() const noexcept;
+
+private:
+    mutex_type * __pm;
+    bool __owns;
+};
+
+template<typename _Mutex>
+void swap(shared_lock<_Mutex> & __x, shared_lock<_Mutex> & __y) noexcept;
+
+__ROSESTD_CLOSE
+
+// vim: ft=cpp

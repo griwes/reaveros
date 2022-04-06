@@ -17,6 +17,7 @@ set(includes
     new
     optional
     ratio
+    shared_mutex
     string_view
     system_error
     type_traits

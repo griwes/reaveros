@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "vmo_mapping.h"
+#include "vas.h"
 
-#include "../memory/vas.h"
-#include "../util/intrusive_ptr.h"
-#include "process.h"
-
-namespace kernel::scheduler
+namespace kernel::vm
 {
-void initialize();
-bool is_initialized();
-void schedule(util::intrusive_ptr<thread> thread);
-void post_schedule(util::intrusive_ptr<thread> thread);
+rose::syscall::result vmo_mapping::syscall_rose_mapping_destroy_handler(vmo_mapping * mapping)
+{
+    if (mapping->is_invalid())
+    {
+        return rose::syscall::result::invalid_handle;
+    }
 
-util::intrusive_ptr<process> get_kernel_process();
-util::intrusive_ptr<process> create_process(util::intrusive_ptr<vm::vas> address_space);
+    mapping->get_vas()->unmap(mapping); // TODO: handle errors here and not with inline panics
+
+    return rose::syscall::result::ok;
+}
 }

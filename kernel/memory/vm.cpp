@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ namespace kernel::vm
 namespace
 {
     std::atomic<std::uint64_t> vm_space_top = boot_protocol::kernel_base - 4096;
-    util::intrusive_ptr<vmo> vdso_vmo;
+    util::intrusive_ptr<vmo> vdso_vmo{};
 }
 
 virt_addr_t allocate_address_range(std::size_t size)
@@ -44,11 +44,21 @@ virt_addr_t allocate_address_range(std::size_t size)
 
 void set_vdso_vmo(util::intrusive_ptr<vmo> vdso)
 {
-    if (vdso_vmo.get())
+    if (vdso_vmo)
     {
         PANIC("set_vdso_vmo called more than once!");
     }
 
     vdso_vmo = vdso;
+}
+
+util::intrusive_ptr<vmo> get_vdso_vmo()
+{
+    if (!vdso_vmo)
+    {
+        PANIC("get_vdso_vmo called before set_vdso_vmo");
+    }
+
+    return vdso_vmo;
 }
 }

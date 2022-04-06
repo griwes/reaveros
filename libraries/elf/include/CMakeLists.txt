@@ -1,8 +1,5 @@
-set(includes
-)
-
 set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include)
 
-install(FILES ${includes}
+install(DIRECTORY elf
     DESTINATION ${install_dir}
 )

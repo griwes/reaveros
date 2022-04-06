@@ -11,14 +11,32 @@ permissions for kernel::kernel_caps_t(
     create_vas
 );
 
+permissions for kernel::vm::vmo(
+    map
+);
+
+permissions for kernel::vm::vas(
+    create_mapping
+);
+
+permissions for kernel::vm::vmo_mapping(
+    unmap,
+    destroy
+);
+
 enum result(
     ok,
     invalid_token,
+    invalid_handle,
     wrong_handle_type,
     not_allowed,
     invalid_pointers,
     not_ready
 );
+
+syscall(kernel::scheduler::process) rose_token_release(
+    token_: std::uintptr_t
+) -> $::result;
 
 enum mailbox_message_type(
     handle_token,
@@ -54,7 +72,32 @@ syscall(kernel::ipc::mailbox) rose_mailbox_write(
     message: in ptr $::mailbox_message
 ) -> $::result;
 
+syscall(kernel::vm::vmo) rose_vmo_create(
+    size: std::uintptr_t,
+    flags: std::uintptr_t,
+    vmo_token: out ptr std::uintptr_t
+) -> $::result;
+
+struct vdso_mapping_info(
+    base: std::uintptr_t,
+    length: std::size_t
+);
+
 syscall(kernel::vm::vas) rose_vas_create(
     kernel_caps: token(create_vas) kernel::kernel_caps_t,
-    vas: out ptr std::uintptr_t
+    vas: out ptr std::uintptr_t,
+    vdso_info: out ptr $::vdso_mapping_info
 ) -> $::result;
+
+syscall(kernel::vm::vas) rose_mapping_create(
+    vas: token(create_mapping) kernel::vm::vas,
+    vmo: token(map) kernel::vm::vmo,
+    address: std::uintptr_t,
+    flags: std::uintptr_t,
+    mapping_token: out ptr std::uintptr_t
+) -> $::result;
+
+syscall(kernel::vm::vmo_mapping) rose_mapping_destroy(
+    mapping: token(destroy) kernel::vm::vmo_mapping
+) -> $::result;
+

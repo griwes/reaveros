@@ -29,7 +29,7 @@ namespace archive
 class cpio;
 struct try_cpio_result;
 
-try_cpio_result try_cpio(char * base, std::size_t length);
+try_cpio_result try_cpio(const char * base, std::size_t length);
 
 class cpio
 {
@@ -41,13 +41,13 @@ public:
 
     std::optional<std::string_view> operator[](std::string_view filename) const;
 
-    friend try_cpio_result try_cpio(char *, std::size_t);
+    friend try_cpio_result try_cpio(const char *, std::size_t);
 
 private:
     std::size_t _size;
 
-    char * _base;
-    char * _limit;
+    const char * _base;
+    const char * _limit;
 };
 
 struct try_cpio_result

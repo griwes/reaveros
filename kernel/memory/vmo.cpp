@@ -15,6 +15,8 @@
  */
 
 #include "vmo.h"
+#include "../arch/cpu.h"
+#include "../scheduler/thread.h"
 
 #include <iterator>
 
@@ -138,5 +140,26 @@ void vmo::commit_between_offsets(std::size_t start_offset, std::size_t end_offse
 void vmo::commit_all()
 {
     commit_between_offsets(0, _length);
+}
+
+rose::syscall::result vmo::syscall_rose_vmo_create_handler(
+    std::uintptr_t size,
+    std::uintptr_t flags,
+    std::uintptr_t * token)
+{
+    if (flags != 0)
+    {
+        PANIC("TODO: rose_vmo_create: non zero flags");
+    }
+
+    auto vmo = create_sparse_vmo(size);
+    auto handle = create_handle(std::move(vmo));
+
+    *token = arch::cpu::get_core_local_storage()
+                 ->current_thread->get_container()
+                 ->register_for_token(std::move(handle))
+                 .value();
+
+    return rose::syscall::result::ok;
 }
 }

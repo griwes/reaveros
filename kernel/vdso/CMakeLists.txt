@@ -48,6 +48,11 @@ add_library(vdso SHARED
 )
 add_dependencies(vdso thorn-generation)
 
+set_target_properties(vdso
+    PROPERTIES
+        LINK_FLAGS "-z separate-loadable-segments"
+)
+
 string(REGEX REPLACE
     "sysroots/${REAVEROS_ARCH}-freestanding$"
     "sysroots/${REAVEROS_ARCH}-hosted"
@@ -55,7 +60,11 @@ string(REGEX REPLACE
 )
 
 install(FILES ${_thorn_user_files}
-    DESTINATION ${_hosted_sysroot}/include/rose/syscall
+    DESTINATION ${_hosted_sysroot}/usr/include/rose/syscall
+)
+
+install(TARGETS vdso
+    DESTINATION ${_hosted_sysroot}/usr/lib
 )
 
 add_library(syscall_table STATIC

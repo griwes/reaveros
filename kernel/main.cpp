@@ -68,7 +68,7 @@ namespace
 kernel::phys_addr_t initrd_base;
 std::size_t initrd_size;
 
-const char * process_tags[] = { "bootinit", "vasmgr", "procmgr", "broker" };
+const char * process_tags[] = { "bootinit", "logger" };
 
 void log_handler(
     std::uintptr_t log_mailbox,
@@ -288,12 +288,18 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
     // even when this is not accessing any local variables)
     []() __attribute__((noinline))
     {
+        kernel::log::println("[BOOT] Creating VDSO VMO...");
+
+        auto vdso_vmo = kernel::vm::create_physical_vmo(
+            kernel::arch::vm::virt_to_phys(kernel::virt_addr_t(reinterpret_cast<std::uintptr_t>(begin_vdso))),
+            end_vdso - begin_vdso);
+        kernel::vm::set_vdso_vmo(vdso_vmo);
+
         kernel::log::println("[BOOT] Creating the bootinit process...");
 
-        auto bootinit_vas_uptr = kernel::vm::create_vas(false);
-        auto bootinit_vas = bootinit_vas_uptr.get();
+        auto bootinit_vas = kernel::vm::create_vas(false);
 
-        auto bootinit_process = kernel::scheduler::create_process(std::move(bootinit_vas_uptr));
+        auto bootinit_process = kernel::scheduler::create_process(bootinit_vas);
         auto bootinit_thread = bootinit_process->create_thread();
 
         kernel::log::println(" > Creating and mapping the bootinit code VMO...");
@@ -303,11 +309,7 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
             end_bootinit - begin_bootinit);
         bootinit_vas->map_vmo(std::move(bootinit_code_vmo), bootinit::addresses::ip, kernel::vm::flags::user);
 
-        kernel::log::println(" > Creating and mapping the VDSO VMO...");
-        auto vdso_vmo = kernel::vm::create_physical_vmo(
-            kernel::arch::vm::virt_to_phys(kernel::virt_addr_t(reinterpret_cast<std::uintptr_t>(begin_vdso))),
-            end_vdso - begin_vdso);
-        kernel::vm::set_vdso_vmo(vdso_vmo);
+        kernel::log::println(" > Mapping the VDSO VMO...");
         bootinit_vas->map_vmo(std::move(vdso_vmo), bootinit::addresses::vdso, kernel::vm::flags::user);
 
         kernel::log::println(" > Creating and mapping the initrd VMO...");
@@ -337,9 +339,14 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         kernel::log::println(" >> Sending kernel caps handle token...");
         bootinit_mailbox->send(kernel::create_handle(&kernel::kernel_caps));
 
-        kernel::log::println(" >> Sending initrd VMO handle token and size...");
+        kernel::log::println(" >> Sending initrd VMO handle token and size, and vdso size...");
         bootinit_mailbox->send(kernel::create_handle(std::move(initrd_vmo)));
-        bootinit_mailbox->send(rose::syscall::mailbox_user_message{ .data0 = initrd_size });
+        bootinit_mailbox->send(rose::syscall::mailbox_user_message{
+            .data0 = initrd_size, .data1 = static_cast<std::uintptr_t>(end_vdso - begin_vdso) });
+
+        kernel::log::println(" >> Sending bootinit VAS handle token...");
+        bootinit_mailbox->send(
+            kernel::create_handle(bootinit_vas, rose::syscall::permissions::create_mapping));
 
         kernel::log::println(" > Preparing bootinit context...");
         auto bm_handle = kernel::create_handle(std::move(bootinit_mailbox), rose::syscall::permissions::read);

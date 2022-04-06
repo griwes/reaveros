@@ -28,7 +28,7 @@ class thread;
 class process : public util::intrusive_ptrable<process>
 {
 public:
-    process(std::unique_ptr<vm::vas> address_space);
+    process(util::intrusive_ptr<vm::vas> address_space);
 
     handle_token_t register_for_token(util::intrusive_ptr<handle>);
     void unregister_token(handle_token_t);
@@ -40,6 +40,8 @@ public:
     {
         return _address_space.get();
     }
+
+    static rose::syscall::result syscall_rose_token_release_handler(std::uintptr_t token);
 
 private:
     struct _handle_store : util::treeable<_handle_store>
@@ -67,7 +69,7 @@ private:
     };
 
     mutable std::mutex _lock;
-    std::unique_ptr<vm::vas> _address_space;
+    util::intrusive_ptr<vm::vas> _address_space;
     util::avl_tree<_handle_store, _handle_store_compare> _handles;
 };
 }

@@ -223,6 +223,7 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
             {
                 state_struct_stream << "struct syscall_" << name << "_state\n";
                 state_struct_stream << "{\n";
+                state_struct_stream << "    scheduler::thread * current_thread;\n";
 
                 continuation_stream << "bool syscall_" << name
                                     << "_continuation(std::uintptr_t & return_register, void * state_ptr)\n";
@@ -233,13 +234,14 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
 
             handler_stream << "void handle_syscall_" << name << "(context & ctx)\n";
             handler_stream << "{\n";
-            handler_stream << "    auto current_thread = cpu::get_core_local_storage()->current_thread;\n\n";
-            handler_stream << "    auto & return_register = ctx.rax;\n\n";
-
             if (syscall.blocking)
             {
                 handler_stream << "    syscall_" << name << "_state state;\n\n"; // TODO
             }
+
+            handler_stream << "    " << (syscall.blocking ? "state." : "[[maybe_unused]] auto ")
+                           << "current_thread = cpu::get_core_local_storage()->current_thread.get();\n\n";
+            handler_stream << "    auto & return_register = ctx.rax;\n\n";
 
             if (symb.module != "meta")
             {
@@ -356,9 +358,9 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
 
                         handler_stream << "    handle_token_t " << pname << "_token{ctx."
                                        << _get_arch_register_for_arg(i) << "};\n";
-                        handler_stream << "    auto " << pname
-                                       << "_handle = current_thread->get_container()->get_handle(" << pname
-                                       << "_token);\n\n";
+                        handler_stream
+                            << "    auto " << pname << "_handle = " << (syscall.blocking ? "state." : "")
+                            << "current_thread->get_container()->get_handle(" << pname << "_token);\n\n";
 
                         handler_stream << "    if (!" << pname << "_handle)\n";
                         handler_stream << "    {\n";
@@ -429,29 +431,24 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
                         handler_stream << pname << "_addr = reinterpret_cast<" << pointer_spec.deref_type
                                        << " *>(ctx." << _get_arch_register_for_arg(i) << ");\n\n";
 
+                        action_stream << "    auto " << pname
+                                      << "_guard = " << (syscall.blocking ? "state." : "")
+                                      << "current_thread->get_container()->get_vas()->lock_array_mapping("
+                                      << (syscall.blocking ? "state." : "") << pname << "_addr, 1, "
+                                      << (pointer_spec.out ? "true" : "false") << ");\n";
+                        action_stream << "    if (!" << pname << "_guard)\n";
+                        action_stream << "    {\n";
+                        action_stream << "        return_register = std::to_underlying(::" << _scope
+                                      << "::result::invalid_pointers);\n";
                         if (syscall.blocking)
                         {
-                            state_struct_stream << "    std::optional<std::unique_lock<std::mutex>> " << pname
-                                                << "_guard;\n";
-                            handler_stream << "    state.";
+                            action_stream << "        return true;\n";
                         }
                         else
                         {
-                            handler_stream << "    auto ";
+                            action_stream << "        return;\n";
                         }
-
-                        handler_stream
-                            << pname
-                            << "_guard = current_thread->get_container()->get_vas()->lock_array_mapping("
-                            << (syscall.blocking ? "state." : "") << pname << "_addr, 1, "
-                            << (pointer_spec.out ? "true" : "false") << ");\n";
-                        handler_stream << "    if (!" << (syscall.blocking ? "state." : "") << pname
-                                       << "_guard)\n";
-                        handler_stream << "    {\n";
-                        handler_stream << "        return_register = std::to_underlying(::" << _scope
-                                       << "::result::invalid_pointers);\n";
-                        handler_stream << "        return;\n";
-                        handler_stream << "    }\n\n";
+                        action_stream << "    }\n\n";
 
                         action_stream << "    " << pointer_spec.deref_type << " " << pname << "_storage;\n";
 
@@ -504,7 +501,7 @@ void context::generate_symbol(std::string_view name, const symbol & symb)
                                << "_continuation(return_register, static_cast<void *>(&state));\n";
                 handler_stream << "    if (!finished)\n";
                 handler_stream << "    {\n";
-                handler_stream << "        current_thread->set_continuation(syscall_" << name
+                handler_stream << "        state.current_thread->set_continuation(syscall_" << name
                                << "_continuation, std::move(state));\n";
                 handler_stream << "    }\n";
             }
