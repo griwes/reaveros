@@ -20,7 +20,7 @@
 
 namespace kernel::scheduler
 {
-process::process(std::unique_ptr<vm::vas> address_space) : _address_space(std::move(address_space))
+process::process(util::intrusive_ptr<vm::vas> address_space) : _address_space(std::move(address_space))
 {
 }
 
@@ -92,5 +92,18 @@ util::intrusive_ptr<thread> process::create_thread()
     ret->timestamp = time::get_high_precision_timer().now();
 
     return ret;
+}
+
+rose::syscall::result process::syscall_rose_token_release_handler(std::uintptr_t token)
+{
+    if (token == 0)
+    {
+        return rose::syscall::result::ok;
+    }
+
+    auto process = arch::cpu::get_core_local_storage()->current_thread->get_container();
+    process->unregister_token(handle_token_t(token)); // TODO: propagate errors instead of a panic
+
+    return rose::syscall::result::ok;
 }
 }

@@ -16,6 +16,7 @@
 
 #include "__config"
 #include "compare"
+#include "memory"
 #include "utility"
 #include "version"
 
@@ -113,9 +114,26 @@ public:
     friend constexpr const variant_alternative_t<_I, variant<_UTypes...>> && get(
         const variant<_UTypes...> &&);
 
-    // [variant.ctor], constructors
-    // constexpr variant() noexcept(see below);
-    constexpr variant(const variant &);
+    constexpr variant() noexcept(is_nothrow_default_constructible<variant_alternative_t<0, variant>>::value)
+    {
+        __construct<0>();
+    }
+
+    constexpr variant(const variant & __other)
+    {
+        if (!__other.valueless_by_exception())
+        {
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, const variant &);
+                static const __f_t __table[] = { +[](variant & __self, const variant & __other) {
+                    __self.__construct<_Indices>(get<_Indices>(__other));
+                }... };
+                __table[__other.__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
+        }
+    }
 
     /*
     constexpr variant(variant &&) requires (is_trivially_move_constructible_v<_Types> &&...)) = default;
@@ -123,15 +141,18 @@ public:
 
     constexpr variant(variant && __other) noexcept((is_nothrow_move_constructible_v<_Types> && ...))
     {
-        [&]<size_t... _Indices>(index_sequence<_Indices...>)
+        if (!__other.valueless_by_exception())
         {
-            using __f_t = void (*)(variant &, variant &);
-            static const __f_t __table[] = { +[](variant & __self, variant & __other) {
-                __self.__construct<_Indices>(get<_Indices>(__ROSESTD::move(__other)));
-            }... };
-            __table[__other.__index](*this, __other);
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, variant &);
+                static const __f_t __table[] = { +[](variant & __self, variant & __other) {
+                    __self.__construct<_Indices>(get<_Indices>(__ROSESTD::move(__other)));
+                }... };
+                __table[__other.__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
         }
-        (make_index_sequence<sizeof...(_Types)>());
     }
 
     template<typename _T>
@@ -158,9 +179,99 @@ public:
     }
 
     // [variant.assign], assignment
-    constexpr variant & operator=(const variant &);
-    constexpr variant & operator=(variant &&) noexcept(
-        (is_nothrow_move_constructible_v<_Types> && ...) && (is_nothrow_move_assignable_v<_Types> && ...));
+    constexpr variant & operator=(const variant & __other)
+    {
+        if (this == __ROSESTD::addressof(__other))
+        {
+            return *this;
+        }
+
+        if (!valueless_by_exception() && __other.valueless_by_exception())
+        {
+            __destroy();
+        }
+
+        else if (__index == __other.__index)
+        {
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, const variant &);
+                static const __f_t __table[] = { +[](variant & __self, const variant & __other)
+                                                 { __self.__assign<_Indices>(get<_Indices>(__other)); }... };
+                __table[__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
+        }
+
+        else if (!__other.valueless_by_exception())
+        {
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, const variant &);
+                static const __f_t __table[] = {
+                    +[](variant & __self, const variant & __other)
+                    {
+                        using _T = variant_alternative_t<_Indices, variant>;
+                        if constexpr (
+                            is_nothrow_copy_constructible_v<_T> || !is_nothrow_move_constructible_v<_T>)
+                        {
+                            __self.emplace<_Indices>(get<_Indices>(__other));
+                        }
+                        else
+                        {
+                            __self.operator=(variant(__other));
+                        }
+                    }...
+                };
+                __table[__other.__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
+        }
+
+        return *this;
+    }
+
+    constexpr variant & operator=(variant && __other) noexcept(
+        (is_nothrow_move_constructible_v<_Types> && ...) && (is_nothrow_move_assignable_v<_Types> && ...))
+    {
+        if (this == __ROSESTD::addressof(__other))
+        {
+            return *this;
+        }
+
+        if (!valueless_by_exception() && __other.valueless_by_exception())
+        {
+            __destroy();
+        }
+
+        else if (__index == __other.__index)
+        {
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, variant &);
+                static const __f_t __table[] = { +[](variant & __self, variant & __other) {
+                    __self.__assign<_Indices>(get<_Indices>(__ROSESTD::move(__other)));
+                }... };
+                __table[__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
+        }
+
+        else if (!__other.valueless_by_exception())
+        {
+            [&]<size_t... _Indices>(index_sequence<_Indices...>)
+            {
+                using __f_t = void (*)(variant &, variant &);
+                static const __f_t __table[] = { +[](variant & __self, variant & __other) {
+                    __self.emplace<_Indices>(get<_Indices>(__ROSESTD::move(__other)));
+                }... };
+                __table[__other.__index](*this, __other);
+            }
+            (make_index_sequence<sizeof...(_Types)>());
+        }
+
+        return *this;
+    }
 
     // template<typename _T>
     // constexpr variant & operator=(_T &&) noexcept(see below);
@@ -170,8 +281,16 @@ public:
     constexpr _T & emplace(_Args &&...);
     // template<typename _T, typename _U, typename... _Args>
     // constexpr _T & emplace(initializer_list<_U>, _Args &&...);
+
     template<size_t _I, typename... _Args>
-    constexpr variant_alternative_t<_I, variant<_Types...>> & emplace(_Args &&...);
+    constexpr variant_alternative_t<_I, variant<_Types...>> & emplace(_Args &&... __args) requires
+        is_constructible_v<variant_alternative_t<_I, variant>, _Args...>
+    {
+        __destroy();
+        __construct<_I>(__ROSESTD::forward<_Args>(__args)...);
+        return get<_I>(*this);
+    }
+
     // template<size_t _I, typename _U, typename... _Args>
     // constexpr variant_alternative_t<_I, variant<_Types...>> & emplace(initializer_list<_U>, _Args &&...);
 
@@ -197,6 +316,12 @@ private:
         __index = _I;
     }
 
+    template<size_t _I, typename _T>
+    void __assign(_T && __val)
+    {
+        reinterpret_cast<variant_alternative_t<_I, variant> &>(__storage) = __ROSESTD::forward<_T>(__val);
+    }
+
     void __destroy()
     {
         if (valueless_by_exception())
@@ -209,6 +334,7 @@ private:
                                          { reinterpret_cast<_Types *>(self.__storage)->~_Types(); }... };
 
         __table[__index](*this);
+        __index = variant_npos;
     }
 
     template<typename _Head, typename... _Values>
@@ -297,7 +423,24 @@ constexpr add_pointer_t<const _T> get_if(const variant<_Types...> *) noexcept;
 
 // [variant.relops], relational operators
 template<typename... _Types>
-constexpr bool operator==(const variant<_Types...> &, const variant<_Types...> &);
+constexpr bool operator==(const variant<_Types...> & __lhs, const variant<_Types...> & __rhs)
+{
+    if (__lhs.index() != __rhs.index())
+    {
+        return false;
+    }
+
+    return [&]<size_t... _Indices>(index_sequence<_Indices...>)
+    {
+        using __f_t = bool (*)(const variant<_Types...> &, const variant<_Types...> &);
+        static const __f_t __table[] = { +[](const variant<_Types...> & __lhs,
+                                             const variant<_Types...> & __rhs)
+                                         { return get<_Indices>(__lhs) == get<_Indices>(__rhs); }... };
+        return __table[__lhs.index()](__lhs, __rhs);
+    }
+    (make_index_sequence<sizeof...(_Types)>());
+}
+
 template<typename... _Types>
 constexpr bool operator!=(const variant<_Types...> &, const variant<_Types...> &);
 template<typename... _Types>

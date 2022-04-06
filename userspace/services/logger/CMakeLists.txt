@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(reaveros-service-vasmgr CXX)
+project(reaveros-service-logger CXX)
 
-add_executable(vasmgr
+add_executable(logger
     main.cpp
 )
 
-set_target_properties(vasmgr
+set_target_properties(logger
     PROPERTIES
         SUFFIX ".srv"
 )
 
-install(TARGETS vasmgr
+install(TARGETS logger
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )

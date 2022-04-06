@@ -6,6 +6,7 @@ add_executable(bootinit-elf
 target_link_libraries(bootinit-elf
     ${CMAKE_SYSROOT}/usr/lib/librosestd.a
     ${CMAKE_SYSROOT}/usr/lib/libarchive.a
+    ${CMAKE_SYSROOT}/usr/lib/libelf.a
 )
 
 set(linker_script_in ${CMAKE_CURRENT_SOURCE_DIR}/bootinit.lds.in)
@@ -15,8 +16,8 @@ configure_file(${linker_script_in} ${linker_script} @ONLY)
 
 set_target_properties(bootinit-elf
     PROPERTIES
-        COMPILE_FLAGS "-g"
-        LINK_FLAGS "-T ${linker_script} -static -Map=bootinit.map -nostdlib"
+        COMPILE_FLAGS "-g -Wno-infinite-recursion"
+        LINK_FLAGS "-T ${linker_script} -static -Map=bootinit.map"
         LINK_DEPENDS ${linker_script}
 )
 

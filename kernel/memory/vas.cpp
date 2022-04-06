@@ -15,26 +15,38 @@
  */
 
 #include "vas.h"
+#include "../arch/cpu.h"
+#include "../scheduler/thread.h"
 
 namespace kernel::vm
 {
-std::unique_ptr<vas> create_vas(bool randomly_map_vdso)
+namespace
 {
-    auto ret = std::make_unique<vas>(vas::_key_t{});
+    virt_addr_t generate_vdso_mapping_base()
+    {
+        // TODO: randomize this
+        return virt_addr_t(0x800000000000 - get_vdso_vmo()->length() * 2);
+    }
+}
+
+util::intrusive_ptr<vas> create_vas(bool randomly_map_vdso)
+{
+    auto ret = util::make_intrusive<vas>(vas::_key_t{});
 
     ret->_asid = arch::vm::clone_upper_half();
 
     if (randomly_map_vdso)
     {
-        PANIC("Implement random mapping of vdso!");
+        auto vdso_base = generate_vdso_mapping_base();
+        ret->map_vmo(get_vdso_vmo(), vdso_base, flags::user);
     }
 
     return ret;
 }
 
-std::unique_ptr<vas> adopt_existing_asid(phys_addr_t asid)
+util::intrusive_ptr<vas> adopt_existing_asid(phys_addr_t asid)
 {
-    auto ret = std::make_unique<vas>(vas::_key_t{});
+    auto ret = util::make_intrusive<vas>(vas::_key_t{});
 
     ret->_asid = asid;
 
@@ -85,7 +97,7 @@ util::intrusive_ptr<vmo_mapping> vas::map_vmo(
             mapping_end.value());
     }
 
-    auto mapping = util::make_intrusive<vmo_mapping>(mapping_base, mapping_end, vm_object, fl);
+    auto mapping = util::make_intrusive<vmo_mapping>(this, mapping_base, mapping_end, vm_object, fl);
     _mappings.insert(mapping);
 
     switch (vm_object->type())
@@ -117,10 +129,25 @@ util::intrusive_ptr<vmo_mapping> vas::map_vmo(
             PANIC("unknown vmo type!");
     }
 
+    if (!_vdso_mapping && vm_object == get_vdso_vmo())
+    {
+        _vdso_mapping = mapping;
+    }
+
     return mapping;
 }
 
-std::optional<std::unique_lock<std::mutex>> vas::lock_address_range(
+void vas::unmap(vmo_mapping * mapping)
+{
+    auto lock = mapping->lock();
+    std::lock_guard _(_lock);
+
+    arch::vm::unmap(this, mapping->range().start, mapping->range().end, false);
+
+    mapping->release(lock);
+}
+
+std::optional<std::shared_lock<std::shared_mutex>> vas::lock_address_range(
     virt_addr_t start,
     virt_addr_t end,
     bool rw)
@@ -138,11 +165,65 @@ std::optional<std::unique_lock<std::mutex>> vas::lock_address_range(
         return {};
     }
 
-    return { it->lock() };
+    return { it->shared_lock() };
 }
 
-rose::syscall::result vas::syscall_rose_vas_create_handler(kernel_caps_t *, std::uintptr_t *)
+rose::syscall::result vas::syscall_rose_vas_create_handler(
+    kernel_caps_t *,
+    std::uintptr_t * token_ptr,
+    rose::syscall::vdso_mapping_info * vdso_info)
 {
-    PANIC("got to creating the VAS");
+    auto new_vas = create_vas(vdso_info != nullptr);
+
+    if (vdso_info)
+    {
+        auto maybe_base = new_vas->get_vdso_base();
+        if (!maybe_base)
+        {
+            PANIC("couldn't find the base of vdso mapping in a VAS created with a random vdso mapping");
+        }
+
+        vdso_info->base = maybe_base->value();
+        vdso_info->length = vm::get_vdso_vmo()->length();
+    }
+
+    auto handle = create_handle(
+        std::move(new_vas),
+        rose::syscall::permissions::read | rose::syscall::permissions::write
+            | rose::syscall::permissions::transfer | rose::syscall::permissions::clone
+            | rose::syscall::permissions::create_mapping);
+
+    *token_ptr = arch::cpu::get_core_local_storage()
+                     ->current_thread->get_container()
+                     ->register_for_token(std::move(handle))
+                     .value();
+
+    return rose::syscall::result::ok;
+}
+
+rose::syscall::result vas::syscall_rose_mapping_create_handler(
+    vas * vas,
+    vmo * vmo,
+    std::uintptr_t address,
+    std::uintptr_t flags,
+    std::uintptr_t * token)
+{
+    if (flags != 0)
+    {
+        PANIC("TODO: rose_mapping_create: non zero flags");
+    }
+
+    // TODO: remove when on demand mapping is supported
+    vmo->commit_all();
+
+    auto mapping = vas->map_vmo(util::intrusive_ptr(vmo), virt_addr_t(address), flags::user);
+    auto handle = create_handle(std::move(mapping));
+
+    *token = arch::cpu::get_core_local_storage()
+                 ->current_thread->get_container()
+                 ->register_for_token(std::move(handle))
+                 .value();
+
+    return rose::syscall::result::ok;
 }
 }

@@ -44,14 +44,14 @@ namespace
 
     struct header
     {
-        cpio_header * hdr;
+        const cpio_header * hdr;
         std::uintptr_t namesize = 0;
         std::uintptr_t name_padding = 0;
         std::uintptr_t filesize = 0;
         std::uintptr_t file_padding = 0;
         std::uintptr_t mode = 0;
 
-        get_entry_result next(char * limit);
+        get_entry_result next(const char * limit);
 
         bool is_file()
         {
@@ -60,13 +60,14 @@ namespace
 
         std::string_view filename()
         {
-            return std::string_view(reinterpret_cast<char *>(hdr) + sizeof(cpio_header), namesize);
+            return std::string_view(reinterpret_cast<const char *>(hdr) + sizeof(cpio_header), namesize);
         }
 
         std::string_view contents()
         {
             return std::string_view(
-                reinterpret_cast<char *>(hdr) + sizeof(cpio_header) + namesize + name_padding, filesize);
+                reinterpret_cast<const char *>(hdr) + sizeof(cpio_header) + namesize + name_padding,
+                filesize);
         }
     };
 
@@ -74,17 +75,17 @@ namespace
     {
         std::optional<header> entry;
         std::string_view error_message;
-        char * header_base;
+        const char * header_base;
     };
 
-    get_entry_result get_entry(char * base, char * limit)
+    get_entry_result get_entry(const char * base, const char * limit)
     {
         if (base + sizeof(cpio_header) >= limit)
         {
             return { std::nullopt, "end of entry would be past the limit of the archive", base };
         }
 
-        auto hdr = reinterpret_cast<cpio_header *>(base);
+        auto hdr = reinterpret_cast<const cpio_header *>(base);
 
         if (std::string_view(hdr->magic, 6) != "070701")
         {
@@ -118,7 +119,7 @@ namespace
         auto name_padding = (4 - (sizeof(cpio_header) + namesize) % 4) % 4;
         auto file_padding = (4 - filesize % 4) % 4;
 
-        if (reinterpret_cast<char *>(hdr) + sizeof(cpio_header) + namesize + name_padding + filesize
+        if (reinterpret_cast<const char *>(hdr) + sizeof(cpio_header) + namesize + name_padding + filesize
                 + file_padding
             >= limit)
         {
@@ -135,16 +136,16 @@ namespace
                  nullptr };
     }
 
-    get_entry_result header::next(char * limit)
+    get_entry_result header::next(const char * limit)
     {
         return get_entry(
-            reinterpret_cast<char *>(hdr) + sizeof(cpio_header) + namesize + name_padding + filesize
+            reinterpret_cast<const char *>(hdr) + sizeof(cpio_header) + namesize + name_padding + filesize
                 + file_padding,
             limit);
     }
 }
 
-try_cpio_result try_cpio(char * base, std::size_t length)
+try_cpio_result try_cpio(const char * base, std::size_t length)
 {
     std::size_t size = 0;
     std::size_t index = 0;

@@ -17,6 +17,11 @@
 #pragma once
 
 #include "../util/intrusive_ptr.h"
+#include "vmo.h"
+
+#include <user/meta.h>
+
+#include <shared_mutex>
 
 namespace kernel::vm
 {
@@ -31,8 +36,8 @@ class vmo_mapping : public util::intrusive_ptrable<vmo_mapping>
 public:
     vmo_mapping * tree_parent = nullptr;
 
-    vmo_mapping(virt_addr_t start, virt_addr_t end, util::intrusive_ptr<vmo> object, flags fl)
-        : _range{ start, end }, _object(std::move(object)), _mapping_flags(fl)
+    vmo_mapping(vas * as, virt_addr_t start, virt_addr_t end, util::intrusive_ptr<vmo> object, flags fl)
+        : _range{ start, end }, _object(std::move(object)), _address_space(as), _mapping_flags(fl)
     {
     }
 
@@ -46,20 +51,41 @@ public:
         return (std::to_underlying(_mapping_flags) & std::to_underlying(fl)) == std::to_underlying(fl);
     }
 
-    std::unique_lock<std::mutex> lock() const
+    vas * get_vas() const
+    {
+        return _address_space;
+    }
+
+    std::unique_lock<std::shared_mutex> lock() const
     {
         return std::unique_lock{ _lock };
     }
 
-    void mark_invalid()
+    std::shared_lock<std::shared_mutex> shared_lock() const
     {
-        _valid = false;
+        return std::shared_lock{ _lock };
     }
 
+    bool is_invalid()
+    {
+        return !_valid;
+    }
+
+    void release(const std::unique_lock<std::shared_mutex> &)
+    {
+        _valid = false;
+        _object.release(util::drop_count);
+        _address_space = nullptr;
+        _range = {};
+    }
+
+    static rose::syscall::result syscall_rose_mapping_destroy_handler(vmo_mapping * mapping);
+
 private:
-    mutable std::mutex _lock;
+    mutable std::shared_mutex _lock;
     address_range _range;
     util::intrusive_ptr<vmo> _object;
+    vas * _address_space;
     flags _mapping_flags;
     bool _valid = true;
 };

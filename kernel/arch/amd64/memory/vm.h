@@ -44,8 +44,8 @@ void map_physical(
     phys_addr_t physical,
     kernel::vm::flags flags = kernel::vm::flags::none);
 
-void unmap(virt_addr_t begin, virt_addr_t end, bool free_physical = true);
-void unmap(kernel::vm::vas * address_space, virt_addr_t begin, virt_addr_t end, bool free_physical = true);
+void unmap(virt_addr_t begin, virt_addr_t end, bool free_physical);
+void unmap(kernel::vm::vas * address_space, virt_addr_t begin, virt_addr_t end, bool free_physical);
 
 phys_addr_t virt_to_phys(virt_addr_t address);
 phys_addr_t virt_to_phys(kernel::vm::vas * address_space, virt_addr_t address);

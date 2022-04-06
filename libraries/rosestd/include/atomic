@@ -155,6 +155,12 @@ _T __cxx_atomic_fetch_sub(memory_order __order, volatile __atomic_base_lock_free
 }
 
 template<typename _T>
+_T __cxx_atomic_fetch_xor(memory_order __order, volatile __atomic_base_lock_free<_T> * __a, _T __rhs)
+{
+    return __atomic_fetch_xor(&__a->__val, __rhs, static_cast<int>(__order));
+}
+
+template<typename _T>
 struct __atomic_base_non_lock_free
 {
     static const constexpr bool is_always_lock_free = false;
@@ -412,8 +418,16 @@ public:
     _T fetch_and(_T, memory_order = memory_order::seq_cst) noexcept;
     _T fetch_or(_T, memory_order = memory_order::seq_cst) volatile noexcept;
     _T fetch_or(_T, memory_order = memory_order::seq_cst) noexcept;
-    _T fetch_xor(_T, memory_order = memory_order::seq_cst) volatile noexcept;
-    _T fetch_xor(_T, memory_order = memory_order::seq_cst) noexcept;
+
+    _T fetch_xor(_T __val, memory_order __order = memory_order::seq_cst) volatile noexcept
+    {
+        return __cxx_atomic_fetch_xor(__order, &this->__impl, __val);
+    }
+
+    _T fetch_xor(_T __val, memory_order __order = memory_order::seq_cst) noexcept
+    {
+        return __cxx_atomic_fetch_xor(__order, &this->__impl, __val);
+    }
 
     _T operator++(int) volatile noexcept
     {

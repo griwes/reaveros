@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ util::intrusive_ptr<process> get_kernel_process()
     return kernel_process;
 }
 
-util::intrusive_ptr<process> create_process(std::unique_ptr<vm::vas> address_space)
+util::intrusive_ptr<process> create_process(util::intrusive_ptr<vm::vas> address_space)
 {
     auto ret = util::make_intrusive<process>(std::move(address_space));
 

@@ -220,6 +220,7 @@ namespace
                 }
 
                 table->entries[start_table_index].present = false;
+                asm volatile("invlpg (%0)" ::"r"(virt_start) : "memory");
             }
 
             else

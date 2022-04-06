@@ -20,6 +20,8 @@
 #include "../util/handle.h"
 #include "../util/intrusive_ptr.h"
 
+#include <user/meta.h>
+
 #include <optional>
 
 namespace kernel::scheduler
@@ -88,6 +90,11 @@ public:
 
     void commit_between_offsets(std::size_t start, std::size_t end);
     void commit_all();
+
+    static rose::syscall::result syscall_rose_vmo_create_handler(
+        std::uintptr_t size,
+        std::uintptr_t flags,
+        std::uintptr_t * token);
 
 private:
     vmo_type _type;

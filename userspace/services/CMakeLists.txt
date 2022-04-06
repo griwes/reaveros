@@ -1,7 +1,7 @@
 reaveros_add_aggregate_targets(userspace-services)
 
 set(services
-    vasmgr
+    logger
 )
 
 foreach (service IN LISTS services)
