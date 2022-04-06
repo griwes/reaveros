@@ -574,13 +574,6 @@ create_process_result create_process(
 
     bootinit::log::println(" > Number of regular files in initrd: {}.", initrd.size());
 
-    auto test_file = initrd["test-file"];
-    if (!test_file)
-    {
-        PANIC("'test-file not found!");
-    }
-    bootinit::log::println(" > Contents of test-file: '{}'.", *test_file);
-
     bootinit::log::println("Creating logger process...");
     [[maybe_unused]] auto [logger_process, logger_vas, logger_protocol_mailbox] =
         create_process(initrd, "system/logger.srv", "logger");

@@ -14,8 +14,6 @@ function(_reaveros_add_initrd_image_target architecture)
 
         COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/userspace/services/${architecture}/* ${_working_path}
 
-        COMMAND echo -n "this is a test" > ${_working_path}/test-file
-
         COMMAND cd ${_working_path} && find . | cpio --no-absolute-filenames --format=newc --create > ${_target_path}
     )
 
