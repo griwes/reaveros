@@ -215,7 +215,8 @@ loaded_elf load_elf_with_dependencies(
     const archive::cpio & initrd,
     std::string_view filename,
     std::uintptr_t vas_token,
-    std::uintptr_t & binary_base)
+    std::uintptr_t & binary_base,
+    std::uintptr_t vdso_preload)
 {
     loaded_elf ret{ filename };
     ret.binary_base = binary_base;
@@ -251,7 +252,15 @@ loaded_elf load_elf_with_dependencies(
     bootinit::log::println(" > {}:{}: ELF OS ABI: {}", prefix, filename, elf.get_os_abi_description());
     bootinit::log::println(" > {}:{}: ELF ABI version: {}", prefix, filename, elf.get_abi_version());
     bootinit::log::println(" > {}:{}: ELF type: {}", prefix, filename, elf.get_type_description());
-    bootinit::log::println(" > {}:{}: loading at base {:#018x}", prefix, filename, binary_base);
+
+    if (filename == "libvdso.so")
+    {
+        bootinit::log::println(" > kernel:libvdso.so: preloaded at base {:#018x}", vdso_preload);
+        ret.binary_base = vdso_preload;
+        return ret;
+    }
+
+    bootinit::log::println(" > initrd:{}: loading at base {:#018x}", filename, binary_base);
 
     std::size_t load_segments = 0;
     for (auto && program_header : elf.program_headers())
@@ -325,8 +334,8 @@ loaded_elf load_elf_with_dependencies(
         {
             if (dynamic_entry.type() == elf::dynamic_entry_types::needed)
             {
-                ret.dependencies[i++] =
-                    load_elf_with_dependencies(initrd, dynamic_entry.needed_name(), vas_token, binary_base);
+                ret.dependencies[i++] = load_elf_with_dependencies(
+                    initrd, dynamic_entry.needed_name(), vas_token, binary_base, vdso_preload);
             }
         }
     }
@@ -353,7 +362,8 @@ create_process_result create_process(
 
     std::uintptr_t binary_base_c = 0x400000;
     std::uintptr_t binary_base = binary_base_c;
-    auto loaded_elf = load_elf_with_dependencies(initrd, filename, ret.vas_token, binary_base);
+    auto loaded_elf =
+        load_elf_with_dependencies(initrd, filename, ret.vas_token, binary_base, vdso_info.base);
 
     auto reloc_visitor = [&](const elf::relocation & reloc, const struct loaded_elf & elf)
     {
