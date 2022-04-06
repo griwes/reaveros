@@ -92,6 +92,7 @@ interrupt_ret:
     iretq
 
 syscall_handler_stub:
+    cli
     swapgs
 
     mov rdx, rsp

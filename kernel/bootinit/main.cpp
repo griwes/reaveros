@@ -172,14 +172,15 @@ struct loaded_elf
     elf::elf_image image = {};
     allocate_array_result<segment_mapping> segment_mappings = {};
     allocate_array_result<loaded_elf> dependencies = {};
+    std::uintptr_t binary_base = 0;
 
     std::optional<std::uintptr_t> find_symbol_definition(std::string_view name) const
     {
         for (auto && symbol : image.symbols())
         {
-            if (symbol.name() == name)
+            if (symbol.name() == name && symbol.is_defined())
             {
-                return reinterpret_cast<std::uintptr_t>(segment_mappings[0].storage.ptr + symbol.value());
+                return reinterpret_cast<std::uintptr_t>(binary_base + symbol.value());
             }
         }
 
@@ -217,6 +218,7 @@ loaded_elf load_elf_with_dependencies(
     std::uintptr_t & binary_base)
 {
     loaded_elf ret{ filename };
+    ret.binary_base = binary_base;
 
     auto image = [&]
     {
@@ -349,7 +351,8 @@ create_process_result create_process(
     bootinit::log::println(
         " > {} vdso mapping: {:#018x}-{:#018x}", name, vdso_info.base, vdso_info.base + vdso_info.length);
 
-    std::uintptr_t binary_base = 0x400000;
+    std::uintptr_t binary_base_c = 0x400000;
+    std::uintptr_t binary_base = binary_base_c;
     auto loaded_elf = load_elf_with_dependencies(initrd, filename, ret.vas_token, binary_base);
 
     auto reloc_visitor = [&](const elf::relocation & reloc, const struct loaded_elf & elf)
@@ -393,7 +396,54 @@ create_process_result create_process(
 
     loaded_elf.visit_all_relocations(reloc_visitor);
 
-    PANIC("now create a process!");
+    result = sc::rose_process_create(kernel_caps_token, ret.vas_token, &ret.process_token);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to create a process!");
+    }
+
+    std::uintptr_t stack_token;
+    result = sc::rose_vmo_create(31 * kernel::arch::vm::page_sizes[0], 0, &stack_token);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to create a stack VMO!");
+    }
+
+    std::uintptr_t top_of_stack = 0x80000000;
+    std::uintptr_t stack_map_base = top_of_stack - 31 * kernel::arch::vm::page_sizes[0];
+
+    std::uintptr_t stack_mapping;
+    result = sc::rose_mapping_create(ret.vas_token, stack_token, stack_map_base, 0, &stack_mapping);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to map a stack VMO!");
+    }
+
+    result = sc::rose_token_release(stack_token);
+    if (result != sc::result::ok)
+    {
+        bootinit::log::println("!!! Warning: failed to release a token: {}.", std::to_underlying(result));
+    }
+
+    result = sc::rose_token_release(stack_mapping);
+    if (result != sc::result::ok)
+    {
+        bootinit::log::println("!!! Warning: failed to release a token: {}.", std::to_underlying(result));
+    }
+
+    std::uintptr_t read_endpoint;
+    result = sc::rose_mailbox_create(&read_endpoint, &ret.protocol_mailbox_token);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to create a protocol mailbox!");
+    }
+
+    result = sc::rose_process_start(
+        ret.process_token, binary_base_c + loaded_elf.image.get_entry_point(), top_of_stack, read_endpoint);
+    if (result != sc::result::ok)
+    {
+        PANIC("failed to start the process!");
+    }
 
     return ret;
 }

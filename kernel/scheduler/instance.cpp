@@ -53,7 +53,7 @@ void instance::schedule(util::intrusive_ptr<thread> thread)
 
     if (_current_thread == thread)
     {
-        PANIC("rescheduling a running thread!");
+        PANIC("rescheduling the current thread!");
     }
 
     _threads.push(std::move(thread));

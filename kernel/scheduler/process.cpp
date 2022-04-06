@@ -16,6 +16,7 @@
 
 #include "process.h"
 #include "../util/interrupt_control.h"
+#include "scheduler.h"
 #include "thread.h"
 
 namespace kernel::scheduler
@@ -87,6 +88,11 @@ util::intrusive_ptr<handle> process::get_handle(handle_token_t token) const
 
 util::intrusive_ptr<thread> process::create_thread()
 {
+    {
+        std::lock_guard _(_lock);
+        _started = true;
+    }
+
     auto ret = util::make_intrusive<thread>(util::intrusive_ptr<process>(this));
 
     ret->timestamp = time::get_high_precision_timer().now();
@@ -103,6 +109,78 @@ rose::syscall::result process::syscall_rose_token_release_handler(std::uintptr_t
 
     auto process = arch::cpu::get_core_local_storage()->current_thread->get_container();
     process->unregister_token(handle_token_t(token)); // TODO: propagate errors instead of a panic
+
+    return rose::syscall::result::ok;
+}
+
+rose::syscall::result process::syscall_rose_process_create_handler(
+    kernel_caps_t *,
+    vm::vas * vas,
+    std::uintptr_t * token_ptr)
+{
+    auto new_process = create_process(util::intrusive_ptr(vas));
+    if (!new_process)
+    {
+        return rose::syscall::result::invalid_arguments;
+    }
+
+    auto handle = create_handle(
+        std::move(new_process),
+        rose::syscall::permissions::read | rose::syscall::permissions::write
+            | rose::syscall::permissions::transfer | rose::syscall::permissions::clone);
+
+    *token_ptr = arch::cpu::get_core_local_storage()
+                     ->current_thread->get_container()
+                     ->register_for_token(std::move(handle))
+                     .value();
+
+    return rose::syscall::result::ok;
+}
+
+rose::syscall::result process::syscall_rose_process_start_handler(
+    process * process,
+    std::uintptr_t entrypoint,
+    std::uintptr_t top_of_stack,
+    std::uintptr_t bootstrap_token)
+{
+    auto current_process = arch::cpu::get_core_local_storage()->current_thread->get_container();
+    auto token = handle_token_t(bootstrap_token);
+    auto handle = current_process->get_handle(token);
+
+    if (!handle)
+    {
+        return rose::syscall::result::invalid_token;
+    }
+
+    if (!handle->has_permissions(rose::syscall::permissions::transfer))
+    {
+        return rose::syscall::result::not_allowed;
+    }
+
+    {
+        std::lock_guard _(process->_lock);
+        if (process->_started)
+        {
+            return rose::syscall::result::invalid_arguments;
+        }
+        process->_started = true;
+    }
+
+    current_process->unregister_token(token);
+    auto actual_token = process->register_for_token(std::move(handle));
+
+    process->_started = true;
+
+    auto thread = util::make_intrusive<class thread>(util::intrusive_ptr<class process>(process));
+    thread->timestamp = time::get_high_precision_timer().now();
+
+    auto context = thread->get_context();
+    context->set_userspace();
+    context->set_instruction_pointer(virt_addr_t(entrypoint));
+    context->set_stack_pointer(virt_addr_t(top_of_stack));
+    context->set_argument(0, actual_token);
+
+    scheduler::schedule(std::move(thread));
 
     return rose::syscall::result::ok;
 }

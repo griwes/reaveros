@@ -81,6 +81,11 @@ util::intrusive_ptr<process> get_kernel_process()
 
 util::intrusive_ptr<process> create_process(util::intrusive_ptr<vm::vas> address_space)
 {
+    if (!address_space->claim_for_process())
+    {
+        return {};
+    }
+
     auto ret = util::make_intrusive<process>(std::move(address_space));
 
     return ret;

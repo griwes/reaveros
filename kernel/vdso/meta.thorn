@@ -8,7 +8,8 @@ permissions(
 );
 
 permissions for kernel::kernel_caps_t(
-    create_vas
+    create_vas,
+    create_process
 );
 
 permissions for kernel::vm::vmo(
@@ -31,6 +32,7 @@ enum result(
     wrong_handle_type,
     not_allowed,
     invalid_pointers,
+    invalid_arguments,
     not_ready
 );
 
@@ -99,5 +101,18 @@ syscall(kernel::vm::vas) rose_mapping_create(
 
 syscall(kernel::vm::vmo_mapping) rose_mapping_destroy(
     mapping: token(destroy) kernel::vm::vmo_mapping
+) -> $::result;
+
+syscall(kernel::scheduler::process) rose_process_create(
+    kernel_caps: token(create_process) kernel::kernel_caps_t,
+    vas: token(write) kernel::vm::vas,
+    process_token: out ptr std::uintptr_t
+) -> $::result;
+
+syscall(kernel::scheduler::process) rose_process_start(
+    process: token(write) kernel::scheduler::process,
+    entrypoint: std::uintptr_t,
+    top_of_stack: std::uintptr_t,
+    bootstrap_token: std::uintptr_t
 ) -> $::result;
 
