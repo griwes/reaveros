@@ -218,6 +218,11 @@ loaded_elf load_elf_with_dependencies(
     std::uintptr_t & binary_base,
     std::uintptr_t vdso_preload)
 {
+    // TODO: make sure that this is not mapping a file twice?
+    // this isn't crucial as none of the binaries loaded by bootinit should ever have a dependency that has a
+    // dependency which is also a dependency of the main binary, maybe other than vdso, but vdso is handled in
+    // a special way anyway
+
     loaded_elf ret{ filename };
     ret.binary_base = binary_base;
 
