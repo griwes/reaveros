@@ -86,7 +86,7 @@ ExternalProject_Add(toolchain-llvm
 
     STEP_TARGETS configure install patch
 
-    DEPENDS toolchain-cmake-install llvm-patch-timestamp-target
+    DEPENDS toolchain-cmake-install
 
     INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/llvm
 
@@ -95,7 +95,7 @@ ExternalProject_Add(toolchain-llvm
 
     LIST_SEPARATOR |
 
-    PATCH_COMMAND git apply ${patch_files}
+    PATCH_COMMAND git reset --hard && git clean -fxd && git apply ${patch_files}
 
     CMAKE_COMMAND ${REAVEROS_CMAKE}
     CMAKE_ARGS
@@ -116,6 +116,8 @@ ExternalProject_Add(toolchain-llvm
 )
 reaveros_add_ep_prune_target(toolchain-llvm)
 reaveros_add_ep_fetch_tag_target(toolchain-llvm)
+
+add_dependencies(toolchain-llvm-patch llvm-patch-timestamp-target)
 
 if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
     ExternalProject_Add(toolchain-llvm-binutils-extra
@@ -146,6 +148,7 @@ endif()
 
 # install compiler-rt to the appropriate sysroots
 string(REGEX REPLACE "llvmorg-([0-9]+\.[0-9]+\.[0-9])+(-.*)?" "\\1" _llvm_version "${REAVEROS_LLVM_TAG}")
+ExternalProject_Get_Property(toolchain-llvm BINARY_DIR)
 
 set(_freestanding_env freestanding)
 set(_hosted_env elf)
@@ -153,7 +156,7 @@ set(_hosted_env elf)
 foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
     foreach (mode IN ITEMS freestanding hosted)
         set(_sub_path "${_llvm_version}/lib/${_reaveros_${architecture}_${_${mode}_env}_target}")
-        set(_builtin_lib "${REAVEROS_BINARY_DIR}/install/toolchain/llvm/lib/clang/${_sub_path}/libclang_rt.builtins.a")
+        set(_builtin_lib "${BINARY_DIR}/lib/clang/${_sub_path}/libclang_rt.builtins.a")
         set(_destination "${REAVEROS_BINARY_DIR}/install/sysroots/${architecture}-${mode}/usr/lib")
 
         add_custom_command(TARGET toolchain-llvm

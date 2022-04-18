@@ -78,14 +78,14 @@ diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
 index 94a7553e27..e13d84d812 100644
 --- a/clang/lib/Driver/Driver.cpp
 +++ b/clang/lib/Driver/Driver.cpp
-@@ -38,6 +38,7 @@
+@@ -39,6 +39,7 @@
  #include "ToolChains/NaCl.h"
  #include "ToolChains/NetBSD.h"
  #include "ToolChains/OpenBSD.h"
 +#include "ToolChains/ReaverOS.h"
+ #include "ToolChains/PPCFreeBSD.h"
  #include "ToolChains/PPCLinux.h"
  #include "ToolChains/PS4CPU.h"
- #include "ToolChains/RISCVToolchain.h"
 @@ -5296,6 +5297,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
      case llvm::Triple::NaCl:
        TC = std::make_unique<toolchains::NaClToolChain>(*this, Target, Args);
@@ -96,19 +96,6 @@ index 94a7553e27..e13d84d812 100644
      case llvm::Triple::Fuchsia:
        TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
        break;
-diff --git a/clang/lib/Driver/ToolChains/AIX.cpp b/clang/lib/Driver/ToolChains/AIX.cpp
-index 3000b8416a..dc79c8dbe9 100644
---- a/clang/lib/Driver/ToolChains/AIX.cpp
-+++ b/clang/lib/Driver/ToolChains/AIX.cpp
-@@ -227,6 +227,8 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
-     return;
-   case ToolChain::CST_Libstdcxx:
-     llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
-+  default:
-+    ;
-   }
-
-   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
 diff --git a/clang/lib/Driver/ToolChains/ReaverOS.cpp b/clang/lib/Driver/ToolChains/ReaverOS.cpp
 new file mode 100644
 index 0000000000..4df95ed8a4
@@ -207,7 +194,7 @@ index 0000000000..4df95ed8a4
 +  else if (Args.hasArg(options::OPT_shared))
 +    CmdArgs.push_back("-shared");
 +
-+  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
++  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs(Args);
 +
 +  CmdArgs.push_back("-o");
 +  CmdArgs.push_back(Output.getFilename());
@@ -544,7 +531,7 @@ index 0000000000..4e49b4ed1b
 +    return true;
 +  }
 +  bool isPICDefault() const override { return false; }
-+  bool isPIEDefault() const override { return true; }
++  bool isPIEDefault(const llvm::opt::ArgList &Args) const override { return true; }
 +  bool isPICDefaultForced() const override { return false; }
 +  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
 +    return llvm::DebuggerKind::GDB;
