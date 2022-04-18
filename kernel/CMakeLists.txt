@@ -33,7 +33,7 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
         bootinit-incbin
         vdso-incbin
         syscall_table
-        ${CMAKE_SYSROOT}/usr/lib/librosestd.a
+        rosestd
     )
 
     set(linker_script_in ${CMAKE_CURRENT_SOURCE_DIR}/arch/${REAVEROS_ARCH}/kernel.lds.in)
@@ -44,7 +44,7 @@ if (NOT REAVEROS_ENABLE_UNIT_TESTS)
     set_target_properties(kernel-elf
         PROPERTIES
             COMPILE_FLAGS "-g -mcmodel=kernel -DREAVEROS_KERNEL_SOURCE_ROOT='\"${CMAKE_SOURCE_DIR}\"'"
-            LINK_FLAGS "-T ${linker_script} -static -Map=kernel.map -nostdlib"
+            LINK_FLAGS "-Wl,-T,${linker_script} -static -Wl,-Map=kernel.map -lclang_rt.builtins -ffreestanding"
             LINK_DEPENDS ${linker_script}
     )
 

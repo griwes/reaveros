@@ -228,6 +228,12 @@ try_parse_result try_parse(const char * base, std::size_t length)
                 case dynamic_entry_types::debug:
                     break;
 
+                case dynamic_entry_types::bind_now:
+                    break;
+
+                case dynamic_entry_types::flags:
+                    break;
+
                 case dynamic_entry_types::gnu_hash:
                     break;
 

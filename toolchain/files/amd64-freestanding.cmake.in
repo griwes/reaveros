@@ -1,49 +1,31 @@
-set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_NAME ReaverOS)
 set(CMAKE_SYSTEM_PROCESSOR AMD64)
 
 set(REAVEROS_IS_FREESTANDING TRUE)
 
-set(triple x86_64-pc-linux-elf)
+set(triple x86_64-pc-reaveros-freestanding)
 
 set(tools @REAVEROS_BINARY_DIR@/install/toolchain/llvm/bin)
 
-set(CMAKE_C_COMPILER_WORKS 1)
-set(CMAKE_CXX_COMPILER_WORKS 1)
-
 set(CMAKE_SYSROOT @REAVEROS_BINARY_DIR@/install/sysroots/amd64-freestanding)
-set(CMAKE_EXE_LINKER_FLAGS "--sysroot=${CMAKE_SYSROOT} -L${CMAKE_SYSROOT}/usr/lib")
+set(CMAKE_EXE_LINKER_FLAGS "--sysroot=${CMAKE_SYSROOT} -L${CMAKE_SYSROOT}/usr/lib -nostartfiles")
 
-set(CMAKE_LINKER ${tools}/ld.lld)
-set(CMAKE_SHARED_LINKER ${tools}/ld.lld)
 set(CMAKE_OBJCOPY ${tools}/llvm-objcopy)
 set(BINUTILS_OBJCOPY ${tools}/x86_64-w64-mingw32-objcopy)
-
-set(CMAKE_REAVEROS_LINK_FLAGS "--ld-path=${CMAKE_LINKER} -L=/usr/lib -nodefaultlibs -nostdlib -ffreestanding")
 
 set(CMAKE_ASM_COMPILER ${tools}/clang)
 set(CMAKE_ASM_FLAGS "-masm=intel -fPIC")
 
 set(CMAKE_C_COMPILER ${tools}/clang)
 set(CMAKE_C_COMPILER_TARGET ${triple})
-set(CMAKE_C_FLAGS "-nostdlib")
 set(CMAKE_C_COMPILE_FLAGS
-    "-fPIC -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone \
-    -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable \
-    -D__ROSE_FREESTANDING"
+    "-ffreestanding -fPIC -fno-stack-protector -D__ROSE_FREESTANDING \
+    -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone \
+    -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable"
 )
 
 set(CMAKE_C_COMPILE_OBJECT
     "<CMAKE_C_COMPILER> ${CMAKE_C_COMPILE_FLAGS} <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>"
-)
-
-set(CMAKE_C_LINK_EXECUTABLE
-    "<CMAKE_LINKER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> -lclang_rt.builtins"
-)
-
-set(CMAKE_C_CREATE_SHARED_LIBRARY
-    "<CMAKE_CXX_COMPILER> ${CMAKE_REAVEROS_LINK_FLAGS} <CMAKE_SHARED_LIBRARY_C_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> \
-    <CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS> <SONAME_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES> \
-    -lclang_rt.builtins -Wl,--hash-style=gnu -z separate-loadable-segments"
 )
 
 set(CMAKE_C_STANDARD @REAVEROS_C_STANDARD@)
@@ -51,26 +33,14 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 set(CMAKE_CXX_COMPILER ${tools}/clang++)
 set(CMAKE_CXX_COMPILER_TARGET ${triple})
-set(CMAKE_CXX_FLAGS_INIT "-nostdlib")
 set(CMAKE_CXX_COMPILE_FLAGS
-    "-ffreestanding -fno-rtti -fno-exceptions -fPIC \
+    "-ffreestanding -fno-rtti -fno-exceptions -fPIC -fno-stack-protector -D__ROSE_FREESTANDING \
     -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-red-zone \
-    -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable \
-    -D__ROSE_FREESTANDING"
+    -Wall -Wextra -Wpedantic -Werror -Wno-unused-const-variable"
 )
 
 set(CMAKE_CXX_COMPILE_OBJECT
     "<CMAKE_CXX_COMPILER> ${CMAKE_CXX_COMPILE_FLAGS} <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>"
-)
-
-set(CMAKE_CXX_LINK_EXECUTABLE
-    "<CMAKE_LINKER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES> -lclang_rt.builtins"
-)
-
-set(CMAKE_CXX_CREATE_SHARED_LIBRARY
-    "<CMAKE_CXX_COMPILER> ${CMAKE_REAVEROS_LINK_FLAGS} <CMAKE_SHARED_LIBRARY_CXX_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> \
-    <CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS> <SONAME_FLAG><TARGET_SONAME> -o <TARGET> <OBJECTS> <LINK_LIBRARIES> \
-    -lclang_rt.builtins -Wl,--hash-style=gnu -z separate-loadable-segments"
 )
 
 set(CMAKE_CXX_STANDARD @REAVEROS_CXX_STANDARD@)

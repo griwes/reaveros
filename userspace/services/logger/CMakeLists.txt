@@ -11,6 +11,10 @@ set_target_properties(logger
         SUFFIX ".srv"
 )
 
+target_link_libraries(logger
+    vdso
+)
+
 install(TARGETS logger
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )

@@ -17,7 +17,7 @@ configure_file(${linker_script_in} ${linker_script} @ONLY)
 set_target_properties(bootinit-elf
     PROPERTIES
         COMPILE_FLAGS "-g -Wno-infinite-recursion"
-        LINK_FLAGS "-T ${linker_script} -static -Map=bootinit.map"
+        LINK_FLAGS "-Wl,-T,${linker_script} -static -Wl,-Map=bootinit.map -ffreestanding"
         LINK_DEPENDS ${linker_script}
 )
 

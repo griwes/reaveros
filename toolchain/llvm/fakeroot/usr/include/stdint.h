@@ -13,21 +13,3 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include <rose/syscall/meta.h>
-
-#include <cstdint>
-
-extern "C" void rose_main([[maybe_unused]] std::uintptr_t inbox)
-{
-    rose::syscall::mailbox_message msg;
-    auto result = rose::syscall::rose_mailbox_read(inbox, 1, &msg);
-    if (result != rose::syscall::result::ok)
-    {
-        *reinterpret_cast<volatile std::uintptr_t *>(0) = std::to_underlying(result);
-    }
-
-    for (;;)
-
-        ;
-}

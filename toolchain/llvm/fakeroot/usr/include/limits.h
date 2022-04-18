@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-#include <rose/syscall/meta.h>
+#pragma once
 
-#include <cstdint>
+// this is a "fake" stdlib header, sufficient to satisfy compiler-rt.builtins build
 
-extern "C" void rose_main([[maybe_unused]] std::uintptr_t inbox)
-{
-    rose::syscall::mailbox_message msg;
-    auto result = rose::syscall::rose_mailbox_read(inbox, 1, &msg);
-    if (result != rose::syscall::result::ok)
-    {
-        *reinterpret_cast<volatile std::uintptr_t *>(0) = std::to_underlying(result);
-    }
+#ifdef __amd64__
 
-    for (;;)
+typedef short int16_t;
+typedef unsigned short uint16_t;
+typedef int int32_t;
+typedef unsigned int uint32_t;
+typedef long long int64_t;
+typedef unsigned long long uint64_t;
 
-        ;
-}
+#define UINT16_C(...) (uint16_t)(__VA_ARGS__)
+#define UINT32_C(...) (uint32_t)(__VA_ARGS__)
+#define UINT64_C(...) (uint64_t)(__VA_ARGS__)
+
+#else
+
+#error unsupported architecture
+
+#endif
