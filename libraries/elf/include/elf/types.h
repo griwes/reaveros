@@ -349,6 +349,11 @@ namespace dynamic_entry_types
         fini_array,
         init_array_size,
         fini_array_size,
+        runpath,
+        flags,
+        encoding,
+        preinit_array,
+        preinit_array_size,
 
         os_specific_low = 0x60000000,
 

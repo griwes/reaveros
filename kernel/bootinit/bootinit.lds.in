@@ -46,13 +46,12 @@ SECTIONS
     /DISCARD/ :
     {
         *(.comment)
-        *(.eh_frame)
+        *(.eh_frame*)
         *(.dynsym)
         *(.dynstr)
-        *(.rela.dyn)
         *(.hash)
         *(.gnu.hash*)
-        *(.dynamic)
+        *(.note.*)
     }
 }
 

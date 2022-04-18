@@ -1,0 +1,652 @@
+diff --git a/clang/include/clang/Driver/ToolChain.h b/clang/include/clang/Driver/ToolChain.h
+index 882ae40086..82e7064094 100644
+--- a/clang/include/clang/Driver/ToolChain.h
++++ b/clang/include/clang/Driver/ToolChain.h
+@@ -94,7 +94,8 @@ public:
+
+   enum CXXStdlibType {
+     CST_Libcxx,
+-    CST_Libstdcxx
++    CST_Libstdcxx,
++    CST_Rosestd
+   };
+
+   enum RuntimeLibType {
+@@ -105,7 +106,8 @@ public:
+   enum UnwindLibType {
+     UNW_None,
+     UNW_CompilerRT,
+-    UNW_Libgcc
++    UNW_Libgcc,
++    UNW_Roseunw
+   };
+
+   enum RTTIMode {
+diff --git a/clang/lib/Basic/Targets.cpp b/clang/lib/Basic/Targets.cpp
+index ba91d04399..dcae7902b8 100644
+--- a/clang/lib/Basic/Targets.cpp
++++ b/clang/lib/Basic/Targets.cpp
+@@ -567,6 +567,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
+       return new OpenBSDX86_64TargetInfo(Triple, Opts);
+     case llvm::Triple::FreeBSD:
+       return new FreeBSDTargetInfo<X86_64TargetInfo>(Triple, Opts);
++    case llvm::Triple::ReaverOS:
++      return new ReaverOSTargetInfo<X86_64TargetInfo>(Triple, Opts);
+     case llvm::Triple::Fuchsia:
+       return new FuchsiaTargetInfo<X86_64TargetInfo>(Triple, Opts);
+     case llvm::Triple::KFreeBSD:
+diff --git a/clang/lib/Basic/Targets/OSTargets.h b/clang/lib/Basic/Targets/OSTargets.h
+index 12df95c19f..ae36208f62 100644
+--- a/clang/lib/Basic/Targets/OSTargets.h
++++ b/clang/lib/Basic/Targets/OSTargets.h
+@@ -494,6 +494,22 @@ public:
+   }
+ };
+
++// ReaverOS Target
++template <typename Target>
++class LLVM_LIBRARY_VISIBILITY ReaverOSTargetInfo : public OSTargetInfo<Target> {
++protected:
++  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
++                    MacroBuilder &Builder) const override {
++    Builder.defineMacro("__reaveros__");
++    if (Triple.getObjectFormat() == llvm::Triple::ELF)
++      Builder.defineMacro("__ELF__");
++  }
++
++public:
++  ReaverOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
++      : OSTargetInfo<Target>(Triple, Opts) {}
++};
++
+ // PSP Target
+ template <typename Target>
+ class LLVM_LIBRARY_VISIBILITY PSPTargetInfo : public OSTargetInfo<Target> {
+diff --git a/clang/lib/Driver/CMakeLists.txt b/clang/lib/Driver/CMakeLists.txt
+index 08be9f0115..5b87a87d57 100644
+--- a/clang/lib/Driver/CMakeLists.txt
++++ b/clang/lib/Driver/CMakeLists.txt
+@@ -65,6 +65,7 @@ add_clang_library(clangDriver
+   ToolChains/NaCl.cpp
+   ToolChains/NetBSD.cpp
+   ToolChains/OpenBSD.cpp
++  ToolChains/ReaverOS.cpp
+   ToolChains/PS4CPU.cpp
+   ToolChains/RISCVToolchain.cpp
+   ToolChains/Solaris.cpp
+diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
+index 94a7553e27..e13d84d812 100644
+--- a/clang/lib/Driver/Driver.cpp
++++ b/clang/lib/Driver/Driver.cpp
+@@ -38,6 +38,7 @@
+ #include "ToolChains/NaCl.h"
+ #include "ToolChains/NetBSD.h"
+ #include "ToolChains/OpenBSD.h"
++#include "ToolChains/ReaverOS.h"
+ #include "ToolChains/PPCLinux.h"
+ #include "ToolChains/PS4CPU.h"
+ #include "ToolChains/RISCVToolchain.h"
+@@ -5296,6 +5297,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
+     case llvm::Triple::NaCl:
+       TC = std::make_unique<toolchains::NaClToolChain>(*this, Target, Args);
+       break;
++    case llvm::Triple::ReaverOS:
++      TC = std::make_unique<toolchains::ReaverOS>(*this, Target, Args);
++      break;
+     case llvm::Triple::Fuchsia:
+       TC = std::make_unique<toolchains::Fuchsia>(*this, Target, Args);
+       break;
+diff --git a/clang/lib/Driver/ToolChains/AIX.cpp b/clang/lib/Driver/ToolChains/AIX.cpp
+index 3000b8416a..dc79c8dbe9 100644
+--- a/clang/lib/Driver/ToolChains/AIX.cpp
++++ b/clang/lib/Driver/ToolChains/AIX.cpp
+@@ -227,6 +227,8 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
+     return;
+   case ToolChain::CST_Libstdcxx:
+     llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
++  default:
++    ;
+   }
+
+   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+diff --git a/clang/lib/Driver/ToolChains/ReaverOS.cpp b/clang/lib/Driver/ToolChains/ReaverOS.cpp
+new file mode 100644
+index 0000000000..4df95ed8a4
+--- /dev/null
++++ b/clang/lib/Driver/ToolChains/ReaverOS.cpp
+@@ -0,0 +1,364 @@
++//===--- ReaverOS.cpp - ReaverOS ToolChain Implementations --------*- C++
++//-*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "ReaverOS.h"
++#include "CommonArgs.h"
++#include "clang/Config/config.h"
++#include "clang/Driver/Compilation.h"
++#include "clang/Driver/Driver.h"
++#include "clang/Driver/DriverDiagnostic.h"
++#include "clang/Driver/Options.h"
++#include "clang/Driver/SanitizerArgs.h"
++#include "llvm/Option/ArgList.h"
++#include "llvm/ProfileData/InstrProf.h"
++#include "llvm/Support/FileSystem.h"
++#include "llvm/Support/Path.h"
++#include "llvm/Support/VirtualFileSystem.h"
++
++using namespace clang::driver;
++using namespace clang::driver::toolchains;
++using namespace clang::driver::tools;
++using namespace clang;
++using namespace llvm::opt;
++
++using tools::addMultilibFlag;
++
++void reaveros::Linker::ConstructJob(Compilation &C, const JobAction &JA,
++                                    const InputInfo &Output,
++                                    const InputInfoList &Inputs,
++                                    const ArgList &Args,
++                                    const char *LinkingOutput) const {
++  const toolchains::ReaverOS &ToolChain =
++      static_cast<const toolchains::ReaverOS &>(getToolChain());
++  const Driver &D = ToolChain.getDriver();
++
++  ArgStringList CmdArgs;
++
++  // Silence warning for "clang -g foo.o -o foo"
++  Args.ClaimAllArgs(options::OPT_g_Group);
++  // and "clang -emit-llvm foo.o -o foo"
++  Args.ClaimAllArgs(options::OPT_emit_llvm);
++  // and for "clang -w foo.o -o foo". Other warning options are already
++  // handled somewhere else.
++  Args.ClaimAllArgs(options::OPT_w);
++
++  CmdArgs.push_back("-z");
++  CmdArgs.push_back("max-page-size=4096");
++
++  CmdArgs.push_back("-z");
++  CmdArgs.push_back("now");
++
++  CmdArgs.push_back("-z");
++  CmdArgs.push_back("separate-loadable-segments");
++
++  CmdArgs.push_back("-z");
++  CmdArgs.push_back("rodynamic");
++
++  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
++
++  if (!D.SysRoot.empty())
++    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
++
++  if (!Args.hasArg(options::OPT_shared) && !Args.hasArg(options::OPT_r) &&
++      !Args.hasArg(options::OPT_ffreestanding)) {
++    CmdArgs.push_back("-pie");
++  }
++
++  if (Args.hasArg(options::OPT_rdynamic))
++    CmdArgs.push_back("-export-dynamic");
++
++  if (Args.hasArg(options::OPT_s))
++    CmdArgs.push_back("-s");
++
++  if (Args.hasArg(options::OPT_r)) {
++    CmdArgs.push_back("-r");
++  } else {
++    CmdArgs.push_back("--build-id");
++    CmdArgs.push_back("--hash-style=gnu");
++  }
++
++  CmdArgs.push_back("--eh-frame-hdr");
++
++  if (Args.hasArg(options::OPT_static))
++    CmdArgs.push_back("-Bstatic");
++  else if (Args.hasArg(options::OPT_shared))
++    CmdArgs.push_back("-shared");
++
++  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
++
++  CmdArgs.push_back("-o");
++  CmdArgs.push_back(Output.getFilename());
++
++  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
++    if (!Args.hasArg(options::OPT_shared) &&
++        !Args.hasArg(options::OPT_ffreestanding)) {
++      CmdArgs.push_back("-lrosert-crt");
++    }
++  }
++
++  Args.AddAllArgs(CmdArgs, options::OPT_L);
++  Args.AddAllArgs(CmdArgs, options::OPT_u);
++
++  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
++
++  if (D.isUsingLTO()) {
++    assert(!Inputs.empty() && "Must have at least one input.");
++    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
++                  D.getLTOMode() == LTOK_Thin);
++  }
++
++  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
++  bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
++  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
++  ToolChain.addProfileRTLibs(Args, CmdArgs);
++
++  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
++    if (Args.hasArg(options::OPT_static))
++      CmdArgs.push_back("-Bdynamic");
++
++    if (D.CCCIsCXX()) {
++      if (ToolChain.ShouldLinkCXXStdlib(Args)) {
++        bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
++                                   !Args.hasArg(options::OPT_static);
++        CmdArgs.push_back("--push-state");
++        CmdArgs.push_back("--as-needed");
++        if (OnlyLibstdcxxStatic)
++          CmdArgs.push_back("-Bstatic");
++        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
++        if (OnlyLibstdcxxStatic)
++          CmdArgs.push_back("-Bdynamic");
++        // CmdArgs.push_back("-lm");
++        CmdArgs.push_back("--pop-state");
++      }
++    }
++
++    if (NeedsSanitizerDeps)
++      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
++
++    if (NeedsXRayDeps)
++      linkXRayRuntimeDeps(ToolChain, CmdArgs);
++
++    AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
++  }
++
++  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
++                                         Exec, CmdArgs, Inputs, Output));
++}
++
++/// ReaverOS - ReaverOS tool chain which can call as(1) and ld(1) directly.
++
++ReaverOS::ReaverOS(const Driver &D, const llvm::Triple &Triple,
++                   const ArgList &Args)
++    : ToolChain(D, Triple, Args) {
++  getProgramPaths().push_back(getDriver().getInstalledDir());
++  if (getDriver().getInstalledDir() != D.Dir)
++    getProgramPaths().push_back(D.Dir);
++
++  if (!D.SysRoot.empty()) {
++    SmallString<128> P(D.SysRoot);
++    llvm::sys::path::append(P, "usr/lib");
++    getFilePaths().push_back(std::string(P.str()));
++  }
++}
++
++std::string ReaverOS::ComputeEffectiveClangTriple(const ArgList &Args,
++                                                  types::ID InputType) const {
++  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
++  return Triple.str();
++}
++
++Tool *ReaverOS::buildLinker() const {
++  return new tools::reaveros::Linker(*this);
++}
++
++ToolChain::RuntimeLibType
++ReaverOS::GetRuntimeLibType(const ArgList &Args) const {
++  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
++    StringRef Value = A->getValue();
++    if (Value != "compiler-rt")
++      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
++          << A->getAsString(Args);
++  }
++
++  return ToolChain::RLT_CompilerRT;
++}
++
++ToolChain::UnwindLibType
++ReaverOS::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
++  if (Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ)) {
++    StringRef Value = A->getValue();
++    if (Value != "roseunw")
++      getDriver().Diag(diag::err_drv_invalid_unwindlib_name)
++          << A->getAsString(Args);
++  }
++
++  return ToolChain::UNW_Roseunw;
++}
++
++ToolChain::CXXStdlibType ReaverOS::GetCXXStdlibType(const ArgList &Args) const {
++  if (Arg *A = Args.getLastArg(options::OPT_stdlib_EQ)) {
++    StringRef Value = A->getValue();
++    if (Value != "rosestd")
++      getDriver().Diag(diag::err_drv_invalid_stdlib_name)
++          << A->getAsString(Args);
++  }
++
++  return ToolChain::CST_Rosestd;
++}
++
++void ReaverOS::addClangTargetOptions(const ArgList &DriverArgs,
++                                     ArgStringList &CC1Args,
++                                     Action::OffloadKind) const {
++  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
++                          options::OPT_fno_use_init_array, true))
++    CC1Args.push_back("-fno-use-init-array");
++
++  if (Arg *A = DriverArgs.getLastArg(options::OPT_fplt)) {
++    getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
++        << A->getAsString(DriverArgs);
++  }
++  CC1Args.push_back("-fno-plt");
++
++  if (Arg *A =
++          DriverArgs.getLastArg(options::OPT_fno_pic, options::OPT_fno_PIC)) {
++    getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
++        << A->getAsString(DriverArgs);
++  }
++}
++
++void ReaverOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
++                                         ArgStringList &CC1Args) const {
++  const Driver &D = getDriver();
++
++  if (DriverArgs.hasArg(options::OPT_nostdinc))
++    return;
++
++  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
++    SmallString<128> P(D.ResourceDir);
++    llvm::sys::path::append(P, "include");
++    addSystemInclude(DriverArgs, CC1Args, P);
++  }
++
++  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
++    return;
++
++  // Check for configure-time C include directories.
++  StringRef CIncludeDirs(C_INCLUDE_DIRS);
++  if (CIncludeDirs != "") {
++    SmallVector<StringRef, 5> dirs;
++    CIncludeDirs.split(dirs, ":");
++    for (StringRef dir : dirs) {
++      StringRef Prefix =
++          llvm::sys::path::is_absolute(dir) ? "" : StringRef(D.SysRoot);
++      addExternCSystemInclude(DriverArgs, CC1Args, Prefix + dir);
++    }
++    return;
++  }
++
++  if (!D.SysRoot.empty()) {
++    SmallString<128> P(D.SysRoot);
++    llvm::sys::path::append(P, "usr/include");
++    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
++  }
++}
++
++void ReaverOS::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
++                                            ArgStringList &CC1Args) const {
++  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
++      DriverArgs.hasArg(options::OPT_nostdincxx))
++    return;
++
++  const Driver &D = getDriver();
++  std::string Target = getTripleString();
++
++  auto AddCXXIncludePath = [&](StringRef Path) {
++    std::string Version = "v0";
++
++    // First add the per-target include path.
++    SmallString<128> TargetDir(Path);
++    llvm::sys::path::append(TargetDir, Target, "rosestd", Version);
++    if (getVFS().exists(TargetDir))
++      addSystemInclude(DriverArgs, CC1Args, TargetDir);
++
++    // Second add the generic one.
++    SmallString<128> Dir(Path);
++    llvm::sys::path::append(Dir, "rosestd", Version);
++    addSystemInclude(DriverArgs, CC1Args, Dir);
++  };
++
++  switch (GetCXXStdlibType(DriverArgs)) {
++  case ToolChain::CST_Rosestd: {
++    if (D.SysRoot.empty()) {
++      SmallString<128> P(D.Dir);
++      llvm::sys::path::append(P, "..", "include");
++      AddCXXIncludePath(P);
++    }
++    else
++    {
++      SmallString<128> P(D.SysRoot);
++      llvm::sys::path::append(P, "usr/include");
++      addExternCSystemInclude(DriverArgs, CC1Args, P.str());
++      AddCXXIncludePath(P);
++    }
++    break;
++  }
++
++  default:
++    llvm_unreachable("invalid stdlib name");
++  }
++}
++
++void ReaverOS::AddCXXStdlibLibArgs(const ArgList &Args,
++                                   ArgStringList &CmdArgs) const {
++  switch (GetCXXStdlibType(Args)) {
++  case ToolChain::CST_Rosestd:
++    if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
++      CmdArgs.push_back("-lrosestd");
++    }
++    break;
++
++  default:
++    llvm_unreachable("invalid stdlib name");
++  }
++}
++
++SanitizerMask ReaverOS::getSupportedSanitizers() const {
++  SanitizerMask Res = ToolChain::getSupportedSanitizers();
++  /*
++  Res |= SanitizerKind::Address;
++  Res |= SanitizerKind::HWAddress;
++  Res |= SanitizerKind::PointerCompare;
++  Res |= SanitizerKind::PointerSubtract;
++  Res |= SanitizerKind::Fuzzer;
++  Res |= SanitizerKind::FuzzerNoLink;
++  Res |= SanitizerKind::Leak;
++  Res |= SanitizerKind::SafeStack;
++  Res |= SanitizerKind::Scudo;
++  Res |= SanitizerKind::Thread;
++  */
++  return Res;
++}
++
++SanitizerMask ReaverOS::getDefaultSanitizers() const {
++  SanitizerMask Res;
++  /*
++  switch (getTriple().getArch()) {
++  case llvm::Triple::aarch64:
++    Res |= SanitizerKind::ShadowCallStack;
++    break;
++  case llvm::Triple::x86_64:
++    Res |= SanitizerKind::SafeStack;
++    break;
++  default:
++    // TODO: Enable SafeStack on RISC-V once tested.
++    break;
++  }
++  */
++  return Res;
++}
+diff --git a/clang/lib/Driver/ToolChains/ReaverOS.h b/clang/lib/Driver/ToolChains/ReaverOS.h
+new file mode 100644
+index 0000000000..4e49b4ed1b
+--- /dev/null
++++ b/clang/lib/Driver/ToolChains/ReaverOS.h
+@@ -0,0 +1,108 @@
++//===--- ReaverOS.h - ReaverOS ToolChain Implementations ----------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_REAVEROS_H
++#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_REAVEROS_H
++
++#include "Gnu.h"
++#include "clang/Basic/LangOptions.h"
++#include "clang/Driver/Tool.h"
++#include "clang/Driver/ToolChain.h"
++
++namespace clang {
++namespace driver {
++namespace tools {
++namespace reaveros {
++class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
++public:
++  Linker(const ToolChain &TC) : Tool("reaveros::Linker", "ld.lld", TC) {}
++
++  bool hasIntegratedCPP() const override { return false; }
++  bool isLinkJob() const override { return true; }
++
++  void ConstructJob(Compilation &C, const JobAction &JA,
++                    const InputInfo &Output, const InputInfoList &Inputs,
++                    const llvm::opt::ArgList &TCArgs,
++                    const char *LinkingOutput) const override;
++};
++} // end namespace reaveros
++} // end namespace tools
++
++namespace toolchains {
++
++class LLVM_LIBRARY_VISIBILITY ReaverOS : public ToolChain {
++public:
++  ReaverOS(const Driver &D, const llvm::Triple &Triple,
++          const llvm::opt::ArgList &Args);
++
++  bool HasNativeLLVMSupport() const override { return true; }
++  bool IsIntegratedAssemblerDefault() const override { return true; }
++  bool IsMathErrnoDefault() const override { return false; }
++  bool useRelaxRelocations() const override { return true; };
++  RuntimeLibType GetDefaultRuntimeLibType() const override {
++    return ToolChain::RLT_CompilerRT;
++  }
++  UnwindLibType GetDefaultUnwindLibType() const override {
++    return ToolChain::UNW_Roseunw;
++  }
++  CXXStdlibType GetDefaultCXXStdlibType() const override {
++    return ToolChain::CST_Rosestd;
++  }
++  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override {
++    return true;
++  }
++  bool isPICDefault() const override { return false; }
++  bool isPIEDefault() const override { return true; }
++  bool isPICDefaultForced() const override { return false; }
++  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
++    return llvm::DebuggerKind::GDB;
++  }
++
++  LangOptions::StackProtectorMode
++  GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
++    return LangOptions::SSPStrong;
++  }
++
++  std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
++                                          types::ID InputType) const override;
++
++  SanitizerMask getSupportedSanitizers() const override;
++  SanitizerMask getDefaultSanitizers() const override;
++
++  RuntimeLibType
++  GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
++  UnwindLibType
++  GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
++  CXXStdlibType
++  GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
++
++  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
++                             llvm::opt::ArgStringList &CC1Args,
++                             Action::OffloadKind DeviceOffloadKind) const override;
++  void
++  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
++                            llvm::opt::ArgStringList &CC1Args) const override;
++  void
++  AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
++                               llvm::opt::ArgStringList &CC1Args) const override;
++  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
++                           llvm::opt::ArgStringList &CmdArgs) const override;
++
++  const char *getDefaultLinker() const override {
++    return "ld.lld";
++  }
++
++protected:
++  Tool *buildLinker() const override;
++};
++
++} // end namespace toolchains
++} // end namespace driver
++} // end namespace clang
++
++#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_REAVEROS_H
+diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
+index cfcbb8f8ae..f0236ebf9d 100644
+--- a/llvm/cmake/modules/HandleLLVMOptions.cmake
++++ b/llvm/cmake/modules/HandleLLVMOptions.cmake
+@@ -139,7 +139,7 @@ if(WIN32)
+     set(LLVM_ON_UNIX 0)
+   endif(CYGWIN)
+ else(WIN32)
+-  if(FUCHSIA OR UNIX)
++  if(FUCHSIA OR REAVEROS OR UNIX)
+     set(LLVM_ON_WIN32 0)
+     set(LLVM_ON_UNIX 1)
+     if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+@@ -147,9 +147,9 @@ else(WIN32)
+     else()
+       set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
+     endif()
+-  else(FUCHSIA OR UNIX)
++  else(FUCHSIA OR REAVEROS OR UNIX)
+     MESSAGE(SEND_ERROR "Unable to determine platform")
+-  endif(FUCHSIA OR UNIX)
++  endif(FUCHSIA OR REAVEROS OR UNIX)
+ endif(WIN32)
+
+ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+diff --git a/llvm/include/llvm/ADT/Triple.h b/llvm/include/llvm/ADT/Triple.h
+index 76f3514050..7df52673cd 100644
+--- a/llvm/include/llvm/ADT/Triple.h
++++ b/llvm/include/llvm/ADT/Triple.h
+@@ -177,6 +177,7 @@ public:
+     MacOSX,
+     NetBSD,
+     OpenBSD,
++    ReaverOS,
+     Solaris,
+     Win32,
+     ZOS,
+diff --git a/llvm/lib/Support/Triple.cpp b/llvm/lib/Support/Triple.cpp
+index 8831154635..b9c169c8bf 100644
+--- a/llvm/lib/Support/Triple.cpp
++++ b/llvm/lib/Support/Triple.cpp
+@@ -215,6 +215,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
+   case NaCl: return "nacl";
+   case NetBSD: return "netbsd";
+   case OpenBSD: return "openbsd";
++  case ReaverOS: return "reaveros";
+   case PS4: return "ps4";
+   case RTEMS: return "rtems";
+   case Solaris: return "solaris";
+@@ -515,6 +516,7 @@ static Triple::OSType parseOS(StringRef OSName) {
+     .StartsWith("macos", Triple::MacOSX)
+     .StartsWith("netbsd", Triple::NetBSD)
+     .StartsWith("openbsd", Triple::OpenBSD)
++    .StartsWith("reaveros", Triple::ReaverOS)
+     .StartsWith("solaris", Triple::Solaris)
+     .StartsWith("win32", Triple::Win32)
+     .StartsWith("windows", Triple::Win32)
