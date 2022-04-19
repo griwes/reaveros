@@ -1,3 +1,16 @@
+set(patch_files
+    ${CMAKE_CURRENT_LIST_DIR}/cmake/patches/000-reaveros.patch
+)
+
+add_custom_command(OUTPUT cmake-patch-timestamp
+    COMMAND touch cmake-patch-timestamp
+    DEPENDS ${patch_files}
+)
+
+add_custom_target(cmake-patch-timestamp-target
+    DEPENDS cmake-patch-timestamp
+)
+
 ExternalProject_Add(toolchain-cmake
     GIT_REPOSITORY ${REAVEROS_CMAKE_REPO}
     GIT_TAG ${REAVEROS_CMAKE_TAG}
@@ -9,6 +22,8 @@ ExternalProject_Add(toolchain-cmake
     INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/cmake
 
     ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
+
+    PATCH_COMMAND git reset --hard && git clean -fxd && git apply ${patch_files}
 
     CMAKE_ARGS
         -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
