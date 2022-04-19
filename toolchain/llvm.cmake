@@ -28,7 +28,7 @@ set(_reaveros_amd64_elf_flags
 )
 
 set(_runtime_targets default)
-if (REAVEROS_ENABLE_TESTS)
+if (REAVEROS_ENABLE_UNIT_TESTS)
     set(_runtime_flags
         -DRUNTIMES_default_LLVM_ENABLE_RUNTIMES=compiler-rt|libcxx|libcxxabi
         -DRUNTIMES_default_COMPILER_RT_BUILD_BUILTINS=ON
