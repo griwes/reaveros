@@ -1,0 +1,7 @@
+diff --git a/Modules/Platform/ReaverOS.cmake b/Modules/Platform/ReaverOS.cmake
+new file mode 100644
+index 000000000..51f313868
+--- /dev/null
++++ b/Modules/Platform/ReaverOS.cmake
+@@ -0,0 +1 @@
++set(REAVEROS 1)
