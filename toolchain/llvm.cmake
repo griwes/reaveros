@@ -40,6 +40,7 @@ if (REAVEROS_ENABLE_UNIT_TESTS)
         -DRUNTIMES_default_COMPILER_RT_DEFAULT_TARGET_ONLY=ON
     )
 else()
+    set(_runtime_targets)
     set(_runtime_flags)
 endif()
 
@@ -49,9 +50,13 @@ foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
     foreach (mode IN ITEMS freestanding elf)
         set(_target ${_reaveros_${architecture}_${mode}_target})
         set(_cc_flags ${_reaveros_${architecture}_${mode}_extra_cc_flags})
-        string(APPEND _runtime_targets
-            |${_target}
-        )
+        if ("${_runtime_targets}" STREQUAL "")
+            set(_runtime_targets ${_target})
+        else()
+            string(APPEND _runtime_targets
+                |${_target}
+            )
+        endif()
         list(APPEND _runtime_flags
             -DRUNTIMES_${_target}_LLVM_ENABLE_RUNTIMES=compiler-rt
             -DRUNTIMES_${_target}_CMAKE_SYSTEM_NAME=ReaverOS
@@ -107,8 +112,9 @@ ExternalProject_Add(toolchain-llvm
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DLLVM_TARGETS_TO_BUILD=X86
         -DLLVM_ENABLE_PROJECTS=clang|lld
-        -DLLVM_ENABLE_RUNTIMES=compiler-rt|libcxx|libcxxabi
+        -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
         -DLLVM_RUNTIME_TARGETS=${_runtime_targets}
+        -DLLVM_BUILTIN_TARGETS=${_runtime_targets}
         "${_runtime_flags}"
         -DLLVM_PARALLEL_LINK_JOBS=${REAVEROS_LLVM_PARALLEL_LINK_JOBS}
         -DLLVM_INCLUDE_TESTS=OFF
