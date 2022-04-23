@@ -4,8 +4,8 @@ set -ex
 
 sha=$(git rev-parse HEAD)
 
-docker pull ghcr.io/griwes/reaveros-build-env/unpruned:latest
-docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io/griwes/reaveros-build-env/unpruned:latest /usr/bin/env bash -c '
+# docker pull ghcr.io/griwes/reaveros-build-env/unpruned:latest
+docker run -t -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io/griwes/reaveros-build-env/unpruned:latest /usr/bin/env bash -c '
     set -xe
     set -o pipefail
 
@@ -15,7 +15,7 @@ docker run -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io
     apt clean
 
     cd /build
-    cmake .
+    cmake . -DREAVEROS_ENABLE_UNIT_TESTS=ON
     make all-toolchain -j$(nproc) | tee /reaveros/docker/.build-log
 '
 

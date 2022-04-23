@@ -139,7 +139,6 @@ jobs:
                 docker run -v $(pwd):/reaveros ghcr.io/griwes/reaveros-build-env:${{ github.sha }} bash -c '
                     set -e
                     cd /build
-                    cmake . -DREAVEROS_ENABLE_UNIT_TESTS=ON
                     make all-${{ matrix.arch }}-build-tests -j$(nproc)
                     ctest -j$(nproc)
                 '

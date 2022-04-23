@@ -17,7 +17,9 @@ ExternalProject_Add(toolchain-cmake
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
 
-    STEP_TARGETS install patch
+    STEP_TARGETS install
+
+    DEPENDS cmake-patch-timestamp-target
 
     INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/cmake
 
@@ -33,7 +35,5 @@ ExternalProject_Add(toolchain-cmake
 )
 reaveros_add_ep_prune_target(toolchain-cmake)
 reaveros_add_ep_fetch_tag_target(toolchain-cmake)
-
-add_dependencies(toolchain-cmake-patch cmake-patch-timestamp-target)
 
 reaveros_register_target(toolchain-cmake-install toolchain)

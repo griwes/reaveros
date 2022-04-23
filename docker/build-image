@@ -15,8 +15,8 @@ docker run -v $(pwd):/reaveros -it --name reaveros-docker-build-${sha}-full debi
 
     mkdir /build
     cd /build
-    cmake /reaveros
-    make all-toolchain -j$(nproc)
+    cmake /reaveros -DREAVEROS_ENABLE_UNIT_TESTS=ON
+    make all-toolchain
 '
 
 docker export reaveros-docker-build-${sha}-full \
