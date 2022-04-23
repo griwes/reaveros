@@ -9,8 +9,8 @@ function(_reaveros_add_uefi_image_target architecture)
             toolchain-dosfstools-install
             toolchain-mtools-install
 
-            loader-uefi-${architecture}-install
-            kernel-${architecture}-install
+            loader-uefi-${architecture}
+            kernel-${architecture}
             image-initrd-${architecture}
 
             # this should be dynamically generated

@@ -89,7 +89,7 @@ ExternalProject_Add(toolchain-llvm
     GIT_SHALLOW TRUE
     UPDATE_DISCONNECTED 1
 
-    STEP_TARGETS configure install
+    STEP_TARGETS install
 
     DEPENDS toolchain-cmake-install llvm-patch-timestamp-target
 

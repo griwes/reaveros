@@ -65,4 +65,6 @@ else()
     enable_testing()
 
     add_subdirectory(test)
+
+    install(FILES)
 endif()
