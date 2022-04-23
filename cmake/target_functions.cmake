@@ -194,6 +194,7 @@ function(reaveros_add_ep_prune_target external_project)
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt
         COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
         COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-patch
         COMMAND touch ${STAMP_DIR}/${external_project}-configure
         COMMAND touch ${STAMP_DIR}/${external_project}-build
         COMMAND touch ${STAMP_DIR}/${external_project}-install
@@ -221,7 +222,7 @@ function(reaveros_add_ep_fetch_tag_target external_project)
         COMMAND ${GIT_EXECUTABLE} checkout ${GIT_TAG}
         WORKING_DIRECTORY <SOURCE_DIR>
         DEPENDEES download
-        DEPENDERS update configure build
+        DEPENDERS update patch configure build
         EXCLUDE_FROM_MAIN TRUE
         INDEPENDENT TRUE
     )
@@ -239,7 +240,7 @@ function(reaveros_add_ep_fetch_tag_target external_project)
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-download
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-gitclone-lastrun.txt
         COMMAND rm -rf ${STAMP_DIR}/${external_project}-configure
-        DEPENDERS mkdir download update set-to-tag prune
+        DEPENDERS mkdir download update patch set-to-tag prune
         EXCLUDE_FROM_MAIN TRUE
         INDEPENDENT TRUE
     )
@@ -247,6 +248,7 @@ function(reaveros_add_ep_fetch_tag_target external_project)
     add_custom_command(TARGET ${external_project}
         COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
         COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-patch
         COMMAND touch ${STAMP_DIR}/${external_project}-configure
         COMMAND touch ${STAMP_DIR}/${external_project}-build
         COMMAND touch ${STAMP_DIR}/${external_project}-install
@@ -255,6 +257,7 @@ function(reaveros_add_ep_fetch_tag_target external_project)
     add_custom_command(TARGET ${external_project}-install
         COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
         COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
+        COMMAND touch ${STAMP_DIR}/${external_project}-patch
         COMMAND touch ${STAMP_DIR}/${external_project}-configure
         COMMAND touch ${STAMP_DIR}/${external_project}-build
         COMMAND touch ${STAMP_DIR}/${external_project}-install
