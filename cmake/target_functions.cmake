@@ -86,8 +86,6 @@ function(reaveros_add_component _directory _prefix)
                 SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${_directory}
                 BUILD_ALWAYS 1
 
-                STEP_TARGETS build install
-
                 DEPENDS toolchain-llvm-install ${_depends}
 
                 INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/${_install_path}
@@ -107,10 +105,10 @@ function(reaveros_add_component _directory _prefix)
                     -DREAVEROS_THORN=${REAVEROS_THORN}
             )
 
-            reaveros_register_target(${_component_name}-install ${_architecture} ${_mode} ${ARGN} ${_directory})
+            reaveros_register_target(${_component_name} ${_architecture} ${_mode} ${ARGN} ${_directory})
 
             if (${_mode} STREQUAL "tests")
-                reaveros_register_target(${_component_name}-build ${_architecture} ${_mode} ${ARGN} ${_directory} build-tests)
+                reaveros_register_target(${_component_name} ${_architecture} ${_mode} ${ARGN} ${_directory} build-tests)
 
                 set_property(GLOBAL APPEND PROPERTY _REAVEROS_COMPONENTS "${_component_name}")
                 if (NOT _directory STREQUAL "kernel")
@@ -246,15 +244,6 @@ function(reaveros_add_ep_fetch_tag_target external_project)
     )
 
     add_custom_command(TARGET ${external_project}
-        COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
-        COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
-        COMMAND touch ${STAMP_DIR}/${external_project}-patch
-        COMMAND touch ${STAMP_DIR}/${external_project}-configure
-        COMMAND touch ${STAMP_DIR}/${external_project}-build
-        COMMAND touch ${STAMP_DIR}/${external_project}-install
-        COMMAND rm -rf ${STAMP_DIR}/${external_project}-prune
-    )
-    add_custom_command(TARGET ${external_project}-install
         COMMAND touch ${STAMP_DIR}/${external_project}-set-to-tag
         COMMAND touch ${STAMP_DIR}/${external_project}-skip-update
         COMMAND touch ${STAMP_DIR}/${external_project}-patch
