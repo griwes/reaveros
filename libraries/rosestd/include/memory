@@ -305,6 +305,21 @@ template<typename _T, typename... _Args>
 void make_unique_for_overwrite(_Args &&...) requires is_bounded_array_v<_T>
 = delete;
 
+template<typename _T>
+constexpr void * __voidify(_T & __obj) noexcept
+{
+    return const_cast<void *>(static_cast<const volatile void *>(addressof(__obj)));
+}
+
+template<typename _T, typename... _Args>
+constexpr _T * construct_at(_T * __location, _Args &&... __args) requires requires
+{
+    ::new (declval<void *>()) _T(declval<_Args>()...);
+}
+{
+    return ::new (__voidify(*__location)) _T(__ROSESTD::forward<_Args>(__args)...);
+}
+
 __ROSESTD_CLOSE
 
 // vim: ft=cpp

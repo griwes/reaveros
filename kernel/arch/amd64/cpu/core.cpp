@@ -62,5 +62,7 @@ void core::reinit_as(const core & other)
 
     _nmi_vector = other._nmi_vector;
     _nmi_flags = other._nmi_flags;
+
+    _boot_flag = other._boot_flag;
 }
 }

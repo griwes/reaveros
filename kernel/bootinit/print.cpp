@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "log.h"
+#include "print.h"
 
-#include <user/meta.h>
+#include <mutex>
 
 namespace sc = rose::syscall;
 
-namespace bootinit::log
+namespace kernel_print
 {
 std::uintptr_t logging_send_mailbox_token;
 std::uintptr_t logging_ack_mailbox_token;
@@ -30,6 +30,45 @@ namespace
 {
     char log_buffer[4096];
     char * log_cursor = nullptr;
+}
+
+void initialize(std::uintptr_t acceptor_mailbox_token)
+{
+    std::uintptr_t log_read_token;
+    std::uintptr_t ack_write_token;
+
+    auto result = sc::rose_mailbox_create(&log_read_token, &logging_send_mailbox_token);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+    result = sc::rose_mailbox_create(&logging_ack_mailbox_token, &ack_write_token);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+
+    sc::mailbox_message message{};
+
+    message.type = sc::mailbox_message_type::handle_token;
+    message.payload.handle_token = log_read_token;
+    result = sc::rose_mailbox_write(acceptor_mailbox_token, &message);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+
+    message.type = sc::mailbox_message_type::handle_token;
+    message.payload.handle_token = ack_write_token;
+    result = sc::rose_mailbox_write(acceptor_mailbox_token, &message);
+    if (result != sc::result::ok)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
 }
 
 const iterator::proxy & iterator::proxy::operator=(char c) const

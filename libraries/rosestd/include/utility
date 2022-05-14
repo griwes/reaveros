@@ -23,11 +23,6 @@
 
 __ROSESTD_OPEN
 
-// template<typename _T>
-// constexpr void swap(T & a, T & b) noexcept(see below);
-template<typename _T, size_t _N>
-constexpr void swap(_T (&__a)[_N], _T (&__b)[_N]) noexcept(is_nothrow_swappable_v<_T>);
-
 template<typename _T>
 constexpr _T && forward(remove_reference_t<_T> & __t) noexcept
 {
@@ -47,6 +42,16 @@ constexpr remove_reference_t<_T> && move(_T && __t) noexcept
 {
     return static_cast<remove_reference_t<_T> &&>(__t);
 }
+
+template<typename _T>
+constexpr void swap(_T & __a, _T & __b) noexcept(is_nothrow_move_constructible_v<_T> && is_nothrow_move_assignable_v<_T>) {
+    auto __tmp = __ROSESTD::move(__a);
+    __a = __ROSESTD::move(__b);
+    __b = __ROSESTD::move(__tmp);
+}
+
+template<typename _T, size_t _N>
+constexpr void swap(_T (&__a)[_N], _T (&__b)[_N]) noexcept(is_nothrow_swappable_v<_T>);
 
 template<typename _T, typename _U = _T>
 constexpr _T exchange(_T & __obj, _U && __new_val)

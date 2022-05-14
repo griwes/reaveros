@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
+#ifdef REAVEROS_BOOTINIT_PRINT_IN_TREE
 #include <user/meta.h>
+#else
+#include <rose/syscall/meta.h>
+#endif
 
 #include <format>
 #include <iterator>
 #include <mutex>
 
 #define PANIC(...)                                                                                           \
-    bootinit::log::println("PANIC: " __VA_ARGS__);                                                           \
+    ::kernel_print::println("PANIC: " __VA_ARGS__);                                                          \
     for (;;)                                                                                                 \
         ;                                                                                                    \
     __builtin_unreachable()
 
-namespace bootinit::log
+namespace kernel_print
 {
+void initialize(std::uintptr_t acceptor_mailbox_token);
+
 extern std::uintptr_t logging_send_mailbox_token;
 extern std::uintptr_t logging_ack_mailbox_token;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,6 +100,7 @@ extern "C"
     void * memset(void * s, int c, size_t n)
     {
         auto s_u8 = reinterpret_cast<uint8_t *>(s);
+
         auto end = s_u8 + n;
 
         while (s_u8 != end)

@@ -8,11 +8,13 @@ function(_reaveros_add_initrd_image_target architecture)
     add_custom_command(OUTPUT ${_target_path} "always rebuilt"
         DEPENDS
             all-${architecture}-userspace-services
+            library-rosestd-hosted-${architecture}
 
         COMMAND rm -rf ${_working_path}
         COMMAND mkdir ${_working_path}
 
         COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/userspace/services/${architecture}/* ${_working_path}
+        COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/sysroots/${architecture}-hosted/usr/lib/librosestd.so ${_working_path}
 
         COMMAND cd ${_working_path} && find . | cpio --no-absolute-filenames --format=newc --create > ${_target_path}
     )

@@ -68,7 +68,7 @@ namespace
 kernel::phys_addr_t initrd_base;
 std::size_t initrd_size;
 
-const char * process_tags[] = { "bootinit", "logger" };
+const char * process_tags[] = { "bootinit", "logger", "temporaryhack" };
 
 void log_handler(
     std::uintptr_t log_mailbox,
@@ -96,6 +96,11 @@ void log_handler(
         if (msg.type != rose::syscall::mailbox_message_type::user)
         {
             PANIC("{} logging mailbox contained a message of a wrong type!", process_tag);
+        }
+
+        if (msg.payload.user.data0 == 0)
+        {
+            break;
         }
 
         auto start = kernel::virt_addr_t(msg.payload.user.data0);
@@ -142,7 +147,7 @@ void log_handler(
     PANIC("TODO: implement thread termination");
 }
 
-void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mapping)
+void log_acceptor(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mapping)
 {
     auto process_tag = process_tags;
 
@@ -156,19 +161,19 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
 
         if (result != rose::syscall::result::ok)
         {
-            PANIC("failed to read a message from the log accept mailbox: {}", std::to_underlying(result));
+            PANIC("failed to read a message from the log acceptor mailbox: {}", std::to_underlying(result));
         }
 
         if (msg.type != rose::syscall::mailbox_message_type::handle_token)
         {
-            PANIC("wrong message type in the log accept mailbox");
+            PANIC("wrong message type in the log acceptor mailbox");
         }
 
         auto handle = kernel::scheduler::get_kernel_process()->get_handle(
             kernel::handle_token_t(msg.payload.handle_token));
         if (!handle)
         {
-            PANIC("invalid handle token received from the log accept mailbox");
+            PANIC("invalid handle token received from the log acceptor mailbox");
         }
 
         return handle;
@@ -179,33 +184,33 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         auto process_handle = read_valid_token();
         if (!process_handle->is_a<kernel::scheduler::process>())
         {
-            PANIC("wrong handle type received from the log accept mailbox");
+            PANIC("wrong handle type received from the log acceptor mailbox");
         }
 
         auto process = process_handle->get_as<kernel::scheduler::process>();
 
-        kernel::log::println("[kernel/log-accepter] Received process handle.");
+        kernel::log::println("[kernel/log-acceptor] Received process handle.");
 
         auto log_mailbox_handle = read_valid_token();
         if (!log_mailbox_handle->is_a<kernel::ipc::mailbox>())
         {
-            PANIC("wrong handle type received from the log accept mailbox");
+            PANIC("wrong handle type received from the log acceptor mailbox");
         };
 
         auto log_mailbox = log_mailbox_handle->get_as<kernel::ipc::mailbox>();
 
-        kernel::log::println("[kernel/log-accepter] Received log mailbox handle.");
+        kernel::log::println("[kernel/log-acceptor] Received log mailbox handle.");
 
         auto ack_mailbox_handle = read_valid_token();
         if (!ack_mailbox_handle->is_a<kernel::ipc::mailbox>())
         {
-            PANIC("wrong handle type received from the log accept mailbox");
+            PANIC("wrong handle type received from the log acceptor mailbox");
         };
 
         auto ack_mailbox = ack_mailbox_handle->get_as<kernel::ipc::mailbox>();
 
-        kernel::log::println("[kernel/log-accepter] Received ack mailbox handle.");
-        kernel::log::println("[kernel/log-accepter] Creating log handler thread for {}.", *process_tag);
+        kernel::log::println("[kernel/log-acceptor] Received ack mailbox handle.");
+        kernel::log::println("[kernel/log-acceptor] Creating log handler thread for {}.", *process_tag);
 
         // TODO: abstraction for this, create_kernel_thread or something
         auto log_stack_addr = kernel::vm::allocate_address_range(32 * kernel::arch::vm::page_sizes[0]);
@@ -234,9 +239,11 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
 
         kernel::util::interrupt_guard guard;
         kernel::scheduler::schedule(std::move(log_thread));
+
+        ++process_tag;
     }
 
-    // rose::syscall::rose_token_release(accept_mailbox);
+    rose::syscall::rose_token_release(accept_mailbox);
 
     PANIC("implement thread termination");
 }
@@ -328,10 +335,11 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
         kernel::log::println(" > Creating the bootstrap mailboxes and sending handle tokens...");
         auto bootinit_mailbox = kernel::ipc::create_mailbox();
 
-        kernel::log::println(" >> Creating and sending the log accept mailbox...");
+        kernel::log::println(" >> Creating and sending the log acceptor mailbox...");
         auto log_accept_mailbox = kernel::ipc::create_mailbox();
         auto lab_handle = kernel::create_handle(
-            log_accept_mailbox /* not moved on purpose */, rose::syscall::permissions::write);
+            log_accept_mailbox /* not moved on purpose */,
+            rose::syscall::permissions::write | rose ::syscall::permissions::transfer);
         bootinit_mailbox->send(std::move(lab_handle));
 
         log_accept_mailbox->send(kernel::create_handle(bootinit_process));
@@ -358,32 +366,32 @@ void log_accepter(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
 
         kernel::log::println(" > Preparing log mailbox accepter...");
         // TODO: abstraction for this, create_kernel_thread or something
-        auto log_accepter_stack_addr =
+        auto log_acceptor_stack_addr =
             kernel::vm::allocate_address_range(32 * kernel::arch::vm::page_sizes[0]);
-        auto log_accepter_stack_vmo = kernel::vm::create_sparse_vmo(31 * kernel::arch::vm::page_sizes[0]);
-        log_accepter_stack_vmo->commit_all();
-        auto log_accepter_stack_mapping = kernel::scheduler::get_kernel_process()->get_vas()->map_vmo(
-            std::move(log_accepter_stack_vmo), log_accepter_stack_addr + kernel::arch::vm::page_sizes[0]);
+        auto log_acceptor_stack_vmo = kernel::vm::create_sparse_vmo(31 * kernel::arch::vm::page_sizes[0]);
+        log_acceptor_stack_vmo->commit_all();
+        auto log_acceptor_stack_mapping = kernel::scheduler::get_kernel_process()->get_vas()->map_vmo(
+            std::move(log_acceptor_stack_vmo), log_acceptor_stack_addr + kernel::arch::vm::page_sizes[0]);
 
-        auto log_accepter_thread = kernel::scheduler::get_kernel_process()->create_thread();
-        log_accepter_thread->get_context()->set_instruction_pointer(
-            kernel::virt_addr_t(reinterpret_cast<std::uintptr_t>(&log_accepter)));
-        log_accepter_thread->get_context()->set_stack_pointer(
-            log_accepter_stack_addr + 32 * kernel::arch::vm::page_sizes[0] - 8);
-        log_accepter_thread->get_context()->set_argument(
+        auto log_acceptor_thread = kernel::scheduler::get_kernel_process()->create_thread();
+        log_acceptor_thread->get_context()->set_instruction_pointer(
+            kernel::virt_addr_t(reinterpret_cast<std::uintptr_t>(&log_acceptor)));
+        log_acceptor_thread->get_context()->set_stack_pointer(
+            log_acceptor_stack_addr + 32 * kernel::arch::vm::page_sizes[0] - 8);
+        log_acceptor_thread->get_context()->set_argument(
             0,
             kernel::scheduler::get_kernel_process()->register_for_token(
                 kernel::create_handle(std::move(log_accept_mailbox), rose::syscall::permissions::read)));
-        log_accepter_thread->get_context()->set_argument(
+        log_acceptor_thread->get_context()->set_argument(
             1,
-            reinterpret_cast<std::uintptr_t>(log_accepter_stack_mapping.release(kernel::util::keep_count)));
+            reinterpret_cast<std::uintptr_t>(log_acceptor_stack_mapping.release(kernel::util::keep_count)));
 
         kernel::log::println(
             " > Scheduling bootinit thread. Kernel-side init done, servicing early logging requests.");
 
         {
             kernel::util::interrupt_guard guard;
-            kernel::scheduler::schedule(std::move(log_accepter_thread));
+            kernel::scheduler::schedule(std::move(log_acceptor_thread));
             kernel::scheduler::schedule(std::move(bootinit_thread));
         }
 

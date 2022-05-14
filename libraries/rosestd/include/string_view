@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,8 @@ public:
     using difference_type = ptrdiff_t;
     static constexpr size_type npos = size_type(-1);
 
-    constexpr basic_string_view() noexcept;
+    constexpr basic_string_view() noexcept : __data(nullptr), __size(0) {}
+
     constexpr basic_string_view(const basic_string_view &) noexcept = default;
     constexpr basic_string_view & operator=(const basic_string_view &) noexcept = default;
 

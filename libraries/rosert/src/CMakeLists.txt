@@ -20,10 +20,10 @@ file(GLOB sources
 
 list(REMOVE_ITEM sources ${crt_sources})
 
-# add_library(rosert STATIC
-# ${sources}
-# )
+add_library(rosert STATIC
+    ${sources}
+)
 
-# install(TARGETS rosert
-# DESTINATION ${install_dir}
-# )
+install(TARGETS rosert
+    DESTINATION ${install_dir}
+)

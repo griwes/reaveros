@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,28 @@
 
 #pragma once
 
-#include "../util/pointer_types.h"
+#include <archive/cpio.h>
+#include <elf/elf.h>
 
-namespace bootinit::addresses
+namespace bootinit::facts
 {
-constexpr kernel::virt_addr_t ip(0x1000000);
-constexpr kernel::virt_addr_t vdso(0xa000000);
-constexpr kernel::virt_addr_t initrd(0x10000000);
-constexpr kernel::virt_addr_t top_of_stack(0x80000000);
+extern std::uintptr_t acceptor_mailbox_token;
+extern std::uintptr_t kernel_caps_token;
+extern std::uintptr_t self_vas_token;
+extern std::uintptr_t vdso_size;
+}
+
+namespace bootinit::process
+{
+struct create_process_result
+{
+    std::uintptr_t process_token;
+    std::uintptr_t vas_token;
+    std::uintptr_t protocol_mailbox_token;
+};
+
+create_process_result create_process(
+    const archive::cpio & initrd,
+    std::string_view filename,
+    std::string_view name);
 }

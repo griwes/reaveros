@@ -89,7 +89,7 @@ class variant
     using __type_for = variant_alternative_t<decltype(__index_type_for<_T>())::value, variant>;
 
     template<typename>
-    struct __enable_move_constructor : false_type
+    struct __enable_uref_ctor : false_type
     {
     };
 
@@ -99,7 +99,22 @@ class variant
         && !is_same_v<
             remove_cvref_t<_T>,
             variant> && !__is_variant_in_place<_T> && is_constructible_v<__type_for<_T>, _T>) struct
-        __enable_move_constructor<_T> : is_constructible<__type_for<_T>, _T>
+        __enable_uref_ctor<_T> : true_type
+    {
+    };
+
+    template<typename>
+    struct __enable_uref_assign : false_type
+    {
+    };
+
+    template<typename _T>
+    requires(
+        sizeof...(_Types) != 0
+        && !is_same_v<
+            remove_cvref_t<_T>,
+            variant> && is_assignable_v<__type_for<_T>, _T> && is_constructible_v<__type_for<_T>, _T>) struct
+        __enable_uref_assign<_T> : true_type
     {
     };
 
@@ -157,7 +172,7 @@ public:
 
     template<typename _T>
     constexpr variant(_T && __t) noexcept(is_nothrow_constructible_v<__type_for<_T>, _T>) requires
-        __enable_move_constructor<_T>::value
+        __enable_uref_ctor<_T>::value
     {
         __construct<__index_type_for<_T>::value>(std::forward<_T>(__t));
     }
@@ -273,8 +288,29 @@ public:
         return *this;
     }
 
-    // template<typename _T>
-    // constexpr variant & operator=(_T &&) noexcept(see below);
+    template<typename _T>
+    constexpr variant & operator=(_T && __t) noexcept(
+        is_nothrow_assignable_v<__type_for<_T>, _T> &&
+            is_nothrow_constructible_v<__type_for<_T>, _T>) requires __enable_uref_assign<_T>::value
+    {
+        if (__index == __index_type_for<_T>::value)
+        {
+            __assign<__index_type_for<_T>::value>(__ROSESTD::forward<_T>(__t));
+            return *this;
+        }
+
+        if constexpr (
+            is_nothrow_constructible_v<
+                __type_for<_T>,
+                _T> || !is_nothrow_move_constructible_v<__type_for<_T>>)
+        {
+            emplace<__index_type_for<_T>::value>(__ROSESTD::forward<_T>(__t));
+            return *this;
+        }
+
+        emplace<__index_type_for<_T>::value>(__type_for<_T>(__ROSESTD::forward<_T>(__t)));
+        return *this;
+    }
 
     // [variant.mod], modifiers
     template<typename _T, typename... _Args>
@@ -372,9 +408,56 @@ struct variant_size<variant<_Types...>> : integral_constant<size_t, sizeof...(_T
 {
 };
 
-// [variant.get], value access
+template<std::size_t _I, typename _T, typename... _Types>
+struct __index_in_pack_impl;
+
+template<std::size_t _I, typename _T, typename... _Types>
+struct __index_in_pack_impl<_I, _T, _T, _Types...> : integral_constant<size_t, _I>
+{
+};
+
+template<size_t _I, typename _T, typename _U, typename... _Types>
+struct __index_in_pack_impl<_I, _T, _U, _Types...> : __index_in_pack_impl<_I + 1, _T, _Types...>
+{
+};
+
+template<size_t _I, typename _T>
+struct __index_in_pack_impl<_I, _T> : integral_constant<size_t, static_cast<size_t>(-1)>
+{
+};
+
 template<typename _T, typename... _Types>
-constexpr bool holds_alternative(const variant<_Types...> &) noexcept;
+using __index_in_pack = __index_in_pack_impl<0, _T, _Types...>;
+
+template<size_t _I, typename _T, typename... Types>
+struct __occurs_once_in_pack_impl;
+
+template<typename _T, typename... _Types>
+struct __occurs_once_in_pack_impl<static_cast<size_t>(-1), _T, _Types...> : false_type
+{
+};
+
+template<typename _T, typename... _Types>
+struct __occurs_once_in_pack_impl<0, _T, _T, _Types...>
+    : bool_constant<__index_in_pack<_T, _Types...>::value == static_cast<size_t>(-1)>
+{
+};
+
+template<size_t _I, typename _T, typename _U, typename... _Types>
+struct __occurs_once_in_pack_impl<_I, _T, _U, _Types...> : __occurs_once_in_pack_impl<_I - 1, _T, _Types...>
+{
+};
+
+template<typename _T, typename... _Types>
+using __occurs_once_in_pack =
+    __occurs_once_in_pack_impl<__index_in_pack<_T, _Types...>::value, _T, _Types...>;
+
+template<typename _T, typename... _Types>
+constexpr bool holds_alternative(const variant<_Types...> & __v) noexcept
+{
+    static_assert(__occurs_once_in_pack<_T, _Types...>::value);
+    return __v.index() == __index_in_pack<_T, _Types...>::value;
+}
 
 template<size_t _I, typename... _Types>
 constexpr variant_alternative_t<_I, variant<_Types...>> & get(variant<_Types...> & __v)
@@ -402,13 +485,32 @@ constexpr const variant_alternative_t<_I, variant<_Types...>> && get(const varia
 }
 
 template<typename _T, typename... _Types>
-constexpr _T & get(variant<_Types...> &);
+constexpr _T & get(variant<_Types...> & __v)
+{
+    static_assert(__occurs_once_in_pack<_T, _Types...>::value);
+    return __ROSESTD::get<__index_in_pack<_T, _Types...>::value>(__v);
+}
+
 template<typename _T, typename... _Types>
-constexpr _T && get(variant<_Types...> &&);
+constexpr _T && get(variant<_Types...> && __v)
+{
+    static_assert(__occurs_once_in_pack<_T, _Types...>::value);
+    return __ROSESTD::move(__ROSESTD::get<__index_in_pack<_T, _Types...>::value>(__v));
+}
+
 template<typename _T, typename... _Types>
-constexpr const _T & get(const variant<_Types...> &);
+constexpr const _T & get(const variant<_Types...> & __v)
+{
+    static_assert(__occurs_once_in_pack<_T, _Types...>::value);
+    return __ROSESTD::get<__index_in_pack<_T, _Types...>::value>(__v);
+}
+
 template<typename _T, typename... _Types>
-constexpr const _T && get(const variant<_Types...> &&);
+constexpr const _T && get(const variant<_Types...> && __v)
+{
+    static_assert(__occurs_once_in_pack<_T, _Types...>::value);
+    return __ROSESTD::move(__ROSESTD::get<__index_in_pack<_T, _Types...>::value>(__v));
+}
 
 template<size_t _I, typename... _Types>
 constexpr add_pointer_t<variant_alternative_t<_I, variant<_Types...>>> get_if(variant<_Types...> *) noexcept;

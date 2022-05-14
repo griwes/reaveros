@@ -5,6 +5,7 @@ set(includes
     cstring
     cwchar
 
+    algorithm
     atomic
     charconv
     chrono

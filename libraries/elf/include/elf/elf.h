@@ -251,6 +251,12 @@ public:
         return *this;
     }
 
+    dynamic_entry_iterator & operator--()
+    {
+        --_index;
+        return *this;
+    }
+
     dynamic_entry_wrapper operator*() const
     {
         return { reinterpret_cast<const dynamic_entry *>(_base) + _index, _strtab };
@@ -290,6 +296,12 @@ private:
 
 using relocation_ptr = std::variant<const rel *, const rela *>;
 
+struct calculate_and_write_result
+{
+    std::uintptr_t target_address;
+    std::intmax_t relocation_value;
+};
+
 class relocation
 {
 public:
@@ -304,9 +316,13 @@ public:
                                          : std::get<1>(_reloc_entry)->offset;
     }
 
+    bool needs_symbol() const;
     std::string_view symbol_name() const;
-    void calculate_and_write(std::uintptr_t symbol_value, std::uintptr_t segment_vaddr, char * segment_base)
-        const;
+    calculate_and_write_result calculate_and_write(
+        std::uintptr_t symbol_value,
+        std::uintptr_t image_vbase,
+        std::uintptr_t segment_vaddr,
+        char * segment_base) const;
 
 private:
     relocation_ptr _reloc_entry;
@@ -471,6 +487,12 @@ private:
     const char * _strtab;
 };
 
+struct function_table_descriptor
+{
+    std::uintptr_t offset;
+    std::uintptr_t byte_size;
+};
+
 class elf_image
 {
 public:
@@ -510,6 +532,21 @@ public:
         return { _symtab, _symtab_size, _strtab };
     }
 
+    auto get_preinit() const
+    {
+        return _preinit_desc;
+    }
+
+    auto get_init() const
+    {
+        return _init_desc;
+    }
+
+    auto get_fini() const
+    {
+        return _fini_desc;
+    }
+
 private:
     const char * _base() const
     {
@@ -524,6 +561,10 @@ private:
     std::size_t _relocations_count = 0;
     const symbol * _symtab = nullptr;
     std::size_t _symtab_size = 0;
+
+    std::optional<function_table_descriptor> _preinit_desc;
+    std::optional<function_table_descriptor> _init_desc;
+    std::optional<function_table_descriptor> _fini_desc;
 };
 
 struct try_parse_result
