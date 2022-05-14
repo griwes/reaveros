@@ -46,6 +46,11 @@ jobs:
         runs-on: ubuntu-latest
         needs: build-env
 
+        strategy:
+            matrix:
+                arch:
+                  - amd64
+
         steps:
           - name: Check out the repository
             uses: actions/checkout@v2
@@ -66,7 +71,7 @@ jobs:
                     set -o pipefail
                     cd /build
                     cmake .
-                    for target in $(make help | grep -- -install | sed "s/\.\.\. //")
+                    for target in $(make help | grep -- -${{ matrix.arch }}$ | grep -v all | sed "s/\.\.\. //")
                     do
                         rm -rf install/{images,kernels,loaders,sysroots,userspace}
                         make ${target} -j$(nproc)
