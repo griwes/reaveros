@@ -48,12 +48,21 @@ public:
 
     constexpr optional(nullopt_t) noexcept {};
 
-    constexpr optional(const optional &);
+    constexpr optional(const optional & __rhs)
+    {
+        if (__rhs)
+        {
+            __init(*__rhs);
+        }
+    }
 
     constexpr optional(optional && __rhs) noexcept(is_nothrow_move_constructible_v<_T>) requires
         is_move_constructible_v<_T>
     {
-        __init(__ROSESTD::move(*__rhs));
+        if (__rhs)
+        {
+            __init(__ROSESTD::move(*__rhs));
+        }
     }
 
     // template<class... Args>
@@ -280,7 +289,11 @@ template<typename _T, three_way_comparable_with<_T> _U>
 constexpr compare_three_way_result_t<_T, _U> operator<=>(const optional<_T> &, const optional<_U> &);
 
 template<typename _T>
-constexpr bool operator==(const optional<_T> &, nullopt_t) noexcept;
+constexpr bool operator==(const optional<_T> & __opt, nullopt_t) noexcept
+{
+    return !__opt;
+}
+
 template<typename _T>
 constexpr strong_ordering operator<=>(const optional<_T> &, nullopt_t) noexcept;
 

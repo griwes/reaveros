@@ -120,7 +120,7 @@ void instance::_setup_preemption(std::lock_guard<std::mutex> &)
         }
 
         _preemption_token = time::get_preemption_timer().one_shot(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)) / 10,
+            std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)) / 100,
             +[](instance * self)
             {
                 auto lock = std::lock_guard(self->_lock);

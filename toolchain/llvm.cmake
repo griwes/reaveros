@@ -11,8 +11,8 @@ set(_reaveros_amd64_freestanding_flags
     -DRUNTIMES_x86_64-pc-reaveros-freestanding_COMPILER_RT_DEFAULT_TARGET_ONLY=ON
     -DRUNTIMES_x86_64-pc-reaveros-freestanding_COMPILER_RT_BAREMETAL_BUILD=ON
 )
-set(_reaveros_amd64_freestanding_extra_flags
-    "-fno-rtti -fno-exceptions -mno-sse -mno-sse2 -mno-sse3 -mno-sse4 -mno-avx -mno-redzone"
+set(_reaveros_amd64_freestanding_extra_cc_flags
+    "-fno-rtti -fno-exceptions -mno-red-zone -fno-stack-protector"
 )
 
 set(_reaveros_amd64_elf_target x86_64-pc-reaveros)
@@ -62,16 +62,16 @@ foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
             -DRUNTIMES_${_target}_CMAKE_SYSTEM_NAME=ReaverOS
             -DRUNTIMES_${_target}_CMAKE_SYSTEM_PROCESSOR=${_arch}
             -DRUNTIMES_${_target}_CMAKE_BUILD_TYPE=RelWithDebInfo
-            "-DRUNTIMES_${_target}_CMAKE_ASM_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_extra_flags}"
-            "-DRUNTIMES_${_target}_CMAKE_C_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_extra_flags}"
-            "-DRUNTIMES_${_target}_CMAKE_CXX_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_extra_flags}"
+            "-DRUNTIMES_${_target}_CMAKE_ASM_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_cc_flags}"
+            "-DRUNTIMES_${_target}_CMAKE_C_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_cc_flags}"
+            "-DRUNTIMES_${_target}_CMAKE_CXX_FLAGS=-nodefaultlibs -nostartfiles ${_fakeroot} ${_cc_flags}"
             ${_reaveros_${architecture}_${mode}_flags}
         )
     endforeach()
 endforeach()
 
 set(patch_files
-    ${CMAKE_CURRENT_LIST_DIR}/llvm/patches/000-reaveros-support.patch
+    ${CMAKE_CURRENT_LIST_DIR}/llvm/patches/000-reaveros-support-with-less-plt.patch
 )
 
 add_custom_command(OUTPUT llvm-patch-timestamp

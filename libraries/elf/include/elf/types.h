@@ -155,6 +155,9 @@ namespace section_types
         rel,
         shlib,
         dynsym,
+        init_array = 14,
+        fini_array,
+        preinit_array,
 
         os_specific_low = 0x60000000,
 
@@ -358,6 +361,7 @@ namespace dynamic_entry_types
         os_specific_low = 0x60000000,
 
         gnu_hash = 0x6ffffef5,
+        rela_count = 0x6ffffff9,
         flags_1 = 0x6ffffffb,
 
         os_specific_high = 0x6fffffff,

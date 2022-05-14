@@ -48,8 +48,17 @@ void context::save_to(thread::context * thctx) const
 
     thctx->rip = rip;
     thctx->rflags = rflags;
-    thctx->cs = cs;
-    thctx->ss = ss;
+
+    if (thctx->rip < 0x8000000000000000)
+    {
+        thctx->cs = 0x1b;
+        thctx->ss = 0x23;
+    }
+    else
+    {
+        thctx->cs = 0x8;
+        thctx->ss = 0x10;
+    }
 
     thctx->can_sysret = false;
 }
@@ -141,6 +150,8 @@ extern "C" void interrupt_handler(context ctx)
     {
         lapic::eoi(number);
     }
+
+    // log::println("(irq) returning to {:x}:{:#018x}", ctx.cs, ctx.rip);
 }
 
 void register_erased_handler(

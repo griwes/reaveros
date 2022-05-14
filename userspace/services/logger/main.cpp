@@ -14,20 +14,44 @@
  * limitations under the License.
  */
 
-#include <rose/syscall/meta.h>
+#include "../../../kernel/bootinit/print.h"
 
 #include <cstdint>
 
-extern "C" void rose_main([[maybe_unused]] std::uintptr_t inbox)
+#include <rosert/init.h>
+
+[[noreturn]] extern "C" void __cxa_pure_virtual()
 {
-    rose::syscall::mailbox_message msg;
-    auto result = rose::syscall::rose_mailbox_read(inbox, 1, &msg);
-    if (result != rose::syscall::result::ok)
+    PANIC("Pure virtual method called!");
+}
+
+extern "C" void rose_main(std::uintptr_t inbox)
+{
+    rose::syscall::mailbox_message message;
+
+    auto result = rose::syscall::rose_mailbox_read(inbox, -1, &message);
+    if (result != rose::syscall::result::ok
+        || message.type != rose::syscall::mailbox_message_type::handle_token)
     {
-        *reinterpret_cast<volatile std::uintptr_t *>(0) = std::to_underlying(result);
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
     }
 
-    for (;;)
+    __rosert::__init(message.payload.handle_token);
 
+    result = rose::syscall::rose_mailbox_read(inbox, 0, &message);
+    if (result != rose::syscall::result::ok
+        || message.type != rose::syscall::mailbox_message_type::handle_token)
+    {
+        // ... panic ...
+        *reinterpret_cast<volatile std::uintptr_t *>(0) = 0;
+    }
+
+    auto acceptor_mailbox_token = message.payload.handle_token;
+    kernel_print::initialize(acceptor_mailbox_token);
+
+    kernel_print::println("Hello from userspace logger!");
+
+    for (;;)
         ;
 }

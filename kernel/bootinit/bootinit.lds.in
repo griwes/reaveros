@@ -1,14 +1,14 @@
 ENTRY(bootinit_main)
 OUTPUT_ARCH(i386:x86-64)
 
-__vdso_base = 0xa0000;
+__vdso_base = 0xa000000;
 INCLUDE @CMAKE_BINARY_DIR@/vdso/vdso_symbols.lds;
 
 SECTIONS
 {
-    . = 0x10000;
+    . = 0x1000000;
 
-    .text (0x10000) :
+    .text (0x1000000) :
     {
         *(.bootinit_entry)
         KEEP(*(.text))

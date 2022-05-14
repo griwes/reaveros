@@ -42,7 +42,7 @@ void context::save_to(thread::context * ctx) const
     ctx->rbx = rbx;
     ctx->rax = rax;
 
-    if (ctx->rcx < 0x8000000000000000)
+    if (ctx->rip < 0x8000000000000000)
     {
         ctx->cs = 0x1b;
         ctx->ss = 0x23;
@@ -141,6 +141,11 @@ extern "C" void syscall_handler(context ctx)
     }
 
     ctx.check_kernel_space();
+
+    // log::println(
+    //"(sys) returning to {:x}:{:#018x}",
+    // ctx.iret_rip ? ctx.iret_cs : 0,
+    // ctx.iret_rip ? ctx.iret_rip : ctx.user_rip);
 }
 
 namespace

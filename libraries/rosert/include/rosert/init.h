@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@
 
 #pragma once
 
-#include "../util/pointer_types.h"
+#include <cstdint>
 
-namespace bootinit::addresses
+namespace __rosert::inline __v0
 {
-constexpr kernel::virt_addr_t ip(0x1000000);
-constexpr kernel::virt_addr_t vdso(0xa000000);
-constexpr kernel::virt_addr_t initrd(0x10000000);
-constexpr kernel::virt_addr_t top_of_stack(0x80000000);
+void __init(std::uintptr_t init_mailbox);
 }

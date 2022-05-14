@@ -18,6 +18,8 @@
 
 #include "helpers.h"
 
+// #include <iostream>
+
 namespace kernel::util
 {
 template<typename T, typename Comparator, template<typename> typename UnboundTraits = unique_ptr_traits>
@@ -353,19 +355,20 @@ public:
                     }
                 }
 
-                next->set_balance_factor(wrapped->get_balance_factor() - 1);
+                next->set_balance_factor(wrapped->get_balance_factor());
                 next->set_left(wrapped->get_left());
                 if (next->get_left())
                 {
                     next->get_left()->set_tree_parent(next);
                 }
 
-                shortened_base = next->get_tree_parent();
+                shortened_base = next;
                 shortened_left = false;
 
                 next->set_tree_parent(wrapped->get_tree_parent());
                 if (!next->get_tree_parent())
                 {
+                    next->set_balance_factor(wrapped->get_balance_factor() - 1);
                     _root = next;
                     if (wrapped->get_balance_factor() < 0)
                     {
@@ -564,7 +567,10 @@ public:
 
     invariant_check_result check_invariants() const
     {
-        return _check_invariants(_root);
+        // std::cout << "====================" << std::endl;
+        auto ret = _check_invariants(_root);
+        // std::cout << "====================" << std::endl;
+        return ret;
     }
 
 private:
@@ -659,8 +665,6 @@ private:
                     {
                         break;
                     }
-
-                    current = right;
                 }
 
                 else if (parent->get_balance_factor() == 0)
@@ -696,8 +700,6 @@ private:
                     {
                         break;
                     }
-
-                    current = left;
                 }
 
                 else if (parent->get_balance_factor() == 0)
@@ -896,6 +898,18 @@ private:
         auto left_depth = _left_depth(node);
         auto right_depth = _right_depth(node);
         auto real_bf = right_depth - left_depth;
+
+        // std::cout << "node: " << node->unwrap()->id << std::endl;
+        // std::cout << "bf: " << (int)bf << std::endl;
+        // std::cout << "left: " << (node->get_left() ? std::to_string(node->get_left()->unwrap()->id) :
+        // "(nil)")
+        // << std::endl;
+        // std::cout << "left depth: " << left_depth << std::endl;
+        // std::cout << "right: "
+        // << (node->get_right() ? std::to_string(node->get_right()->unwrap()->id) : "(nil)")
+        // << std::endl;
+        // std::cout << "right depth: " << right_depth << std::endl;
+        // std::cout << "real bf: " << real_bf << std::endl << std::endl;
 
         if (bf != real_bf)
         {

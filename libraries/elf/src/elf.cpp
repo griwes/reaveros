@@ -175,6 +175,13 @@ try_parse_result try_parse(const char * base, std::size_t length)
 
         std::size_t dynamic_count = 0;
 
+        std::optional<std::uintptr_t> preinit;
+        std::optional<std::size_t> preinit_size;
+        std::optional<std::uintptr_t> init;
+        std::optional<std::size_t> init_size;
+        std::optional<std::uintptr_t> fini;
+        std::optional<std::size_t> fini_size;
+
         while (true)
         {
             bool end = false;
@@ -231,10 +238,21 @@ try_parse_result try_parse(const char * base, std::size_t length)
                 case dynamic_entry_types::bind_now:
                     break;
 
+                case dynamic_entry_types::init_array:
+                    init = dynamic_entry->un.ptr;
+                    break;
+
+                case dynamic_entry_types::init_array_size:
+                    init_size = dynamic_entry->un.val;
+                    break;
+
                 case dynamic_entry_types::flags:
                     break;
 
                 case dynamic_entry_types::gnu_hash:
+                    break;
+
+                case dynamic_entry_types::rela_count:
                     break;
 
                 case dynamic_entry_types::flags_1:
@@ -251,6 +269,46 @@ try_parse_result try_parse(const char * base, std::size_t length)
 
             dynamic_next += sizeof(elf::dynamic_entry);
             ++dynamic_count;
+        }
+
+        if (preinit && !preinit_size)
+        {
+            return { std::nullopt, "PREINIT DYNAMIC entry present without PREINIT_SIZE DYANMIC entry", 0 };
+        }
+        if (!preinit && preinit_size)
+        {
+            return { std::nullopt, "PREINIT_SIZE DYNAMIC entry present without PREINIT DYANMIC entry", 0 };
+        }
+
+        if (init && !init_size)
+        {
+            return { std::nullopt, "INIT DYNAMIC entry present without INIT_SIZE DYANMIC entry", 0 };
+        }
+        if (!init && init_size)
+        {
+            return { std::nullopt, "INIT_SIZE DYNAMIC entry present without INIT DYANMIC entry", 0 };
+        }
+
+        if (fini && !fini_size)
+        {
+            return { std::nullopt, "FINI DYNAMIC entry present without FINI_SIZE DYANMIC entry", 0 };
+        }
+        if (!fini && fini_size)
+        {
+            return { std::nullopt, "FINI_SIZE DYNAMIC entry present without FINI DYANMIC entry", 0 };
+        }
+
+        if (preinit)
+        {
+            ret._preinit_desc = function_table_descriptor{ *preinit, *preinit_size };
+        }
+        if (init)
+        {
+            ret._init_desc = function_table_descriptor{ *init, *init_size };
+        }
+        if (fini)
+        {
+            ret._fini_desc = function_table_descriptor{ *fini, *fini_size };
         }
 
         ret._dynamic_count = dynamic_count;
@@ -288,11 +346,17 @@ try_parse_result try_parse(const char * base, std::size_t length)
             case section_types::note:
                 break;
 
+            case section_types::nobits:
+                break;
+
             case section_types::dynsym:
                 if (base + section.offset() == reinterpret_cast<const char *>(ret._symtab))
                 {
                     ret._symtab_size = section.length() / sizeof(symbol);
                 }
+                break;
+
+            case section_types::init_array:
                 break;
 
             case section_types::gnu_hash:
@@ -311,18 +375,6 @@ try_parse_result try_parse(const char * base, std::size_t length)
     return { ret, "", 0 };
 }
 
-std::string_view relocation::symbol_name() const
-{
-    auto symbol_index =
-        rsym(_reloc_entry.index() == 0 ? std::get<0>(_reloc_entry)->info : std::get<1>(_reloc_entry)->info);
-    auto & symbol = _symtab[symbol_index];
-    if (symbol.name)
-    {
-        return { _strtab + symbol.name };
-    }
-    return "";
-}
-
 namespace
 {
     rela _rel_to_rela(rel r)
@@ -335,13 +387,44 @@ namespace
     }
 }
 
-void relocation::calculate_and_write(
-    [[maybe_unused]] std::uintptr_t symbol_value,
-    [[maybe_unused]] std::uintptr_t segment_vaddr,
-    [[maybe_unused]] char * segment_base) const
+bool relocation::needs_symbol() const
 {
     auto rela =
         _reloc_entry.index() == 0 ? _rel_to_rela(*std::get<0>(_reloc_entry)) : *std::get<1>(_reloc_entry);
+
+    switch (rtype(rela.info))
+    {
+        case relocs::amd64::R_X86_64_RELATIVE:
+            return false;
+
+        default:
+            return true;
+    }
+}
+
+std::string_view relocation::symbol_name() const
+{
+    auto symbol_index =
+        rsym(_reloc_entry.index() == 0 ? std::get<0>(_reloc_entry)->info : std::get<1>(_reloc_entry)->info);
+    auto & symbol = _symtab[symbol_index];
+    if (symbol.name)
+    {
+        return { _strtab + symbol.name };
+    }
+    return "";
+}
+
+calculate_and_write_result relocation::calculate_and_write(
+    std::uintptr_t symbol_value,
+    std::uintptr_t image_vbase,
+    std::uintptr_t segment_vaddr,
+    char * segment_base) const
+{
+    auto rela =
+        _reloc_entry.index() == 0 ? _rel_to_rela(*std::get<0>(_reloc_entry)) : *std::get<1>(_reloc_entry);
+
+    calculate_and_write_result ret;
+    ret.target_address = image_vbase + segment_vaddr + rela.offset;
 
     // TODO: switch on machine type here
     // TODO: throw instead of ud2 in hosted environments
@@ -349,11 +432,20 @@ void relocation::calculate_and_write(
     switch (rtype(rela.info))
     {
         case relocs::amd64::R_X86_64_GLOB_DAT:
-            *reinterpret_cast<std::uint64_t *>(segment_base + rela.offset - segment_vaddr) = symbol_value;
+            ret.relocation_value =
+                *reinterpret_cast<std::uint64_t *>(segment_base + rela.offset - segment_vaddr) = symbol_value;
+            break;
+
+        case relocs::amd64::R_X86_64_RELATIVE:
+            ret.relocation_value =
+                *reinterpret_cast<std::uint64_t *>(segment_base + rela.offset - segment_vaddr) =
+                    image_vbase + rela.addend;
             break;
 
         default:
             asm volatile("ud2");
     }
+
+    return ret;
 }
 }

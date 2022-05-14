@@ -1,6 +1,11 @@
+add_definitions(
+    -DREAVEROS_BOOTINIT_PRINT_IN_TREE
+)
+
 add_executable(bootinit-elf
     main.cpp
-    log.cpp
+    print.cpp
+    process.cpp
 )
 
 target_link_libraries(bootinit-elf

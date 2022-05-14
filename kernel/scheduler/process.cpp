@@ -49,6 +49,8 @@ handle_token_t process::register_for_token(util::intrusive_ptr<handle> hnd)
         }
     }
 
+    // log::println("{}: adding token {}", this, token.value());
+
     new_element->token = token;
     auto result = _handles.insert(std::move(new_element));
     if (!result.second)
@@ -63,6 +65,8 @@ void process::unregister_token(handle_token_t token)
 {
     util::interrupt_guard guard;
     std::lock_guard _(_lock);
+
+    // log::println("{}: removing token {}", this, token.value());
 
     auto it = _handles.find(token);
     if (it == _handles.end())
