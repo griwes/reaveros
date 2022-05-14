@@ -24,6 +24,10 @@ add_library(rosert STATIC
     ${sources}
 )
 
+target_include_directories(rosert
+    SYSTEM PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../../rosestd/include
+)
+
 install(TARGETS rosert
     DESTINATION ${install_dir}
 )
