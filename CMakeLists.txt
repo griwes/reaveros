@@ -54,13 +54,14 @@ if (REAVEROS_ENABLE_UNIT_TESTS)
     set(_REAVEROS_TEST_TARGET test)
 endif()
 
+reaveros_add_aggregate_targets(kernels)
+
 add_subdirectory(toolchain)
 add_subdirectory(libraries)
 add_subdirectory(loaders)
 
 set(_saved "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_CURRENT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/kernel")
-reaveros_add_aggregate_targets(kernels)
 reaveros_include_component(kernel "" kernels)
 set(CMAKE_CURRENT_BINARY_DIR "${_saved}")
 
