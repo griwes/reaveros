@@ -1,6 +1,7 @@
 function(_reaveros_add_initrd_image_target architecture)
     set(_working_path ${REAVEROS_BINARY_DIR}/images/initrd-${architecture})
-    set(_target_path ${REAVEROS_BINARY_DIR}/install/images/initrd-${architecture}.img)
+    set(_target_dir ${REAVEROS_BINARY_DIR}/install/images)
+    set(_target_path ${_target_dir}/initrd-${architecture}.img)
 
     file(MAKE_DIRECTORY ${REAVEROS_BINARY_DIR}/install/images)
     file(MAKE_DIRECTORY ${_working_path})
@@ -12,6 +13,7 @@ function(_reaveros_add_initrd_image_target architecture)
 
         COMMAND rm -rf ${_working_path}
         COMMAND mkdir ${_working_path}
+        COMMAND mkdir -p ${_target_dir}
 
         COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/userspace/services/${architecture}/* ${_working_path}
         COMMAND cp -r ${REAVEROS_BINARY_DIR}/install/sysroots/${architecture}-hosted/usr/lib/librosestd.so ${_working_path}
