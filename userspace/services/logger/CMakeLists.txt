@@ -15,10 +15,6 @@ set_target_properties(logger
         COMPILE_FLAGS "-g -fno-rtti"
 )
 
-target_link_libraries(logger
-    vdso
-)
-
 install(TARGETS logger
     DESTINATION ${CMAKE_INSTALL_PREFIX}
 )

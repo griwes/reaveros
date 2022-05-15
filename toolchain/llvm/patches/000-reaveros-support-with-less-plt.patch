@@ -101,7 +101,7 @@ new file mode 100644
 index 0000000000..64cfb0c54f
 --- /dev/null
 +++ b/clang/lib/Driver/ToolChains/ReaverOS.cpp
-@@ -0,0 +1,364 @@
+@@ -0,0 +1,365 @@
 +//===--- ReaverOS.cpp - ReaverOS ToolChain Implementations --------*- C++
 +//-*-===//
 +//
@@ -202,6 +202,7 @@ index 0000000000..64cfb0c54f
 +  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
 +    if (!Args.hasArg(options::OPT_shared) &&
 +        !Args.hasArg(options::OPT_ffreestanding)) {
++      CmdArgs.push_back("-lvdso");
 +      CmdArgs.push_back("-lrosert-crt");
 +    }
 +  }
