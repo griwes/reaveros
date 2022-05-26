@@ -36,11 +36,13 @@ void initialize()
 
     irq::register_handler(
         irq::lapic_timer, +[](irq::context &) { time::timer::handle(cpu::get_current_core()->get_timer()); });
+    lapic::enable_timer_irq();
 }
 
 void ap_initialize()
 {
     cpu::get_current_core()->get_timer()->initialize(bsp_timer);
+    lapic::enable_timer_irq();
 }
 
 void timer::bsp_initialize()
@@ -48,6 +50,7 @@ void timer::bsp_initialize()
     log::println(" > Initializing LAPIC timer...");
 
     log::println(" >> Estimating tick period...");
+
     lapic::write_timer_divisor(1);
     lapic::write_timer_counter(-1);
 

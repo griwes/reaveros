@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ namespace
             write(registers_rw::lvt_lint1, 0x10000);
             write(registers_rw::lvt_pmc, 0x10000);
             write(registers_rw::lvt_thermal_sensor, 0x10000);
-            write(registers_rw::lvt_timer, irq::lapic_timer);
+            disable_timer_irq();
 
             write(registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
         }
@@ -218,7 +218,7 @@ namespace
             write(registers_rw::lvt_lint1, 0x10000);
             write(registers_rw::lvt_pmc, 0x10000);
             write(registers_rw::lvt_thermal_sensor, 0x10000);
-            write(registers_rw::lvt_timer, irq::lapic_timer);
+            disable_timer_irq();
 
             write(registers_rw::spurious_interrupt_vector, irq::lapic_spurious | 0x100);
         }
@@ -361,6 +361,18 @@ std::uint32_t read_timer_counter()
 {
     return x2apic_enabled ? lapic_storage.x2apic.read(x2apic_t::registers_r::timer_current_count)
                           : lapic_storage.xapic.read(xapic_t::registers_r::timer_current_count);
+}
+
+void enable_timer_irq()
+{
+    x2apic_enabled ? lapic_storage.x2apic.write(x2apic_t::registers_rw::lvt_timer, irq::lapic_timer)
+                   : lapic_storage.xapic.write(xapic_t::registers_rw::lvt_timer, irq::lapic_timer);
+}
+
+void disable_timer_irq()
+{
+    x2apic_enabled ? lapic_storage.x2apic.write(x2apic_t::registers_rw::lvt_timer, 1 << 16)
+                   : lapic_storage.xapic.write(xapic_t::registers_rw::lvt_timer, 1 << 16);
 }
 
 void ipi(std::uint32_t target_apic_id, ipi_type type, std::uint8_t data)
