@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,9 @@ enum class timer_mode
 void write_timer_divisor(std::uint8_t);
 void write_timer_counter(std::uint32_t);
 std::uint32_t read_timer_counter();
-void enable_timer(timer_mode);
+
+void enable_timer_irq();
+void disable_timer_irq();
 
 enum class ipi_type
 {
