@@ -14,31 +14,104 @@
  * limitations under the License.
  */
 
-#include "instance.h"
+#include "types.h"
 
 #include "../arch/cpu.h"
+#include "../arch/ipi.h"
+#include "../arch/irqs.h"
 #include "../util/interrupt_control.h"
 #include "scheduler.h"
 #include "thread.h"
 
 namespace kernel::scheduler
 {
+aggregate::aggregate() = default;
+
+aggregate::~aggregate() = default;
+
+std::size_t aggregate::average_load()
+{
+    auto _ = std::lock_guard(_lock);
+
+    std::size_t child_count = 0;
+    std::size_t total_load = 0;
+
+    for (auto child = _children; child; child = child->_next_sibling)
+    {
+        ++child_count;
+        total_load += child->average_load();
+    }
+
+    return total_load / child_count;
+}
+
+void aggregate::schedule(util::intrusive_ptr<thread> thread)
+{
+    auto _ = std::lock_guard(_lock);
+
+    interface * lowest = nullptr;
+    std::size_t lowest_al = -1;
+
+    for (auto child = _children; child; child = child->_next_sibling)
+    {
+        if (auto al = child->average_load(); al < lowest_al)
+        {
+            lowest = child;
+            lowest_al = al;
+        }
+    }
+
+    if (!lowest)
+    {
+        PANIC("didn't find any candidate children schedulers");
+    }
+
+    lowest->schedule(std::move(thread));
+}
+
+void aggregate::add_child(interface * child)
+{
+    auto _ = std::lock_guard(_lock);
+
+    if (!_children)
+    {
+        _children = child;
+        return;
+    }
+
+    for (auto current = _children;; current = current->_next_sibling)
+    {
+        if (!current->_next_sibling)
+        {
+            current->_next_sibling = child;
+            return;
+        }
+    }
+}
+
 instance::instance() = default;
 
 instance::~instance() = default;
 
-void instance::initialize(instance * parent)
+void instance::initialize(aggregate * parent, void * core)
 {
     _parent = parent;
+    _core = core;
 
     if (parent)
     {
-        _next_child = parent->_next_child;
-        _parent->_children = this;
+        parent->add_child(this);
     }
 
     _idle_thread = util::make_intrusive<thread>(get_kernel_process());
     _current_thread = _idle_thread;
+}
+
+std::size_t instance::average_load()
+{
+    auto _ = std::lock_guard(_lock);
+
+    return _threads.size() * 100;
 }
 
 void instance::schedule(util::intrusive_ptr<thread> thread)
@@ -69,6 +142,12 @@ util::intrusive_ptr<thread> instance::deschedule()
     _reschedule(lock);
 
     return ret;
+}
+
+void instance::scheduling_trigger()
+{
+    auto lock = std::lock_guard(_lock);
+    _setup_preemption(lock);
 }
 
 void instance::_reschedule(std::lock_guard<std::mutex> & lock)
@@ -106,9 +185,10 @@ void instance::_reschedule(std::lock_guard<std::mutex> & lock)
 
 void instance::_setup_preemption(std::lock_guard<std::mutex> &)
 {
-    if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this) [[unlikely]]
+    if (arch::cpu::get_core_local_storage()->current_core->get_scheduler() != this)
     {
-        PANIC("_setup_preemption called on a scheduler instance not of the current core!");
+        auto core = reinterpret_cast<arch::cpu::core *>(_core);
+        arch::ipi::ipi(core->id(), arch::irq::scheduling_trigger);
     }
 
     if (_threads.size())

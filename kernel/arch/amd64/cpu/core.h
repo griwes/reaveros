@@ -18,7 +18,7 @@
 
 #include "gdt.h"
 
-#include "../../../scheduler/instance.h"
+#include "../../../scheduler/types.h"
 #include "../timers/lapic.h"
 
 #include <cstddef>

@@ -25,16 +25,52 @@
 namespace kernel::scheduler
 {
 class thread;
+class aggregate;
 
-class instance
+class interface
+{
+public:
+    virtual ~interface() = default;
+
+    virtual std::size_t average_load() = 0;
+    virtual void schedule(util::intrusive_ptr<thread> thread) = 0;
+
+    friend class aggregate;
+
+protected:
+    std::mutex _lock;
+
+    aggregate * _parent = nullptr;
+    interface * _next_sibling = nullptr;
+};
+
+class aggregate : public interface
+{
+public:
+    aggregate();
+    virtual ~aggregate() override;
+
+    virtual std::size_t average_load() override;
+    virtual void schedule(util::intrusive_ptr<thread> thread) override;
+
+    void add_child(interface * child);
+
+private:
+    interface * _children = nullptr;
+};
+
+class instance : public interface
 {
 public:
     instance();
-    ~instance();
+    virtual ~instance() override;
 
-    void initialize(instance * parent);
-    void schedule(util::intrusive_ptr<thread> thread);
+    void initialize(aggregate * parent, void * core_ptr);
+
+    virtual std::size_t average_load() override;
+    virtual void schedule(util::intrusive_ptr<thread> thread) override;
     util::intrusive_ptr<thread> deschedule();
+    void scheduling_trigger();
 
     util::intrusive_ptr<thread> get_idle_thread();
     util::intrusive_ptr<thread> get_current_thread();
@@ -48,13 +84,8 @@ private:
         bool operator()(const thread & lhs, const thread & rhs) const;
     };
 
-    std::mutex _lock;
-
+    void * _core; // void * to break circular header dependency
     std::optional<time::timer::event_token> _preemption_token;
-
-    instance * _parent = nullptr;
-    instance * _children = nullptr;
-    instance * _next_child = nullptr;
 
     util::intrusive_ptr<thread> _idle_thread;
     util::intrusive_ptr<thread> _current_thread;

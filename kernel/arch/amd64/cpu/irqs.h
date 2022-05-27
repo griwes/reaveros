@@ -32,6 +32,7 @@ static const constexpr auto parallel_exec_count = 0x10;
 
 static const constexpr auto lapic_timer = 0xf0;
 static const constexpr auto hpet_timer = 0xf1;
+static const constexpr auto scheduling_trigger = 0xf2;
 static const constexpr auto lapic_spurious = 0xff;
 
 struct [[gnu::packed]] context

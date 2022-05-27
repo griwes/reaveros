@@ -17,6 +17,7 @@
 #include "scheduler.h"
 
 #include "../arch/cpu.h"
+#include "../arch/irqs.h"
 #include "../util/log.h"
 #include "../util/mp.h"
 #include "thread.h"
@@ -25,7 +26,7 @@ namespace kernel::scheduler
 {
 namespace
 {
-    instance global_scheduler;
+    aggregate global_scheduler;
     util::intrusive_ptr<process> kernel_process;
     std::atomic<bool> initialized = false;
 }
@@ -37,13 +38,16 @@ void initialize()
     auto kernel_vas = vm::adopt_existing_asid(arch::vm::get_asid());
     kernel_process = util::make_intrusive<process>(std::move(kernel_vas));
 
-    global_scheduler.initialize(nullptr);
     for (std::size_t i = 0; i < arch::cpu::get_core_count(); ++i)
     {
         auto core = arch::cpu::get_core_by_id(i);
-        core->get_scheduler()->initialize(&global_scheduler);
+        core->get_scheduler()->initialize(&global_scheduler, core);
         core->get_core_local_storage()->current_thread = core->get_scheduler()->get_idle_thread();
     }
+
+    arch::irq::register_handler(
+        arch::irq::scheduling_trigger,
+        +[](arch::irq::context &) { arch::cpu::get_current_core()->get_scheduler()->scheduling_trigger(); });
 
     initialized.store(true, std::memory_order_relaxed);
 }
@@ -55,7 +59,7 @@ bool is_initialized()
 
 void schedule(util::intrusive_ptr<thread> thread)
 {
-    arch::cpu::get_current_core()->get_scheduler()->schedule(std::move(thread));
+    global_scheduler.schedule(std::move(thread));
 }
 
 void post_schedule(util::intrusive_ptr<thread> thread)
