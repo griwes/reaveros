@@ -57,6 +57,11 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
     PANIC("Pure virtual method called!");
 }
 
+void operator delete(void *) noexcept
+{
+    PANIC("operator delete called!");
+}
+
 extern "C" char begin_bootinit[];
 extern "C" char end_bootinit[];
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@
 
 namespace kernel::arch::irq
 {
+using arch_namespace::irq::scheduling_trigger;
+
 using arch_namespace::irq::context;
 using arch_namespace::irq::parallel_exec_count;
 using arch_namespace::irq::parallel_exec_start;
