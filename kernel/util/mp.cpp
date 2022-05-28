@@ -29,51 +29,91 @@ namespace kernel::mp
 {
 namespace
 {
-    struct parallel_slot
+    ipi_queue_item * outgoing_ipi_items = nullptr;
+}
+
+struct ipi_queue_state
+{
+    void (*fptr)(void *, std::uintptr_t);
+    void * erased_ptr;
+    std::uintptr_t context;
+    std::atomic<std::size_t> unfinished_cores{ 0 };
+};
+
+struct ipi_queue_item
+{
+    ipi_queue_item * next;
+    ipi_queue_state * state;
+};
+
+void ipi_queue::push(ipi_queue_item * item)
+{
+    auto _ = std::lock_guard(_lock);
+
+    if (!_head)
     {
-        std::mutex lock;
-        bool wait = true;
-        void (*fptr)(void *, std::uint64_t);
-        void * erased_fptr;
-        std::uint64_t context;
-        std::atomic<std::size_t> unfinished_cores;
-        std::size_t irq_slot;
-    };
+        _tail = _head = item;
+        return;
+    }
 
-    parallel_slot slots[arch::irq::parallel_exec_count]{};
+    _tail = _tail->next = item;
+}
 
-    std::atomic<std::size_t> next_slot{};
+void ipi_queue::drain()
+{
+    while (true)
+    {
+        ipi_queue_item * item;
+
+        {
+            auto _ = std::lock_guard(_lock);
+            item = _head;
+            if (_head)
+            {
+                _head = _head->next;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        item->state->fptr(item->state->erased_ptr, item->state->context);
+        --item->state->unfinished_cores;
+    }
 }
 
 void initialize_parallel()
 {
-    for (std::size_t i = 0; i < arch::irq::parallel_exec_count; ++i)
+    arch::irq::register_handler(
+        arch::irq::ipi_trigger,
+        +[](arch::irq::context &)
+        { arch::cpu::get_core_local_storage()->current_core->get_ipi_queue()->drain(); });
+
+    auto core_count = arch::cpu::get_core_count();
+    auto size = core_count * core_count * sizeof(ipi_queue_item);
+    auto base = vm::allocate_address_range(size);
+    for (std::size_t offset = 0; offset < size; offset += arch::vm::page_sizes[0])
     {
-        slots[i].irq_slot = arch::irq::parallel_exec_start + i;
-        arch::irq::register_handler(
-            slots[i].irq_slot,
-            +[](arch::irq::context &, std::size_t id)
-            {
-                auto & slot = slots[id];
+        arch::vm::map_physical(base + offset, base + offset + arch::vm::page_sizes[0], pmm::pop(0));
+    }
 
-                auto fptr = slot.fptr;
-                auto erased_fptr = slot.erased_fptr;
-                auto context = slot.context;
-                auto wait = slot.wait;
+    outgoing_ipi_items =
+        new (reinterpret_cast<void *>(base.value())) ipi_queue_item[core_count * core_count]();
+}
 
-                if (!wait)
-                {
-                    --slot.unfinished_cores;
-                }
+namespace
+{
+    bool matches(policy pol, std::uintptr_t target, std::uintptr_t core)
+    {
+        switch (pol)
+        {
+            case policy::all:
+                return true;
 
-                fptr(erased_fptr, context);
-
-                if (wait)
-                {
-                    --slot.unfinished_cores;
-                }
-            },
-            i);
+            case policy::specific:
+                return target == core;
+        }
     }
 }
 
@@ -84,57 +124,47 @@ void erased_parallel_execute(
     std::uint64_t context,
     std::uintptr_t target)
 {
-    auto & slot = slots[next_slot++ % arch::irq::parallel_exec_count];
+    ipi_queue_state state = { fptr, erased_fptr, context };
+    auto core_count = arch::cpu::get_core_count();
+    auto self_id = arch::cpu::get_core_local_storage()->current_core->id();
 
-    util::interrupt_guard guard;
-    std::lock_guard lock(slot.lock);
+    if (pol == policy::specific)
+    {
+        state.unfinished_cores = 1;
+        auto & item = outgoing_ipi_items[self_id * core_count + target];
+        item.state = &state;
+        arch::cpu::get_core_by_id(target)->get_ipi_queue()->push(&item);
+    }
 
-    slot.fptr = fptr;
-    slot.erased_fptr = erased_fptr;
-    slot.context = context;
+    else
+    {
+        for (std::size_t i = 0; i < arch::cpu::get_core_count(); ++i)
+        {
+            if (matches(pol, target, i))
+            {
+                ++state.unfinished_cores;
+                auto & item = outgoing_ipi_items[self_id * core_count + i];
+                item.state = &state;
+                arch::cpu::get_core_by_id(i)->get_ipi_queue()->push(&item);
+            }
+        }
+    }
 
     switch (pol)
     {
-        case policy::all_no_wait:
-            slot.wait = false;
-            [[fallthrough]];
-
         case policy::all:
-            slot.unfinished_cores = arch::cpu::get_core_count();
-            arch::ipi::broadcast(arch::ipi::broadcast_target::others, slot.irq_slot);
-            fptr(erased_fptr, context);
-            --slot.unfinished_cores;
+            arch::ipi::broadcast(arch::ipi::broadcast_target::others, arch::irq::ipi_trigger);
             break;
-
-        case policy::others_no_wait:
-            slot.wait = false;
-            [[fallthrough]];
-
-        case policy::others:
-            slot.unfinished_cores = arch::cpu::get_core_count() - 1;
-            arch::ipi::broadcast(arch::ipi::broadcast_target::others, slot.irq_slot);
-            break;
-
-        case policy::specific_no_wait:
-            slot.wait = false;
-            [[fallthrough]];
 
         case policy::specific:
-            slot.unfinished_cores = 1;
-            arch::ipi::ipi(target, slot.irq_slot);
+            arch::ipi::ipi(target, arch::irq::ipi_trigger);
             break;
     }
 
-    while (slot.unfinished_cores.load(std::memory_order_relaxed) != 0)
+    while (state.unfinished_cores != 0)
     {
-        // TODO: abstract
-        asm volatile("pause");
+        arch::cpu::get_core_local_storage()->current_core->get_ipi_queue()->drain();
     }
-
-    slot.fptr = nullptr;
-    slot.erased_fptr = nullptr;
-    slot.context = 0;
-    slot.wait = true;
 }
 
 void parallel_execute(policy pol, void (*fptr)(), std::uintptr_t target)

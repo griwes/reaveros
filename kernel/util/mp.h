@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,31 @@
 
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <type_traits>
 
 namespace kernel::mp
 {
+struct ipi_queue_item;
+
+class ipi_queue
+{
+public:
+    void push(ipi_queue_item *);
+    void drain();
+
+private:
+    std::mutex _lock;
+    ipi_queue_item * _head = nullptr;
+    ipi_queue_item * _tail = nullptr;
+};
+
 enum class policy
 {
     all,
-    all_no_wait,
-    others,
-    others_no_wait,
     specific,
-    specific_no_wait,
     // TODO:
+    // others,
     // all_domain,
     // others_domain,
     // per_core,

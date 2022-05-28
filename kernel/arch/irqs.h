@@ -32,9 +32,9 @@ namespace kernel::arch::irq
 {
 using arch_namespace::irq::scheduling_trigger;
 
+using arch_namespace::irq::ipi_trigger;
+
 using arch_namespace::irq::context;
-using arch_namespace::irq::parallel_exec_count;
-using arch_namespace::irq::parallel_exec_start;
 using arch_namespace::irq::register_handler;
 }
 

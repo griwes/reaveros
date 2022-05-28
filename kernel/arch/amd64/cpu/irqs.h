@@ -27,12 +27,10 @@ namespace kernel::amd64::irq
 static const constexpr auto free_start = 0x20;
 static const constexpr auto free_end = 0xe0;
 
-static const constexpr auto parallel_exec_start = 0xe0;
-static const constexpr auto parallel_exec_count = 0x10;
-
 static const constexpr auto lapic_timer = 0xf0;
 static const constexpr auto hpet_timer = 0xf1;
 static const constexpr auto scheduling_trigger = 0xf2;
+static const constexpr auto ipi_trigger = 0xf3;
 static const constexpr auto lapic_spurious = 0xff;
 
 struct [[gnu::packed]] context

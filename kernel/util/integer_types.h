@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2022 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <compare>
 #include <concepts>
 #include <cstdint>
 
@@ -96,6 +97,9 @@ public:
     DEFINE_OPERATOR(<=>);
 
 #undef DEFINE_OPERATOR
+
+    friend bool operator==(tagged_integer_type, tagged_integer_type) = default;
+    friend auto operator<=>(tagged_integer_type, tagged_integer_type) = default;
 
     template<typename U, typename OtherTag>
     friend class tagged_integer_type;
