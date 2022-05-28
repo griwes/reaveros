@@ -19,6 +19,7 @@
 #include "gdt.h"
 
 #include "../../../scheduler/types.h"
+#include "../../../util/mp.h"
 #include "../timers/lapic.h"
 
 #include <cstddef>
@@ -95,6 +96,11 @@ public:
         return &_local_scheduler;
     }
 
+    kernel::mp::ipi_queue * get_ipi_queue()
+    {
+        return &_ipi_queue;
+    }
+
     core_local_storage * get_core_local_storage()
     {
         return &_cls;
@@ -137,6 +143,7 @@ private:
 
     lapic_timer::timer _preempt_timer;
     scheduler::instance _local_scheduler;
+    kernel::mp::ipi_queue _ipi_queue;
 
     core_local_storage _cls;
     core_local_storage * _cls_ptr;

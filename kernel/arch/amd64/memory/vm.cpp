@@ -18,6 +18,7 @@
 
 #include "../../../memory/pmm.h"
 #include "../../../memory/vas.h"
+#include "../../../scheduler/scheduler.h"
 #include "../../../util/bit_lock.h"
 #include "../../../util/log.h"
 #include "../../../util/mp.h"
@@ -133,6 +134,65 @@ namespace
 
     using pml4_t = pmlt<4>;
 
+    class tlb_invalidator
+    {
+    public:
+        tlb_invalidator(std::optional<phys_addr_t> asid) : _asid(asid)
+        {
+        }
+
+        ~tlb_invalidator()
+        {
+            _trigger();
+        }
+
+        void invalidate(virt_addr_t page)
+        {
+            _pages[_num_pages++] = page;
+            if (_num_pages == 32)
+            {
+                _trigger();
+            }
+        }
+
+    private:
+        std::optional<phys_addr_t> _asid;
+        std::size_t _num_pages = 0;
+        virt_addr_t _pages[32];
+
+        void _trigger()
+        {
+            if (!scheduler::is_initialized()) [[unlikely]]
+            {
+                for (std::size_t i = 0; i < _num_pages; ++i)
+                {
+                    asm volatile("invlpg (%0)" ::"r"(_pages[i].value()) : "memory");
+                }
+            }
+
+            else
+            {
+                kernel::mp::parallel_execute(
+                    kernel::mp::policy::all,
+                    +[](tlb_invalidator * self)
+                    {
+                        if (self->_asid && self->_asid != get_asid())
+                        {
+                            return;
+                        }
+
+                        for (std::size_t i = 0; i < self->_num_pages; ++i)
+                        {
+                            asm volatile("invlpg (%0)" ::"r"(self->_pages[i].value()) : "memory");
+                        }
+                    },
+                    this);
+            }
+
+            _num_pages = 0;
+        }
+    };
+
     template<int I, int Lowest>
     [[gnu::always_inline]] void vm_map(
         pmlt<I> * table,
@@ -151,7 +211,8 @@ namespace
 
             auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
             entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
-            //                                 ^ this is a protection against overflow on highest addresses
+            //                                 ^ this is a protection against overflow on highest
+            //                                 addresses
 
             if constexpr (I == Lowest)
             {
@@ -189,6 +250,7 @@ namespace
 
     template<int I>
     [[gnu::always_inline]] void vm_unmap(
+        tlb_invalidator & invl,
         pmlt<I> * table,
         std::uintptr_t virt_start,
         std::uintptr_t virt_end,
@@ -204,7 +266,8 @@ namespace
 
             auto entry_virt_end = (virt_start + entry_size) & ~(entry_size - 1);
             entry_virt_end = (entry_virt_end - 1) < virt_end && entry_virt_end ? entry_virt_end : virt_end;
-            //                                 ^ this is a protection against overflow on highest addresses
+            //                                 ^ this is a protection against overflow on highest
+            //                                 addresses
 
             if constexpr (I == 1)
             {
@@ -220,7 +283,7 @@ namespace
                 }
 
                 table->entries[start_table_index].present = false;
-                asm volatile("invlpg (%0)" ::"r"(virt_start) : "memory");
+                invl.invalidate(virt_addr_t(virt_start));
             }
 
             else
@@ -236,7 +299,7 @@ namespace
                 }
 
                 vm_unmap<I - 1>(
-                    table->entries[start_table_index].get(), virt_start, entry_virt_end, free_physical);
+                    invl, table->entries[start_table_index].get(), virt_start, entry_virt_end, free_physical);
             }
 
             ++start_table_index;
@@ -325,9 +388,11 @@ void unmap(kernel::vm::vas * address_space, virt_addr_t start, virt_addr_t end, 
     auto virt_start = start.value() & page_mask;
     auto virt_end = (virt_start + size + page_size - 1) & page_mask;
 
-    auto cr3 = phys_ptr_t<pml4_t>(address_space ? address_space->get_asid() : get_asid()).value();
+    auto cr3_phys = address_space ? address_space->get_asid() : get_asid();
+    auto cr3 = phys_ptr_t<pml4_t>(cr3_phys).value();
+    tlb_invalidator invl(start > 0x8000000000000000 ? std::nullopt : std::optional(cr3_phys));
 
-    vm_unmap<4>(cr3, virt_start, virt_end, free_physical);
+    vm_unmap<4>(invl, cr3, virt_start, virt_end, free_physical);
 }
 
 phys_addr_t virt_to_phys(virt_addr_t address)
