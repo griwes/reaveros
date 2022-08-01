@@ -16,6 +16,7 @@
 
 #include "context.h"
 
+#include <algorithm>
 #include <random>
 
 namespace thorn
