@@ -15,7 +15,7 @@ jobs:
 
         steps:
           - name: Check out the repository
-            uses: actions/checkout@v2
+            uses: actions/checkout@v3
 
           - name: Free up some space on the rootfs
             run: |
@@ -35,7 +35,7 @@ jobs:
             run: docker save ghcr.io/griwes/reaveros-build-env:${{ github.sha }} | gzip > docker.tar.gz
 
           - name: Save the pruned image as an artifact
-            uses: actions/upload-artifact@v2
+            uses: actions/upload-artifact@v3
             with:
                 name: build-env
                 path: ./docker.tar.gz
@@ -53,10 +53,10 @@ jobs:
 
         steps:
           - name: Check out the repository
-            uses: actions/checkout@v2
+            uses: actions/checkout@v3
 
           - name: Download build-env
-            uses: actions/download-artifact@v2
+            uses: actions/download-artifact@v3
             with:
                 name: build-env
                 path: artifacts
@@ -90,10 +90,10 @@ jobs:
 
         steps:
           - name: Check out the repository
-            uses: actions/checkout@v2
+            uses: actions/checkout@v3
 
           - name: Download build-env
-            uses: actions/download-artifact@v2
+            uses: actions/download-artifact@v3
             with:
                 name: build-env
                 path: artifacts
@@ -111,7 +111,7 @@ jobs:
                 '
 
           - name: Save the built image as an artifact
-            uses: actions/upload-artifact@v2
+            uses: actions/upload-artifact@v3
             with:
                 name: image-${{ matrix.image }}
                 path: artifacts/${{ matrix.image }}.img
@@ -128,10 +128,10 @@ jobs:
 
         steps:
           - name: Check out the repository
-            uses: actions/checkout@v2
+            uses: actions/checkout@v3
 
           - name: Download build-env
-            uses: actions/download-artifact@v2
+            uses: actions/download-artifact@v3
             with:
                 name: build-env
                 path: artifacts
