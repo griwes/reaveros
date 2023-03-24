@@ -3,6 +3,7 @@
 set -ex
 
 sha=$(git rev-parse HEAD)
+self_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
 # docker pull ghcr.io/griwes/reaveros-build-env/unpruned:latest
 docker run -t -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr.io/griwes/reaveros-build-env/unpruned:latest /usr/bin/env bash -c '
@@ -17,10 +18,10 @@ docker run -t -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr
     cd /build
     cmake . -DREAVEROS_ENABLE_UNIT_TESTS=ON
     make all-toolchain -j$(nproc) | tee /reaveros/docker/.build-log
-'
+' || { rm -f docker/.build-log; "${self_dir}"/build-image; exit; }
 
 # If only lines like "[xxx%] Built target ..." were printed, everything was up to date.
-if ! cat docker/.build-log | grep -v Built -q
+if [ -f docker/.build-log ] && ! cat docker/.build-log | grep -v Built -q
 then
     docker tag ghcr.io/griwes/reaveros-build-env/unpruned:latest ghcr.io/griwes/reaveros-build-env/unpruned:${sha}
 
