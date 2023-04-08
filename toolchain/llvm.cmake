@@ -151,7 +151,7 @@ if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
 endif()
 
 # install compiler-rt to the appropriate sysroots
-string(REGEX REPLACE "llvmorg-([0-9]+\.[0-9]+\.[0-9])+(-.*)?" "\\1" _llvm_version "${REAVEROS_LLVM_TAG}")
+string(REGEX REPLACE "llvmorg-(([0-9]+)\.[0-9]+\.[0-9])+(-.*)?" "\\2" _llvm_version "${REAVEROS_LLVM_TAG}")
 ExternalProject_Get_Property(toolchain-llvm BINARY_DIR)
 
 set(_freestanding_env freestanding)
