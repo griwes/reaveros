@@ -62,6 +62,7 @@ PenaltyExcessCharacter: 10000
 PenaltyReturnTypeOnItsOwnLine: 500
 PointerAlignment: Middle
 ReflowComments: true
+RequiresExpressionIndentation: OuterScope
 SortIncludes: true
 SpaceAfterCStyleCast: false
 SpaceAfterTemplateKeyword: false
