@@ -21,7 +21,7 @@
 namespace kernel
 {
 template<typename T, typename Storage = std::uintptr_t>
-class phys_ptr_t
+class [[gnu::packed]] phys_ptr_t
 {
 public:
     phys_ptr_t() = default;

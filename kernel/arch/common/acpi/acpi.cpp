@@ -187,16 +187,16 @@ namespace
     phys_ptr_t<rsdt> root_rsdt{ nullptr };
     phys_ptr_t<xsdt> root_xsdt{ nullptr };
 
-    struct address_structure
+    struct [[gnu::packed]] address_structure
     {
         std::uint8_t address_space_id;
         std::uint8_t register_bit_width;
         std::uint8_t register_bit_offset;
         std::uint8_t reserved;
         phys_addr_t address;
-    } __attribute__((packed));
+    };
 
-    struct hpet : public description_header
+    struct [[gnu::packed]] hpet : public description_header
     {
         static const constexpr char expected_signature[] = "HPET";
 
@@ -210,7 +210,7 @@ namespace
         std::uint8_t hpet_number;
         std::uint16_t minimum_tick;
         std::uint8_t page_protection;
-    } __attribute__((packed));
+    };
 
     template<typename Table, typename Root>
     phys_ptr_t<Table> find_table(Root root)
@@ -461,9 +461,9 @@ acpi::madt_result parse_madt(arch::cpu::core * cores_storage, std::size_t max_co
 
 hpet_result parse_hpet()
 {
-    auto hpet_ptr = find_table<hpet>();
+    auto hpet_ptr = find_table<hpet>().value();
 
-    log::println(" > Found HPET table.");
+    log::println(" > Found HPET table at {}.", hpet_ptr);
     log::println(
         " > Number: {}, PCI vendor ID: {:04x}.", hpet_ptr->hpet_number, hpet_ptr->pci_vendor_id.value());
     log::println(
