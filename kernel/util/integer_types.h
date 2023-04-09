@@ -29,7 +29,7 @@ struct virtual_address_tag;
 struct pci_vendor_tag;
 
 template<typename T, typename Tag>
-class tagged_integer_type
+class [[gnu::packed]] tagged_integer_type
 {
 public:
     tagged_integer_type() = default;
