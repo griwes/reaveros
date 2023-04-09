@@ -148,7 +148,6 @@ namespace
 try_cpio_result try_cpio(const char * base, std::size_t length)
 {
     std::size_t size = 0;
-    std::size_t index = 0;
 
     auto end = base + length;
 
@@ -172,7 +171,6 @@ try_cpio_result try_cpio(const char * base, std::size_t length)
         }
 
         result = result.entry->next(end);
-        ++index;
     } while (true);
 
     cpio ret;

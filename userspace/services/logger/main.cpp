@@ -20,7 +20,7 @@
 
 #include <rosert/init.h>
 
-[[noreturn]] extern "C" void __cxa_pure_virtual()
+extern "C" [[noreturn]] void __cxa_pure_virtual()
 {
     PANIC("Pure virtual method called!");
 }
