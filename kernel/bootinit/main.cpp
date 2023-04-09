@@ -39,14 +39,14 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 {
 }
 
-[[noreturn]] extern "C" void __cxa_pure_virtual()
+extern "C" [[noreturn]] void __cxa_pure_virtual()
 {
     PANIC("Pure virtual method called!");
 }
 
 namespace sc = rose::syscall;
 
-[[gnu::section(".bootinit_entry")]] extern "C" int bootinit_main(std::uintptr_t mailbox_token)
+extern "C" [[gnu::section(".bootinit_entry")]] int bootinit_main(std::uintptr_t mailbox_token)
 {
     __init();
 

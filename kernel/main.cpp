@@ -52,7 +52,7 @@ extern "C" void __cxa_atexit(void (*)(void *), void *, void *)
 {
 }
 
-[[noreturn]] extern "C" void __cxa_pure_virtual()
+extern "C" [[noreturn]] void __cxa_pure_virtual()
 {
     PANIC("Pure virtual method called!");
 }
@@ -255,7 +255,7 @@ void log_acceptor(std::uintptr_t accept_mailbox, kernel::vm::vmo_mapping * mappi
 
 }
 
-[[gnu::section(".reaveros_entry")]] extern "C" void kernel_main(boot_protocol::kernel_arguments args)
+extern "C" [[gnu::section(".reaveros_entry")]] void kernel_main(boot_protocol::kernel_arguments args)
 {
     __init();
 
