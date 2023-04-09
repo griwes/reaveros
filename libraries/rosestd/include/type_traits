@@ -296,7 +296,9 @@ struct is_constructible : bool_constant<__is_constructible(_T, _Args...)>
 };
 
 template<typename _T>
-struct is_default_constructible;
+struct is_default_constructible : bool_constant<__is_constructible(_T)>
+{
+};
 
 template<typename _T>
 struct is_copy_constructible : bool_constant<__is_constructible(_T, const _T &)>

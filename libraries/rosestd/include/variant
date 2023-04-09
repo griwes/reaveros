@@ -62,6 +62,9 @@ struct __overload : _Fs...
 template<typename _T>
 using __array = _T[];
 
+template<typename _T, typename _U>
+concept __array_convertible_to = requires { __array<_U>{ __ROSESTD::declval<_T>() }; };
+
 template<size_t _I, typename... _Types>
 constexpr variant_alternative_t<_I, variant<_Types...>> & get(variant<_Types...> & __v);
 template<size_t _I, typename... _Types>
@@ -74,12 +77,20 @@ constexpr const variant_alternative_t<_I, variant<_Types...>> && get(const varia
 template<typename... _Types>
 class variant
 {
+    template<typename _T, typename _U, size_t _Index>
+    struct __get_index_for_helper
+    {
+        auto operator()()
+            requires __array_convertible_to<_T, _U>
+        {
+            return integral_constant<size_t, _Index>();
+        }
+    };
+
     template<typename _T, size_t... _Indices>
     static constexpr auto __get_index_for(index_sequence<_Indices...>)
     {
-        return __overload(
-            [&]() requires requires { __array<_Types>{ __ROSESTD::declval<_T>() }; }
-            { return integral_constant<size_t, _Indices>(); }...)();
+        return __overload(__get_index_for_helper<_T, _Types, _Indices>()...)();
     }
 
     template<typename _T>
@@ -94,12 +105,10 @@ class variant
     };
 
     template<typename _T>
-    requires(
-        sizeof...(_Types) != 0
-        && !is_same_v<
-            remove_cvref_t<_T>,
-            variant> && !__is_variant_in_place<_T> && is_constructible_v<__type_for<_T>, _T>) struct
-        __enable_uref_ctor<_T> : true_type
+        requires(
+            sizeof...(_Types) != 0 && !is_same_v<remove_cvref_t<_T>, variant> && !__is_variant_in_place<_T>
+            && is_constructible_v<__type_for<_T>, _T>)
+    struct __enable_uref_ctor<_T> : true_type
     {
     };
 
