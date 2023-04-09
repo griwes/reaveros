@@ -18,7 +18,7 @@ docker run -t -v $(pwd):/reaveros --name reaveros-docker-update-${sha}-full ghcr
     cd /build
     cmake . -DREAVEROS_ENABLE_UNIT_TESTS=ON
     make all-toolchain -j$(nproc) | tee /reaveros/docker/.build-log
-' || { rm -f docker/.build-log; "${self_dir}"/build-image; exit; }
+' || { rm -f docker/.build-log; docker rm reaveros-docker-update-${sha}-full; "${self_dir}"/build-image; exit; }
 
 # If only lines like "[xxx%] Built target ..." were printed, everything was up to date.
 if [ -f docker/.build-log ] && ! cat docker/.build-log | grep -v Built -q
