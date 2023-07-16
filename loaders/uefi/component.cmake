@@ -1,5 +1,5 @@
 set(REAVEROS_COMPONENT_ARCHITECTURES ${REAVEROS_ARCHITECTURES})
 set(REAVEROS_COMPONENT_INSTALL_PATH [=[loaders/uefi-${_architecture}]=])
-set(REAVEROS_COMPONENT_MODES freestanding)
+set(REAVEROS_COMPONENT_MODES uefi)
 set(REAVEROS_COMPONENT_SKIP_MODE_NAME TRUE)
-set(REAVEROS_COMPONENT_DEPENDS [=[all-${_architecture}-freestanding-libraries]=])
+set(REAVEROS_COMPONENT_DEPENDS [=[all-${_architecture}-uefi-libraries]=])

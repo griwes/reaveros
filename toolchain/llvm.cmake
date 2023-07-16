@@ -123,33 +123,6 @@ ExternalProject_Add(toolchain-llvm
 reaveros_add_ep_prune_target(toolchain-llvm)
 reaveros_add_ep_fetch_tag_target(toolchain-llvm)
 
-if ("amd64" IN_LIST REAVEROS_ARCHITECTURES AND "uefi" IN_LIST REAVEROS_LOADERS)
-    ExternalProject_Add(toolchain-llvm-binutils-extra
-        GIT_REPOSITORY ${REAVEROS_LLVM_BINUTILS_EXTRA_REPO}
-        GIT_TAG ${REAVEROS_LLVM_BINUTILS_EXTRA_TAG}
-        GIT_SHALLOW TRUE
-        UPDATE_DISCONNECTED 1
-
-        STEP_TARGETS install
-
-        INSTALL_DIR ${REAVEROS_BINARY_DIR}/install/toolchain/llvm
-
-        ${_REAVEROS_CONFIGURE_HANDLED_BY_BUILD}
-
-        CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-docs --disable-nls --disable-werror
-            --disable-gdb
-            --target=x86_64-w64-mingw32
-            "CC=${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}"
-            "CXX=${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}"
-        BUILD_COMMAND $(MAKE) MAKEINFO=true
-        INSTALL_COMMAND $(MAKE) MAKEINFO=true install
-    )
-    reaveros_add_ep_prune_target(toolchain-llvm-binutils-extra)
-    reaveros_add_ep_fetch_tag_target(toolchain-llvm-binutils-extra)
-
-    add_dependencies(toolchain-llvm-install toolchain-llvm-binutils-extra-install)
-endif()
-
 # install compiler-rt to the appropriate sysroots
 string(REGEX REPLACE "llvmorg-(([0-9]+)\.[0-9]+\.[0-9])+(-.*)?" "\\2" _llvm_version "${REAVEROS_LLVM_TAG}")
 ExternalProject_Get_Property(toolchain-llvm BINARY_DIR)

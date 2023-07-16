@@ -226,4 +226,14 @@ file_buffer load_file(const path & p)
 
     return { size, std::move(buffer) };
 }
+
+image_info get_image_info()
+{
+    image_info ret;
+
+    ret.image_base = loaded_image->image_base;
+    ret.image_size = loaded_image->image_size;
+
+    return ret;
+}
 }

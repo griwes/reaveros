@@ -31,7 +31,11 @@ set(includes
 )
 
 if (NOT REAVEROS_ENABLE_UNIT_TESTS)
-    set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include/rosestd/v0)
+    if (NOT REAVEROS_IS_UEFI)
+        set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include/rosestd/v0)
+    else()
+        set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include)
+    endif()
 else()
     set(install_dir ${CMAKE_INSTALL_PREFIX}/usr/include/rosestd)
 endif()

@@ -17,7 +17,7 @@ function(reaveros_add_aggregate_targets _suffix)
         _reaveros_add_target_maybe_tests(all-${architecture}${_suffix})
     endforeach()
 
-    set(_modes freestanding hosted)
+    set(_modes uefi freestanding hosted)
     if (REAVEROS_ENABLE_UNIT_TESTS)
         list(APPEND _modes tests)
     endif()

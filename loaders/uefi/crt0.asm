@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2023 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ _start:
     mov rdi, 0x0
     mov dword ptr [rdi], 0xaeaeaeae
 
-    lea rdi, [rip + image_base]
-    lea rsi, [rip + _DYNAMIC]
+    //lea rdi, [rip + image_base]
+    //lea rsi, [rip + _DYNAMIC]
 
     push rcx
     push rdx
