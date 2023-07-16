@@ -5,7 +5,7 @@ function(_reaveros_add_target_maybe_tests _name)
     endif()
 endfunction()
 
-function(reaveros_add_aggregate_targets _suffix)
+function(_reaveros_add_aggregate_targets_impl _suffix _use_modes)
     if (NOT "${_suffix}" STREQUAL "")
         _reaveros_add_target_maybe_tests(all-${_suffix})
         set(_suffix "-${_suffix}")
@@ -17,22 +17,34 @@ function(reaveros_add_aggregate_targets _suffix)
         _reaveros_add_target_maybe_tests(all-${architecture}${_suffix})
     endforeach()
 
-    set(_modes uefi freestanding hosted)
-    if (REAVEROS_ENABLE_UNIT_TESTS)
-        list(APPEND _modes tests)
-    endif()
-    foreach (mode IN LISTS _modes)
-        _reaveros_add_target_maybe_tests(all-${mode}${_suffix})
-        foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
-            _reaveros_add_target_maybe_tests(all-${architecture}-${mode}${_suffix})
+    if (_use_modes)
+        set(_modes uefi freestanding hosted)
+        if (REAVEROS_ENABLE_UNIT_TESTS)
+            list(APPEND _modes tests)
+        endif()
+        foreach (mode IN LISTS _modes)
+            add_custom_target(all-${mode}${_suffix})
+            foreach (architecture IN LISTS REAVEROS_ARCHITECTURES)
+                add_custom_target(all-${architecture}-${mode}${_suffix})
+            endforeach()
         endforeach()
-    endforeach()
+    endif()
+endfunction()
+
+function(reaveros_add_aggregate_targets_with_modes _suffix)
+    _reaveros_add_aggregate_targets_impl("${_suffix}" TRUE)
+endfunction()
+
+function(reaveros_add_aggregate_targets _suffix)
+    _reaveros_add_aggregate_targets_impl("${_suffix}" FALSE)
 endfunction()
 
 function(_reaveros_register_target_impl _target _head _tail)
     list(LENGTH _tail _tail_length)
     math(EXPR _tail_length_prev "${_tail_length} - 1")
     list(GET _tail ${_tail_length_prev} _last)
+
+    get_target_property(_is_test_target ${_target} _REAVEROS_IS_TEST_TARGET)
 
     foreach (_index RANGE 0 ${_tail_length_prev})
         list(GET _tail ${_index} _current_element)
@@ -41,11 +53,23 @@ function(_reaveros_register_target_impl _target _head _tail)
         if (${_index} EQUAL ${_tail_length_prev} OR NOT "${_last}" STREQUAL "build-tests")
             string(REPLACE ";" "-" _aggregate_target "${_full_list}")
             if (TARGET all-${_aggregate_target})
-                add_dependencies(all-${_aggregate_target} ${_target})
+                set(_is_relevant_aggregate TRUE)
+                if (_is_test_target)
+                    list(FIND _full_list "tests" _has_tests)
+                    list(FIND _full_list "build-tests" _has_build_tests)
+                    if (${_has_tests} EQUAL -1 AND ${_has_build_tests} EQUAL -1)
+                        set(_is_relevant_aggregate FALSE)
+                    endif()
+                endif()
+
+                if (_is_relevant_aggregate)
+                    add_dependencies(all-${_aggregate_target} ${_target})
+                endif()
             endif()
         endif()
 
         math(EXPR _index_next "${_index} + 1")
+
         if (${_index_next} LESS ${_tail_length})
             list(SUBLIST _tail ${_index_next} -1 _current_tail)
 
@@ -112,6 +136,18 @@ function(reaveros_add_component _directory _prefix)
                     -DREAVEROS_ARCH=${_architecture}
                     -DREAVEROS_THORN=${REAVEROS_THORN}
             )
+
+            if (${_mode} STREQUAL "tests")
+                set_target_properties("${_component_name}"
+                    PROPERTIES
+                        _REAVEROS_IS_TEST_TARGET TRUE
+                )
+            else()
+                set_target_properties("${_component_name}"
+                    PROPERTIES
+                        _REAVEROS_IS_TEST_TARGET FALSE
+                )
+            endif()
 
             reaveros_register_target(${_component_name} ${_architecture} ${_mode} ${ARGN} ${_directory})
 
