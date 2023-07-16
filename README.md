@@ -132,7 +132,7 @@ Platform requirements:
 ### Unit tests
 
 For testing, there's two kinds of interesting CMake targets:
-* `library-rosestd-tests-amd64-build`, which builds all tests of a specific component, and
+* `library-rosestd-tests-amd64`, which builds all tests of a specific component, and
 * `all-build-tests` and more fine-grained like `all-libraries-build-tests`, which aggregate the above targets.
 
 After the tests for a specific configuration have been built, they can be run with `ctest`. By default, all enabled tests for
