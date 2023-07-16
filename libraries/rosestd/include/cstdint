@@ -35,14 +35,20 @@
 
 __ROSESTD_OPEN
 
+#ifdef __ROSE_UEFI
+#define __ROSESTD_LONG long long
+#else
+#define __ROSESTD_LONG long
+#endif
+
 __ROSESTD_DEFINE_ALIASES(8, char);
 __ROSESTD_DEFINE_ALIASES(16, short);
 __ROSESTD_DEFINE_ALIASES(32, int);
-__ROSESTD_DEFINE_ALIASES(64, long);
+__ROSESTD_DEFINE_ALIASES(64, __ROSESTD_LONG);
 __ROSESTD_DEFINE_ALIASES(128, __int128);
 
-using intptr_t = long;
-using uintptr_t = unsigned long;
+using intptr_t = __ROSESTD_LONG;
+using uintptr_t = unsigned __ROSESTD_LONG;
 static_assert(sizeof(intptr_t) == sizeof(void *), "");
 static_assert(sizeof(uintptr_t) == sizeof(void *), "");
 

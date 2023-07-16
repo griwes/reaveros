@@ -8,11 +8,6 @@ set(REAVEROS_LLVM_TAG llvmorg-16.0.6)
 set(REAVEROS_LLVM_PATTERN llvmorg-[0-9]+\.[0-9]+\.[0-9]+)
 set(REAVEROS_LLVM_EXCLUDE llvmorg-.*-init)
 
-set(REAVEROS_LLVM_BINUTILS_EXTRA_REPO git://sourceware.org/git/binutils-gdb.git)
-set(REAVEROS_LLVM_BINUTILS_EXTRA_TAG binutils-2_36_1)
-set(REAVEROS_LLVM_BINUTILS_EXTRA_PATTERN binutils-[0-9]+_[0-9]+_[0-9]+)
-set(REAVEROS_LLVM_BINUTILS_EXTRA_EXCLUDE "")
-
 set(REAVEROS_DOSFSTOOLS_REPO https://github.com/dosfstools/dosfstools)
 set(REAVEROS_DOSFSTOOLS_TAG v4.2)
 set(REAVEROS_DOSFSTOOLS_PATTERN v[0-9]+\.[0-9]+)

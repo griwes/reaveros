@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021, 2023 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,6 @@
 #include <boot-constants.h>
 
 #include <cstring>
-
-extern "C" char image_base[];
-extern "C" char image_end[];
 
 extern "C" efi_loader::EFI_STATUS efi_main(
     efi_loader::EFI_HANDLE image_handle,
@@ -105,8 +102,13 @@ extern "C" efi_loader::EFI_STATUS efi_main(
         efi_loader::console::print(u"[MEM] Preparing paging structures...\n\r");
         efi_loader::prepare_paging();
 
+        auto image_info = efi_loader::get_image_info();
+
         efi_loader::console::print(u" > Identity mapping the loader code...\n\r");
-        efi_loader::vm_map(image_base, image_end - image_base, reinterpret_cast<std::uintptr_t>(image_base));
+        efi_loader::vm_map(
+            image_info.image_base,
+            image_info.image_size,
+            reinterpret_cast<std::uintptr_t>(image_info.image_base));
 
         efi_loader::console::print(u" > Identity mapping the loader stack...\n\r");
         auto approximately_stack = reinterpret_cast<std::uint8_t *>(&image_handle);
@@ -162,7 +164,7 @@ extern "C" efi_loader::EFI_STATUS efi_main(
     args.acpi_revision = acpi_info.revision;
     args.acpi_root = acpi_info.root;
 
-    using kernel_entry_t = void (*)(boot_protocol::kernel_arguments);
+    using kernel_entry_t = void __attribute__((sysv_abi)) (*)(boot_protocol::kernel_arguments);
     auto kernel_entry = reinterpret_cast<kernel_entry_t>(boot_protocol::kernel_base);
     kernel_entry(args);
 

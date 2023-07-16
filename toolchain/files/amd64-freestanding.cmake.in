@@ -11,7 +11,6 @@ set(CMAKE_SYSROOT @REAVEROS_BINARY_DIR@/install/sysroots/amd64-freestanding)
 set(CMAKE_EXE_LINKER_FLAGS "--sysroot=${CMAKE_SYSROOT} -L${CMAKE_SYSROOT}/usr/lib -nostartfiles")
 
 set(CMAKE_OBJCOPY ${tools}/llvm-objcopy)
-set(BINUTILS_OBJCOPY ${tools}/x86_64-w64-mingw32-objcopy)
 
 set(CMAKE_ASM_COMPILER ${tools}/clang)
 set(CMAKE_ASM_FLAGS "-masm=intel -fPIC")

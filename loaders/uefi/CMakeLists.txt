@@ -6,12 +6,6 @@ file(GLOB_RECURSE sources
     *.cpp
 )
 
-set_source_files_properties(
-    ${sources}
-    PROPERTIES
-        COMPILE_FLAGS "-DHAVE_USE_MS_ABI -fshort-wchar"
-)
-
 file(GLOB asm_sources
     CONFIGURE_DEPENDS
     *.asm
@@ -25,30 +19,18 @@ set_source_files_properties(
         COMPILE_FLAGS -integrated-as
 )
 
-add_executable(loader-uefi-elf
+add_executable(loader-uefi
     ${asm_sources}
     ${sources}
 )
 
-target_link_libraries(loader-uefi-elf
+target_link_libraries(loader-uefi
     ${CMAKE_SYSROOT}/usr/lib/librosestd.a
 )
 
-set(linker_script ${CMAKE_CURRENT_SOURCE_DIR}/loader.lds)
-
-set_target_properties(loader-uefi-elf
+set_target_properties(loader-uefi
     PROPERTIES
-        LINK_FLAGS "-Wl,-T,${linker_script} -Bsymbolic -Wl,-Map=loader.map -fpie"
-        LINK_DEPENDS ${linker_script}
-)
-
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/loader-uefi
-    DEPENDS loader-uefi-elf
-
-    COMMAND
-        ${BINUTILS_OBJCOPY} -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc --target=efi-app-x86_64
-            $<TARGET_FILE:loader-uefi-elf>
-            ${CMAKE_BINARY_DIR}/loader-uefi
+        LINKER_LANGUAGE CXX
 )
 
 add_custom_target(loader-uefi-pe ALL DEPENDS ${CMAKE_BINARY_DIR}/loader-uefi)

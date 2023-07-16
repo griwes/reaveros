@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021 Michał 'Griwes' Dominiak
+ * Copyright © 2021, 2023 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,6 +108,14 @@ struct acpi_information
 };
 
 acpi_information find_acpi_root();
+
+struct image_info
+{
+    void * image_base;
+    std::size_t image_size;
+};
+
+image_info get_image_info();
 
 struct memory_map
 {
