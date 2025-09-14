@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2022 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2025 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,10 +104,12 @@ util::intrusive_ptr<vmo_mapping> vas::map_vmo(
     if (it != _mappings.end())
     {
         PANIC(
-            "tried to map a VMO at ({:#018x}, {:#018x}), which is already occupied by another VMO in this "
-            "VAS",
+            "tried to map a VMO at ({:#018x}, {:#018x}), which is already occupied by another VMO ({:#018x}, "
+            "{:#018x}) in this VAS",
             mapping_base.value(),
-            mapping_end.value());
+            mapping_end.value(),
+            it->range().start.value(),
+            it->range().end.value());
     }
 
     auto mapping = util::make_intrusive<vmo_mapping>(this, mapping_base, mapping_end, vm_object, fl);
@@ -125,8 +127,9 @@ util::intrusive_ptr<vmo_mapping> vas::map_vmo(
             {
                 if (!element.backing_address)
                 {
-                    PANIC("mapping uncommitted sparse VMOs is not supported yet (TODO after on-demand "
-                          "mapping)");
+                    PANIC(
+                        "mapping uncommitted sparse VMOs is not supported yet (TODO after on-demand "
+                        "mapping)");
                 }
 
                 arch::vm::map_physical(
