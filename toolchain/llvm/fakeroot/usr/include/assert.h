@@ -1,5 +1,5 @@
 /*
- * Copyright © 2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022-2025 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,3 +19,4 @@
 // this is a "fake" stdlib header, sufficient to satisfy compiler-rt.builtins build
 
 #define assert(...)
+#define static_assert(...) _Static_assert(__VA_ARGS__)
