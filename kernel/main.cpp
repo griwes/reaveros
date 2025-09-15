@@ -1,5 +1,5 @@
 /*
- * Copyright © 2021-2023 Michał 'Griwes' Dominiak
+ * Copyright © 2021-2025 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ extern "C" [[noreturn]] void __cxa_pure_virtual()
     PANIC("Pure virtual method called!");
 }
 
-void operator delete(void *) noexcept
+void operator delete(void *, unsigned long) noexcept
 {
     PANIC("operator delete called!");
 }
@@ -268,7 +268,7 @@ extern "C" [[gnu::section(".reaveros_entry")]] void kernel_main(boot_protocol::k
     kernel::log::println("ReaverOS: Reaver Project Operating System, \"Rose\"");
     kernel::log::println(
         "Version: 0.0.5 dev; Release #1 \"Cotyledon\", built on {} at {}", __DATE__, __TIME__);
-    kernel::log::println("Copyright (C) 2021-2022 Reaver Project Team");
+    kernel::log::println("Copyright (C) 2021-2025 Reaver Project Team");
     kernel::log::println("");
 
     kernel::pmm::initialize(args.memory_map_size, args.memory_map_entries);

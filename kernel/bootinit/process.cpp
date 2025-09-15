@@ -1,5 +1,5 @@
 /*
- * Copyright © 2022 Michał 'Griwes' Dominiak
+ * Copyright © 2022-2025 Michał 'Griwes' Dominiak
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -592,7 +592,7 @@ loaded_elf load_elf_with_dependencies(
 
         constexpr auto page_mask = ~(kernel::arch::vm::page_sizes[0] - 1);
 
-        auto segment_end_aligned = (segment_end + kernel::arch::vm::page_sizes[0]) & page_mask;
+        auto segment_end_aligned = (segment_end + kernel::arch::vm::page_sizes[0] - 1) & page_mask;
         final_segment_end = binary_base + segment_end_aligned;
 
         auto segment_vmo_size = segment_end_aligned - segment_base;
@@ -691,7 +691,7 @@ void send_runtime_initialization(loaded_elf & image, std::uintptr_t protocol_mai
     auto init_count = image.preinit_count() + image.init_count();
 
     message.type = sc::mailbox_message_type::user;
-    message.payload.user = { .data0 = init_count };
+    message.payload.user = { .data0 = init_count, .data1 = 0 };
 
     result = sc::rose_mailbox_write(runtime_mailbox, &message);
     if (result != sc::result::ok)
@@ -707,7 +707,7 @@ void send_runtime_initialization(loaded_elf & image, std::uintptr_t protocol_mai
     auto fini_count = image.fini_count();
 
     message.type = sc::mailbox_message_type::user;
-    message.payload.user = { .data0 = fini_count };
+    message.payload.user = { .data0 = fini_count, .data1 = 0 };
 
     result = sc::rose_mailbox_write(runtime_mailbox, &message);
     if (result != sc::result::ok)

@@ -120,7 +120,7 @@ the UEFI bootloader for the amd64 architecture. If you install QEMU and OVMF, yo
 command like this (this is the exact command I have been using to test at the time of these words being written on a Debian
 sid):
 
-```
+```bash
 qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -drive format=raw,file=install/images/uefi-efipart-amd64.img -monitor stdio -serial file:/dev/stdout -cpu qemu64,+sse3,+sse4.1,+sse4.2 -m 2048 -smp 4 -vga std -M q35 -global hpet.msi=on -netdev user,id=net0 -device e1000e,romfile=,netdev=net0
 ```
 
