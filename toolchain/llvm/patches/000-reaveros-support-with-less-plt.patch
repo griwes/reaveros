@@ -1,5 +1,5 @@
 diff --git a/clang/include/clang/Driver/ToolChain.h b/clang/include/clang/Driver/ToolChain.h
-index 7d1d8feebf3..baa52b3ab82 100644
+index b8899e78176..146a5fb760a 100644
 --- a/clang/include/clang/Driver/ToolChain.h
 +++ b/clang/include/clang/Driver/ToolChain.h
 @@ -95,7 +95,8 @@ public:
@@ -23,10 +23,10 @@ index 7d1d8feebf3..baa52b3ab82 100644
  
    enum class UnwindTableLevel {
 diff --git a/clang/lib/Basic/Targets.cpp b/clang/lib/Basic/Targets.cpp
-index 281aebdb1c3..aa285dcb863 100644
+index 5d11578893c..9babca7d897 100644
 --- a/clang/lib/Basic/Targets.cpp
 +++ b/clang/lib/Basic/Targets.cpp
-@@ -618,6 +618,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
+@@ -624,6 +624,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
        return std::make_unique<NetBSDTargetInfo<X86_64TargetInfo>>(Triple, Opts);
      case llvm::Triple::OpenBSD:
        return std::make_unique<OpenBSDX86_64TargetInfo>(Triple, Opts);
@@ -37,10 +37,10 @@ index 281aebdb1c3..aa285dcb863 100644
        return std::make_unique<FreeBSDTargetInfo<X86_64TargetInfo>>(Triple,
                                                                     Opts);
 diff --git a/clang/lib/Basic/Targets/OSTargets.h b/clang/lib/Basic/Targets/OSTargets.h
-index 4cf4230273d..9e95e7ecc02 100644
+index c1a68f464e8..327e63a4002 100644
 --- a/clang/lib/Basic/Targets/OSTargets.h
 +++ b/clang/lib/Basic/Targets/OSTargets.h
-@@ -573,6 +573,22 @@ public:
+@@ -607,6 +607,22 @@ public:
    using PSOSTargetInfo<Target>::PSOSTargetInfo;
  };
  
@@ -64,22 +64,22 @@ index 4cf4230273d..9e95e7ecc02 100644
  template <typename Target>
  class LLVM_LIBRARY_VISIBILITY RTEMSTargetInfo : public OSTargetInfo<Target> {
 diff --git a/clang/lib/Driver/CMakeLists.txt b/clang/lib/Driver/CMakeLists.txt
-index 5bdb6614389..04d1de527ed 100644
+index 0268ec49eaf..bd6052104f8 100644
 --- a/clang/lib/Driver/CMakeLists.txt
 +++ b/clang/lib/Driver/CMakeLists.txt
-@@ -73,6 +73,7 @@ add_clang_library(clangDriver
+@@ -75,6 +75,7 @@ add_clang_library(clangDriver
    ToolChains/NetBSD.cpp
    ToolChains/OHOS.cpp
    ToolChains/OpenBSD.cpp
 +  ToolChains/ReaverOS.cpp
    ToolChains/PS4CPU.cpp
-   ToolChains/RISCVToolchain.cpp
    ToolChains/Solaris.cpp
+   ToolChains/SPIRV.cpp
 diff --git a/clang/lib/Driver/Driver.cpp b/clang/lib/Driver/Driver.cpp
-index 87855fdb799..bcddd9583aa 100644
+index 55748c0bce9..101f2764048 100644
 --- a/clang/lib/Driver/Driver.cpp
 +++ b/clang/lib/Driver/Driver.cpp
-@@ -38,6 +38,7 @@
+@@ -40,6 +40,7 @@
  #include "ToolChains/NetBSD.h"
  #include "ToolChains/OHOS.h"
  #include "ToolChains/OpenBSD.h"
@@ -87,7 +87,7 @@ index 87855fdb799..bcddd9583aa 100644
  #include "ToolChains/PPCFreeBSD.h"
  #include "ToolChains/PPCLinux.h"
  #include "ToolChains/PS4CPU.h"
-@@ -6660,6 +6661,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
+@@ -6844,6 +6845,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
      case llvm::Triple::NaCl:
        TC = std::make_unique<toolchains::NaClToolChain>(*this, Target, Args);
        break;
@@ -113,8 +113,8 @@ index 00000000000..0d2e955cc35
 +//===----------------------------------------------------------------------===//
 +
 +#include "ReaverOS.h"
-+#include "CommonArgs.h"
 +#include "clang/Config/config.h"
++#include "clang/Driver/CommonArgs.h"
 +#include "clang/Driver/Compilation.h"
 +#include "clang/Driver/Driver.h"
 +#include "clang/Driver/DriverDiagnostic.h"
@@ -215,7 +215,7 @@ index 00000000000..0d2e955cc35
 +
 +  if (D.isUsingLTO()) {
 +    assert(!Inputs.empty() && "Must have at least one input.");
-+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
++    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
 +                  D.getLTOMode() == LTOK_Thin);
 +  }
 +
@@ -583,31 +583,31 @@ index 00000000000..2b8f8e17596
 +
 +#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_REAVEROS_H
 diff --git a/llvm/cmake/modules/HandleLLVMOptions.cmake b/llvm/cmake/modules/HandleLLVMOptions.cmake
-index 5db06ccdadb..95f0757293d 100644
+index c126b0d0733..77749e5e4c3 100644
 --- a/llvm/cmake/modules/HandleLLVMOptions.cmake
 +++ b/llvm/cmake/modules/HandleLLVMOptions.cmake
-@@ -219,7 +219,7 @@ if(WIN32)
+@@ -229,7 +229,7 @@ if(WIN32 OR CYGWIN)
      set(LLVM_ON_WIN32 1)
      set(LLVM_ON_UNIX 0)
-   endif(CYGWIN)
+   endif()
 -elseif(FUCHSIA OR UNIX)
 +elseif(FUCHSIA OR UNIX OR REAVEROS)
    set(LLVM_ON_WIN32 0)
    set(LLVM_ON_UNIX 1)
    if(APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 diff --git a/llvm/include/llvm/TargetParser/Triple.h b/llvm/include/llvm/TargetParser/Triple.h
-index 7d67966d172..32893d94cba 100644
+index 657f4230379..d0d3addf677 100644
 --- a/llvm/include/llvm/TargetParser/Triple.h
 +++ b/llvm/include/llvm/TargetParser/Triple.h
-@@ -210,6 +210,7 @@ public:
-     MacOSX,
+@@ -214,6 +214,7 @@ public:
+     Managarm,
      NetBSD,
      OpenBSD,
 +    ReaverOS,
      Solaris,
      UEFI,
      Win32,
-@@ -619,6 +620,10 @@ public:
+@@ -638,6 +639,10 @@ public:
      return getOS() == Triple::Fuchsia;
    }
  
@@ -619,7 +619,7 @@ index 7d67966d172..32893d94cba 100644
  
    bool isOSSolaris() const {
 diff --git a/llvm/lib/Target/X86/X86Subtarget.cpp b/llvm/lib/Target/X86/X86Subtarget.cpp
-index b563f6ebce3..21158eb692e 100644
+index a8ee9f55611..f26e5b4c1aa 100644
 --- a/llvm/lib/Target/X86/X86Subtarget.cpp
 +++ b/llvm/lib/Target/X86/X86Subtarget.cpp
 @@ -209,6 +209,10 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
@@ -634,10 +634,10 @@ index b563f6ebce3..21158eb692e 100644
        // According to psABI, PLT stub clobbers XMM8-XMM15.
        // In Regcall calling convention those registers are used for passing
 diff --git a/llvm/lib/Target/X86/X86Subtarget.h b/llvm/lib/Target/X86/X86Subtarget.h
-index 722076ca88c..e1898b98bc4 100644
+index 38b8c246eb2..31c0cae953e 100644
 --- a/llvm/lib/Target/X86/X86Subtarget.h
 +++ b/llvm/lib/Target/X86/X86Subtarget.h
-@@ -301,6 +301,7 @@ public:
+@@ -304,6 +304,7 @@ public:
    bool isTargetNaCl64() const { return isTargetNaCl() && is64Bit(); }
    bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
    bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
@@ -646,10 +646,10 @@ index 722076ca88c..e1898b98bc4 100644
    bool isTargetWindowsMSVC() const {
      return TargetTriple.isWindowsMSVCEnvironment();
 diff --git a/llvm/lib/TargetParser/Triple.cpp b/llvm/lib/TargetParser/Triple.cpp
-index e9e6f130f75..5f431fc1c98 100644
+index 0584c941d2e..39405496470 100644
 --- a/llvm/lib/TargetParser/Triple.cpp
 +++ b/llvm/lib/TargetParser/Triple.cpp
-@@ -304,6 +304,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
+@@ -307,6 +307,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
    case NaCl: return "nacl";
    case NetBSD: return "netbsd";
    case OpenBSD: return "openbsd";
@@ -657,8 +657,8 @@ index e9e6f130f75..5f431fc1c98 100644
    case PS4: return "ps4";
    case PS5: return "ps5";
    case RTEMS: return "rtems";
-@@ -680,6 +681,7 @@ static Triple::OSType parseOS(StringRef OSName) {
-     .StartsWith("macos", Triple::MacOSX)
+@@ -686,6 +687,7 @@ static Triple::OSType parseOS(StringRef OSName) {
+     .StartsWith("managarm", Triple::Managarm)
      .StartsWith("netbsd", Triple::NetBSD)
      .StartsWith("openbsd", Triple::OpenBSD)
 +    .StartsWith("reaveros", Triple::ReaverOS)
